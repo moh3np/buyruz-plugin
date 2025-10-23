@@ -7,7 +7,7 @@ class RFA_RankMath_Integration {
             return;
         }
 
-        if ( self::is_backend_request() ) {
+        if ( self::should_skip_hooks() ) {
             return;
         }
 
@@ -109,21 +109,24 @@ class RFA_RankMath_Integration {
         return apply_filters( 'rfa/rankmath/faq_markup', $output, $items, $schema );
     }
 
-    private static function is_backend_request() {
-        if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
-            return false;
+    private static function should_skip_hooks() {
+        if ( is_admin() ) {
+            return true;
+        }
+        if ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) {
+            return true;
+        }
+        if ( function_exists( 'wp_doing_cron' ) && wp_doing_cron() ) {
+            return true;
         }
         if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
-            return false;
-        }
-        if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
-            return false;
+            return true;
         }
         if ( defined( 'WP_CLI' ) && WP_CLI ) {
             return true;
         }
 
-        return is_admin();
+        return false;
     }
 }
 
