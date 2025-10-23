@@ -13,6 +13,10 @@ class RFA_RankMath_Integration {
     public static function replace_faq_markup( $html, $schema, $post, $shortcode ) {
         $types = array();
 
+        if ( is_admin() && ! wp_doing_ajax() && ! wp_doing_rest() && ! wp_doing_cron() ) {
+            return $html;
+        }
+
         if ( ! isset( $schema['@type'] ) ) {
             return $html;
         }
@@ -34,6 +38,10 @@ class RFA_RankMath_Integration {
         $items = array();
 
         foreach ( $schema['mainEntity'] as $entity ) {
+            if ( ! is_array( $entity ) ) {
+                continue;
+            }
+
             if ( ! isset( $entity['@type'] ) || strtolower( (string) $entity['@type'] ) !== 'question' ) {
                 continue;
             }
