@@ -1,0 +1,56 @@
+/* Styles apply only after JS adds .accordion-init to wrapper.
+   This preserves SEO and no-JS accessibility. */
+:root{--rfa-brand:#RFA_BRAND#}
+
+/* Wrapper */
+.rank-math-faq{direction:rtl}
+.rank-math-faq.accordion-init{max-width:860px;margin-inline:auto}
+
+/* Card item */
+.rank-math-faq.accordion-init .rank-math-faq-item{
+  background:#fff;border:1px solid #eef2f6;border-radius:18px;
+  box-shadow:0 6px 18px rgba(0,0,0,.06);margin:12px 0;overflow:hidden
+}
+
+/* Question header */
+.rank-math-faq.accordion-init .rank-math-question{
+  margin:0;padding:14px 16px;min-height:56px;display:flex;align-items:center;gap:12px;
+  cursor:pointer;font-weight:700;font-size:16px;line-height:1.5;color:#111827;background:#f6f7fb
+}
+
+/* Icon bubble at right */
+.rank-math-faq.accordion-init .rank-math-question::before{
+  content:"";width:34px;height:34px;border-radius:999px;flex:0 0 34px;background:var(--rfa-brand,#RFA_BRAND#);display:inline-block;position:relative
+}
+.rank-math-faq.accordion-init .rank-math-question::after{
+  content:"";width:14px;height:14px;position:absolute;inset:0;margin:auto;
+  -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="black" d="M11 5h2v14h-2zM5 11h14v2H5z"/></svg>') center/contain no-repeat;
+  mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="black" d="M11 5h2v14h-2zM5 11h14v2H5z"/></svg>') center/contain no-repeat;
+  background:#fff;transition:transform .2s ease
+}
+.rank-math-faq.accordion-init .rank-math-faq-item.active .rank-math-question::after{transform:rotate(45deg)}
+
+/* Answer */
+.rank-math-faq.accordion-init .rank-math-answer{
+  max-height:0;opacity:0;overflow:hidden;padding:0 16px;border-top:1px solid transparent
+}
+.rank-math-faq.accordion-init .rank-math-faq-item.active .rank-math-answer{
+  max-height:700px;opacity:1;padding:14px 16px 18px;border-top-color:#eaeef3
+}
+
+/* Focus state */
+.rank-math-faq.accordion-init .rank-math-question:focus{outline:2px solid #3b82f6;outline-offset:3px;border-radius:12px}
+
+/* Mobile tweaks */
+@media (max-width:640px){
+  .rank-math-faq.accordion-init{padding-inline:10px}
+  .rank-math-faq.accordion-init .rank-math-question{border-radius:14px;font-size:15px;padding:12px 14px;min-height:52px}
+  .rank-math-faq.accordion-init .rank-math-faq-item{border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+}
+
+/* Optional dark scheme */
+@media (prefers-color-scheme: dark){
+  .rank-math-faq.accordion-init .rank-math-faq-item{background:#0b0f14;border-color:#1f2937;box-shadow:none}
+  .rank-math-faq.accordion-init .rank-math-question{background:#0f1720;color:#e5e7eb}
+  .rank-math-faq.accordion-init .rank-math-answer{border-top-color:#1f2937}
+}
