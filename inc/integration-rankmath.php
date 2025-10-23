@@ -13,14 +13,14 @@ class RFA_RankMath_Integration {
     public static function replace_faq_markup( $html, $schema, $post, $shortcode ) {
         $types = array();
 
-        if ( empty( $schema['@type'] ) ) {
+        if ( ! isset( $schema['@type'] ) ) {
             return $html;
         }
 
         if ( is_array( $schema['@type'] ) ) {
             $types = array_map( 'strtolower', $schema['@type'] );
         } else {
-            $types[] = strtolower( $schema['@type'] );
+            $types[] = strtolower( (string) $schema['@type'] );
         }
 
         if ( ! in_array( 'faqpage', $types, true ) ) {
@@ -34,7 +34,7 @@ class RFA_RankMath_Integration {
         $items = array();
 
         foreach ( $schema['mainEntity'] as $entity ) {
-            if ( empty( $entity['@type'] ) || strtolower( $entity['@type'] ) !== 'question' ) {
+            if ( ! isset( $entity['@type'] ) || strtolower( (string) $entity['@type'] ) !== 'question' ) {
                 continue;
             }
 
