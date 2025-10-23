@@ -19,12 +19,16 @@ class RFA_Updater {
     }
 
     public static function inject_update( $transient ) {
-        if ( empty( $transient->checked ) ) {
-            return $transient;
+        if ( ! is_object( $transient ) ) {
+            $transient = new stdClass();
+        }
+
+        if ( ! isset( $transient->checked ) || ! is_array( $transient->checked ) ) {
+            $transient->checked = array();
         }
 
         $remote = self::get_remote_meta();
-        if ( ! $remote || empty( $remote['version'] ) ) {
+        if ( ! is_array( $remote ) || empty( $remote['version'] ) ) {
             return $transient;
         }
 
@@ -49,7 +53,7 @@ class RFA_Updater {
         }
 
         $remote = self::get_remote_meta();
-        if ( ! $remote ) {
+        if ( ! is_array( $remote ) || empty( $remote['version'] ) ) {
             return $result;
         }
 
