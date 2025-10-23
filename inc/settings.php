@@ -90,7 +90,9 @@ class RFA_Settings {
         add_settings_field( 'github_token', 'توکن دسترسی گیت‌هاب', function(){
             $v = self::get( 'github_token', '' );
             $expiry = get_transient( 'rfa_token_expiry' );
-            echo '<input type="password" class="regular-text" name="'.RFA_OPTION.'[github_token]" value="" autocomplete="off" placeholder="github_pat_..." />';
+            $type = $v ? 'text' : 'password';
+            $value_attr = $v ? ' value="'.esc_attr( $v ).'"' : ' value=""';
+            echo '<input type="'.$type.'" class="regular-text" name="'.RFA_OPTION.'[github_token]"'.$value_attr.' autocomplete="off" placeholder="github_pat_..." style="direction:ltr" />';
             if ( $v ) {
                 echo '<p class="description">توکن ذخیره شده است. برای جایگزینی، مقدار جدید را وارد کنید.</p>';
                 echo '<input type="hidden" name="'.RFA_OPTION.'[github_token_existing]" value="1" />';

@@ -3,7 +3,7 @@
  * Plugin Name: تنظیمات بایروز
  * Plugin URI: https://github.com/Codruz/buyruz-plugin.git
  * Description: آکاردئون سبک و ماژولار برای FAQهای Rank Math با یک پرسش باز در هر لحظه، هماهنگ با موبایل و دسکتاپ. بارگذاری شرطی و بهینه برای سئو.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: کُدروز
  * Author URI: https://codruz.ir
  * License: Proprietary
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-define( 'RFA_VERSION', '1.2.0' );
+define( 'RFA_VERSION', '1.2.1' );
 define( 'RFA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'RFA_URL', plugin_dir_url( __FILE__ ) );
 define( 'RFA_OPTION', 'rfa_options' );
