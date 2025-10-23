@@ -7,15 +7,15 @@ class RFA_RankMath_Integration {
             return;
         }
 
+        if ( self::is_backend_request() ) {
+            return;
+        }
+
         add_filter( 'rank_math/snippet/html', array( __CLASS__, 'replace_faq_markup' ), 10, 4 );
     }
 
     public static function replace_faq_markup( $html, $schema, $post, $shortcode ) {
         $types = array();
-
-        if ( is_admin() && ! wp_doing_ajax() && ! wp_doing_rest() && ! wp_doing_cron() ) {
-            return $html;
-        }
 
         if ( ! isset( $schema['@type'] ) ) {
             return $html;
@@ -31,13 +31,27 @@ class RFA_RankMath_Integration {
             return $html;
         }
 
-        if ( empty( $schema['mainEntity'] ) || ! is_array( $schema['mainEntity'] ) ) {
+        if ( empty( $schema['mainEntity'] ) ) {
+            return $html;
+        }
+
+        $entities = $schema['mainEntity'];
+
+        if ( is_object( $entities ) ) {
+            $entities = (array) $entities;
+        }
+
+        if ( ! is_array( $entities ) ) {
             return $html;
         }
 
         $items = array();
 
-        foreach ( $schema['mainEntity'] as $entity ) {
+        foreach ( $entities as $entity ) {
+            if ( is_object( $entity ) ) {
+                $entity = (array) $entity;
+            }
+
             if ( ! is_array( $entity ) ) {
                 continue;
             }
@@ -91,8 +105,25 @@ class RFA_RankMath_Integration {
          * @param string $output Generated HTML.
          * @param array  $items  Sanitized FAQ items.
          * @param array  $schema Original schema array.
-         */
+        */
         return apply_filters( 'rfa/rankmath/faq_markup', $output, $items, $schema );
+    }
+
+    private static function is_backend_request() {
+        if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+            return false;
+        }
+        if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+            return false;
+        }
+        if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
+            return false;
+        }
+        if ( defined( 'WP_CLI' ) && WP_CLI ) {
+            return true;
+        }
+
+        return is_admin();
     }
 }
 
