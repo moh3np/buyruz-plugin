@@ -9,12 +9,14 @@ class RFA_Settings {
     }
 
     public static function page() {
-        add_options_page(
-            'RM FAQ Accordion',
-            'RM FAQ Accordion',
+        add_menu_page(
+            'تنظیمات بایروز',
+            'تنظیمات بایروز',
             'manage_options',
             'rfa-settings',
-            array( __CLASS__, 'render' )
+            array( __CLASS__, 'render' ),
+            'dashicons-admin-generic',
+            3
         );
     }
 
@@ -107,7 +109,7 @@ class RFA_Settings {
     public static function render() {
         ?>
         <div class="wrap" dir="rtl">
-            <h1>RM FAQ Accordion (Rank Math)</h1>
+            <h1>تنظیمات بایروز</h1>
             <form method="post" action="options.php">
                 <?php
                 settings_fields( 'rfa_group' );

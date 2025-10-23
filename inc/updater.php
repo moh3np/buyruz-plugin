@@ -48,7 +48,7 @@ class RFA_Updater {
         }
 
         $info = new stdClass();
-        $info->name = 'RM FAQ Accordion (Rank Math)';
+        $info->name = 'تنظیمات بایروز';
         $info->slug = 'rm-faq-accordion';
         $info->version = $remote['version'];
         $info->author = 'کُدروز';
@@ -91,7 +91,7 @@ class RFA_Updater {
         }
 
         $token = RFA_Settings::get( 'github_token', '' );
-        $settings_url = admin_url( 'options-general.php?page=rfa-settings' );
+        $settings_url = admin_url( 'admin.php?page=rfa-settings' );
 
         if ( ! $token ) {
             echo '<div class="notice notice-warning"><p>برای فعال‌شدن بررسی خودکار نسخه لطفاً <a href="'.esc_url( $settings_url ).'">توکن گیت‌هاب را در تنظیمات افزونه</a> ثبت کنید.</p></div>';
