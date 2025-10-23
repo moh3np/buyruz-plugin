@@ -11,6 +11,11 @@ class RFA_Updater {
         add_filter( 'http_request_args', array( __CLASS__, 'authorize_github_requests' ), 10, 2 );
         add_action( 'admin_notices', array( __CLASS__, 'admin_notice' ) );
         add_action( 'network_admin_notices', array( __CLASS__, 'admin_notice' ) );
+        add_action( 'upgrader_process_complete', array( __CLASS__, 'clear_cache_after_upgrade' ), 10, 2 );
+
+        if ( self::is_force_refresh() ) {
+            delete_transient( 'rfa_remote_meta' );
+        }
     }
 
     public static function inject_update( $transient ) {
@@ -106,9 +111,14 @@ class RFA_Updater {
     }
 
     private static function get_remote_meta() {
-        $cached = get_transient( 'rfa_remote_meta' );
-        if ( $cached ) {
-            return $cached;
+        $force_refresh = self::is_force_refresh();
+        if ( ! $force_refresh ) {
+            $cached = get_transient( 'rfa_remote_meta' );
+            if ( $cached ) {
+                return $cached;
+            }
+        } else {
+            delete_transient( 'rfa_remote_meta' );
         }
 
         $token = RFA_Settings::get( 'github_token', '' );
@@ -153,7 +163,8 @@ class RFA_Updater {
             return null;
         }
 
-        set_transient( 'rfa_remote_meta', $meta, HOUR_IN_SECONDS );
+        $ttl = apply_filters( 'rfa_remote_meta_ttl', 10 * MINUTE_IN_SECONDS );
+        set_transient( 'rfa_remote_meta', $meta, max( MINUTE_IN_SECONDS, $ttl ) );
 
         return $meta;
     }
@@ -247,6 +258,34 @@ class RFA_Updater {
             return wp_strip_all_tags( trim( $m[1] ) );
         }
         return wp_strip_all_tags( $section );
+    }
+
+    private static function is_force_refresh() {
+        if ( defined( 'WP_CLI' ) && WP_CLI ) {
+            return true;
+        }
+        if ( isset( $_GET['force-check'] ) ) {
+            if ( ! function_exists( 'current_user_can' ) || current_user_can( 'update_plugins' ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static function clear_cache_after_upgrade( $upgrader, $hook_extra ) {
+        if ( empty( $hook_extra['type'] ) || 'plugin' !== $hook_extra['type'] ) {
+            return;
+        }
+
+        if ( empty( $hook_extra['plugins'] ) ) {
+            return;
+        }
+
+        $plugin_file = plugin_basename( RFA_PATH . 'rm-faq-accordion.php' );
+
+        if ( in_array( $plugin_file, (array) $hook_extra['plugins'], true ) ) {
+            delete_transient( 'rfa_remote_meta' );
+        }
     }
 }
 RFA_Updater::init();
