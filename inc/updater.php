@@ -31,6 +31,7 @@ class RFA_Updater {
                 'new_version' => $remote['version'],
                 'url'         => 'https://github.com/Codruz/buyruz-plugin.git',
                 'package'     => $remote['package'],
+                'upgrade_notice' => isset( $remote['notice'] ) ? $remote['notice'] : '',
             );
         }
 
@@ -119,6 +120,7 @@ class RFA_Updater {
             'version'   => '',
             'package'   => '',
             'changelog' => '',
+            'notice'    => '',
         );
 
         $file = self::request( 'contents/rm-faq-accordion.php?ref=main' );
@@ -141,6 +143,7 @@ class RFA_Updater {
             $data = json_decode( wp_remote_retrieve_body( $changes ), true );
             if ( ! empty( $data['content'] ) ) {
                 $meta['changelog'] = base64_decode( $data['content'] );
+                $meta['notice'] = self::extract_notice( $meta['changelog'] );
             }
         }
 
@@ -221,11 +224,29 @@ class RFA_Updater {
         if ( ! $markdown ) {
             return 'هنوز یادداشت تغییری ثبت نشده است.';
         }
-        $section = $markdown;
-        if ( preg_match( '/##\s*\[[^\]]+\][^\n]*\n(?P<body>.*?)(?=^##\s*\[|\z)/ms', $markdown, $matches ) ) {
-            $section = trim( $matches[0] );
-        }
+        $section = self::get_version_section( $markdown );
         return esc_html( $section );
+    }
+
+    private static function get_version_section( $markdown ) {
+        if ( ! $markdown ) {
+            return '';
+        }
+        if ( preg_match( '/##\s*\[[^\]]+\][^\n]*\n(?P<body>.*?)(?=^##\s*\[|\z)/ms', $markdown, $matches ) ) {
+            return trim( $matches[0] );
+        }
+        return trim( $markdown );
+    }
+
+    private static function extract_notice( $markdown ) {
+        $section = self::get_version_section( $markdown );
+        if ( ! $section ) {
+            return '';
+        }
+        if ( preg_match( '/-\s+(.*)/', $section, $m ) ) {
+            return wp_strip_all_tags( trim( $m[1] ) );
+        }
+        return wp_strip_all_tags( $section );
     }
 }
 RFA_Updater::init();
