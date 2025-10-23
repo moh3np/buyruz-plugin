@@ -101,7 +101,22 @@ class RFA_Settings {
                 echo '<p class="description">برای دسترسی به مخزن خصوصی و پیشنهاد نسخه‌های جدید لازم است.</p>';
             }
             if ( $expiry ) {
-                echo '<p class="description">تاریخ انقضای توکن: '. esc_html( $expiry ) .'</p>';
+                $timestamp = strtotime( $expiry );
+                if ( $timestamp ) {
+                    $now        = current_time( 'timestamp' );
+                    $difference = $timestamp - $now;
+                    if ( $difference > 0 ) {
+                        $days = (int) ceil( $difference / DAY_IN_SECONDS );
+                        echo '<p class="description">توکن تا '. esc_html( number_format_i18n( $days ) ) .' روز دیگر معتبر است.</p>';
+                    } elseif ( abs( $difference ) < DAY_IN_SECONDS ) {
+                        echo '<p class="description">توکن امروز منقضی می‌شود.</p>';
+                    } else {
+                        $days = (int) ceil( abs( $difference ) / DAY_IN_SECONDS );
+                        echo '<p class="description">توکن '. esc_html( number_format_i18n( $days ) ) .' روز پیش منقضی شده است.</p>';
+                    }
+                } else {
+                    echo '<p class="description">زمان انقضای توکن: '. esc_html( $expiry ) .'</p>';
+                }
             } else {
                 echo '<p class="description">در صورت ارائه از سوی GitHub، تاریخ انقضا پس از اولین ارتباط نمایش داده می‌شود.</p>';
             }

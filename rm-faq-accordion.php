@@ -3,7 +3,7 @@
  * Plugin Name: تنظیمات بایروز
  * Plugin URI: https://github.com/Codruz/buyruz-plugin.git
  * Description: تنظیمات بایروز، مرکز مدیریت امکانات اختصاصی افزونه شامل آکاردئون FAQ و سایر قابلیت‌های سفارشی. از اینجا می‌توانید رفتار افزونه‌های بایروز را تنظیم کنید.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: کُدروز
  * Author URI: https://codruz.ir
  * License: Proprietary
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-define( 'RFA_VERSION', '1.3.0' );
+define( 'RFA_VERSION', '1.3.1' );
 define( 'RFA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'RFA_URL', plugin_dir_url( __FILE__ ) );
 define( 'RFA_OPTION', 'rfa_options' );
