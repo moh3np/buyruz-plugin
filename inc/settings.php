@@ -2,6 +2,33 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class RFA_Settings {
+    private static function sections_meta() {
+        $sections = array(
+            'rfa_main'    => array(
+                'title'       => 'نمایش و تجربه کاربری',
+                'description' => 'کنترل کامل روی ظاهر آکاردئون و رفتار تعاملی آن. تغییرات این بخش فوراً روی صفحات دارای Rank Math FAQ اعمال می‌شوند.',
+                'footer'      => 'نکته: در صورت غیرفعال کردن استایل یا اسکریپت، ساختار FAQ بدون آکاردئون نمایش داده می‌شود تا دسترسی‌پذیری حفظ شود.',
+            ),
+            'rfa_load'    => array(
+                'title'       => 'بارگذاری هوشمند',
+                'description' => 'استراتژی فعال‌سازی افزونه را مشخص کنید تا فقط در صفحاتی که واقعاً نیاز دارند منابع بارگذاری شوند.',
+                'footer'      => 'برای بهترین کارایی، حالت خودکار پیشنهاد می‌شود مگر در شرایط خاص صفحه‌سازها که نیاز به سلکتور سفارشی دارند.',
+            ),
+            'rfa_updates' => array(
+                'title'       => 'به‌روزرسانی خودکار از گیت‌هاب',
+                'description' => 'اتصال امن به مخزن خصوصی بایروز تا نسخه‌های جدید افزونه به سرعت در پیشخوان وردپرس پیشنهاد شوند.',
+                'footer'      => 'پس از تعویض یا حذف توکن، حافظهٔ کش مربوط به نسخه و هشدارها به طور خودکار پاکسازی می‌شود.',
+            ),
+            'rfa_guidelines' => array(
+                'title'       => 'راهنمای توسعه و پاکسازی',
+                'description' => 'توصیه‌های کلیدی برای افزودن ماژول‌های آینده بدون قربانی کردن سرعت و سلامت دیتابیس.',
+                'callback'    => array( __CLASS__, 'render_guidelines_card' ),
+            ),
+        );
+
+        return apply_filters( 'rfa/settings/sections_meta', $sections );
+    }
+
     public static function get( $key = null, $default = null ) {
         $opts = get_option( RFA_OPTION, array() );
         if ( $key === null ) { return $opts; }
@@ -23,6 +50,7 @@ class RFA_Settings {
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'page' ) );
         add_action( 'admin_init', array( __CLASS__, 'register' ) );
+        add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
     }
 
     public static function register() {
@@ -124,16 +152,80 @@ class RFA_Settings {
     }
 
     public static function render() {
+        $sections = self::sections_meta();
         ?>
-        <div class="wrap" dir="rtl">
-            <h1>تنظیمات بایروز</h1>
+        <div class="rfa-admin-wrap" dir="rtl">
+            <div class="rfa-hero">
+                <h1>کانون تنظیمات بایروز</h1>
+                <p>از اینجا می‌توانید همهٔ قابلیت‌های اختصاصی بایروز را مدیریت کنید. تمرکز ما بر تجربهٔ کاربری مدرن، سرعت بالا و سادگی مدیریت است.</p>
+                <ul>
+                    <li>استفاده از بهترین الگوهای طراحی رابط و تعامل برای مدیر و کاربر.</li>
+                    <li>پایداری عملکرد با بارگذاری شرطی منابع و پاکسازی داده‌های اضافه.</li>
+                    <li>آمادگی برای افزودن ماژول‌های جدید بدون پیچیده شدن داشبورد.</li>
+                </ul>
+            </div>
+
+            <?php settings_errors( 'rfa_group' ); ?>
+
             <form method="post" action="options.php">
-                <?php
-                settings_fields( 'rfa_group' );
-                do_settings_sections( 'rfa-settings' );
-                submit_button();
-                ?>
+                <?php settings_fields( 'rfa_group' ); ?>
+
+                <div class="rfa-section-grid">
+                    <?php foreach ( $sections as $id => $meta ) : ?>
+                        <section class="rfa-card" id="<?php echo esc_attr( $id ); ?>">
+                            <div class="rfa-card__header">
+                                <h2><?php echo esc_html( $meta['title'] ); ?></h2>
+                                <?php if ( ! empty( $meta['description'] ) ) : ?>
+                                    <p><?php echo esc_html( $meta['description'] ); ?></p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="rfa-card__body">
+                                <?php
+                                if ( isset( $meta['callback'] ) && is_callable( $meta['callback'] ) ) {
+                                    call_user_func( $meta['callback'] );
+                                } else {
+                                    echo '<table class="form-table" role="presentation"><tbody>';
+                                    do_settings_fields( 'rfa-settings', $id );
+                                    echo '</tbody></table>';
+                                }
+                                ?>
+                            </div>
+
+                            <?php if ( ! empty( $meta['footer'] ) ) : ?>
+                                <div class="rfa-card__footer">
+                                    <?php echo wp_kses_post( $meta['footer'] ); ?>
+                                </div>
+                            <?php endif; ?>
+                        </section>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="rfa-save-bar">
+                    <?php submit_button( 'ذخیره تغییرات', 'primary', 'submit', false ); ?>
+                </div>
             </form>
+        </div>
+        <?php
+    }
+
+    public static function enqueue_assets( $hook ) {
+        if ( 'toplevel_page_rfa-settings' !== $hook ) {
+            return;
+        }
+        wp_enqueue_style( 'rfa-settings-admin', RFA_URL . 'assets/admin/settings.css', array(), RFA_VERSION );
+    }
+
+    private static function render_guidelines_card() {
+        ?>
+        <div class="rfa-alert">
+            <strong>اصول کلی توسعه:</strong>
+            <ul>
+                <li>هر ماژول جدید باید در صورت غیرفعال شدن، داده‌های خود را از دیتابیس یا کش پاک کند.</li>
+                <li>بارگذاری فایل‌ها باید فقط در صورت نیاز هر صفحه انجام شود؛ از هوک‌های شرطی یا دیفر استفاده کنید.</li>
+                <li>برای حفظ سرعت، اسکریپت‌ها و استایل‌های بایروز را در یک صف نگه دارید و از وابستگی‌های سنگین پرهیز کنید.</li>
+                <li>رابط کاربری باید با الگوهای طراحی وردپرس هماهنگ باشد اما حس مدرن و ساده‌ای ارائه دهد.</li>
+            </ul>
         </div>
         <?php
     }

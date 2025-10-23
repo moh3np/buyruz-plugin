@@ -1,0 +1,192 @@
+.rfa-admin-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 0 64px;
+  font-size: 15px;
+  color: #1f2933;
+}
+
+.rfa-hero {
+  background: linear-gradient(135deg, #f0f5ff 0%, #fff 60%);
+  border: 1px solid #dbe7ff;
+  border-radius: 18px;
+  padding: 28px 32px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rfa-hero h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rfa-hero p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.rfa-hero ul {
+  margin: 0;
+  padding-inline-start: 18px;
+  line-height: 1.7;
+}
+
+.rfa-section-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.rfa-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.rfa-card__header {
+  padding: 20px 24px 0;
+}
+
+.rfa-card__header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.rfa-card__header p {
+  margin: 10px 0 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.rfa-card__body {
+  padding: 18px 24px 26px;
+}
+
+.rfa-card .form-table,
+.rfa-card .form-table tbody,
+.rfa-card .form-table tr,
+.rfa-card .form-table th,
+.rfa-card .form-table td {
+  display: block;
+  width: 100%;
+  border: none;
+  padding: 0;
+}
+
+.rfa-card .form-table tr + tr {
+  margin-top: 18px;
+}
+
+.rfa-card .form-table th {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.rfa-card .form-table td {
+  margin: 0;
+}
+
+.rfa-card input[type="text"],
+.rfa-card input[type="password"],
+.rfa-card input[type="url"],
+.rfa-card select {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d0d7e2;
+  padding: 10px 12px;
+  font-size: 14px;
+  background-color: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rfa-card input[type="text"]:focus,
+.rfa-card input[type="password"]:focus,
+.rfa-card input[type="url"]:focus,
+.rfa-card select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  outline: none;
+}
+
+.rfa-card .description {
+  margin-top: 6px;
+  color: #6b7280;
+}
+
+.rfa-card label input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+.rfa-card__footer {
+  border-top: 1px solid #eef2f6;
+  background: #f8fafc;
+  padding: 16px 24px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.rfa-save-bar {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.rfa-save-bar .button-primary {
+  font-size: 15px;
+  padding: 10px 26px;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+}
+
+.rfa-alert {
+  margin-top: 16px;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 13px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.rfa-alert strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.rfa-alert ul {
+  margin: 6px 0 0;
+  padding-inline-start: 18px;
+}
+
+.rfa-alert li {
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+
+@media (max-width: 782px) {
+  .rfa-hero {
+    padding: 24px;
+  }
+
+  .rfa-card__body {
+    padding: 16px 20px 22px;
+  }
+
+  .rfa-card__header {
+    padding: 20px 20px 0;
+  }
+
+  .rfa-card__footer {
+    padding: 14px 20px;
+  }
+}
