@@ -25,7 +25,19 @@ class RFA_Updater {
         add_action( 'upgrader_process_complete', array( __CLASS__, 'clear_cache_after_upgrade' ), 10, 2 );
         add_action( 'in_plugin_update_message-' . self::plugin_basename(), array( __CLASS__, 'render_inline_update_message' ), 10, 2 );
 
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Updater hooks registered.',
+            array(
+                'force_refresh' => self::is_force_refresh(),
+            )
+        );
+
         if ( self::is_force_refresh() ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Force refresh detected; clearing cached remote metadata.'
+            );
             delete_transient( self::TRANSIENT_META );
         }
     }
@@ -41,12 +53,37 @@ class RFA_Updater {
             $transient->checked = array();
         }
 
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Injecting update data for plugin list.',
+            array(
+                'has_checked'    => ! empty( $transient->checked ),
+                'transient_keys' => array_keys( (array) $transient->checked ),
+            )
+        );
+
         $remote = self::get_remote_meta();
         if ( empty( $remote['version'] ) || empty( $remote['package'] ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Remote metadata missing version or package; skipping injection.',
+                array(
+                    'version' => $remote['version'] ?? null,
+                    'package' => $remote['package'] ?? null,
+                )
+            );
             return $transient;
         }
 
         $local_version = self::get_local_version();
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Comparing versions.',
+            array(
+                'local_version'  => $local_version,
+                'remote_version' => $remote['version'],
+            )
+        );
 
         if ( version_compare( $remote['version'], $local_version, '>' ) ) {
             $transient->response[ $plugin_file ] = (object) array(
@@ -57,11 +94,24 @@ class RFA_Updater {
                 'package'        => $remote['package'],
                 'upgrade_notice' => ! empty( $remote['notice'] ) ? $remote['notice'] : '',
             );
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Update available and injected into transient.',
+                array(
+                    'package'      => $remote['package'],
+                    'has_notice'   => ! empty( $remote['notice'] ),
+                    'download_type'=> $remote['download_type'] ?? null,
+                )
+            );
         } else {
             $transient->no_update[ $plugin_file ] = (object) array(
                 'slug'        => 'rm-faq-accordion',
                 'plugin'      => $plugin_file,
                 'new_version' => $remote['version'],
+            );
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Remote version not newer than local; marking as up-to-date.'
             );
         }
 
@@ -75,8 +125,21 @@ class RFA_Updater {
 
         $remote = self::get_remote_meta();
         if ( empty( $remote['version'] ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Plugin API request skipped due to missing remote data.'
+            );
             return $result;
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Providing plugin information payload.',
+            array(
+                'remote_version' => $remote['version'],
+                'package'        => $remote['package'] ?? null,
+            )
+        );
 
         $info = new stdClass();
         $info->name           = 'تنظیمات بایروز';
@@ -127,6 +190,17 @@ class RFA_Updater {
             $args['timeout'] = self::HTTP_TIMEOUT;
         }
 
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Applied GitHub request headers.',
+            array(
+                'host'         => $host,
+                'path'         => $path,
+                'token_applied'=> ! empty( $token ),
+                'timeout'      => $args['timeout'],
+            )
+        );
+
         return $args;
     }
 
@@ -144,8 +218,23 @@ class RFA_Updater {
         );
 
         if ( in_array( $host, $allowed, true ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Allowing GitHub host while WP_HTTP_BLOCK_EXTERNAL is active.',
+                array(
+                    'host' => $host,
+                )
+            );
             return false;
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'External host blocked by WP_HTTP_BLOCK_EXTERNAL.',
+            array(
+                'host' => $host,
+            )
+        );
 
         return $is_external;
     }
@@ -187,6 +276,15 @@ class RFA_Updater {
             $notice .= ' ' . $extra;
         }
 
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Displaying admin notice for update failure.',
+            array(
+                'screen' => $screen ? $screen->id : null,
+                'error'  => $error,
+            )
+        );
+
         echo '<div class="notice notice-error"><p>' . esc_html( $notice ) . '</p></div>';
     }
 
@@ -194,12 +292,31 @@ class RFA_Updater {
         $remote = self::get_remote_meta();
 
         if ( ! empty( $remote['error'] ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Inline update message shows error.',
+                array(
+                    'error' => $remote['error'],
+                )
+            );
             echo '<p class="update-message notice inline notice-error"><span>' . esc_html( $remote['error'] ) . '</span></p>';
             return;
         }
 
         if ( ! empty( $remote['notice'] ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Inline update message shows notice.',
+                array(
+                    'notice' => $remote['notice'],
+                )
+            );
             echo '<p class="update-message notice inline notice-info"><span>' . esc_html( $remote['notice'] ) . '</span></p>';
+        } else {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Inline update message has no additional notice.'
+            );
         }
     }
 
@@ -229,24 +346,66 @@ class RFA_Updater {
         $target_dirname = self::plugin_directory_name();
         $desired_path   = trailingslashit( $remote_source ) . $target_dirname;
 
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Preparing to normalize extracted directory name.',
+            array(
+                'source'        => $source,
+                'remote_source' => $remote_source,
+                'desired_path'  => $desired_path,
+            )
+        );
+
         if ( trailingslashit( $source ) === trailingslashit( $desired_path ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Source directory already matches desired name.'
+            );
             return $source;
         }
 
         if ( file_exists( $desired_path ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Existing directory found at desired path; removing before rename.',
+                array(
+                    'desired_path' => $desired_path,
+                )
+            );
             self::remove_dir( $desired_path );
         }
 
         if ( function_exists( 'move_dir' ) ) {
             $result = move_dir( $source, $desired_path, true );
             if ( ! is_wp_error( $result ) ) {
+                RFA_Debug::log(
+                    RFA_Debug::COMPONENT_UPDATE,
+                    'Directory normalized using move_dir helper.'
+                );
                 return $desired_path;
             }
+
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'move_dir failed; falling back to rename.',
+                array(
+                    'error' => is_wp_error( $result ) ? $result->get_error_message() : null,
+                )
+            );
         }
 
         if ( @rename( $source, $desired_path ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Directory normalized using rename().'
+            );
             return $desired_path;
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Failed to normalize directory name; returning original source.'
+        );
 
         return $source;
     }
@@ -269,22 +428,51 @@ class RFA_Updater {
         if ( in_array( $plugin_file, $targets, true ) ) {
             delete_transient( self::TRANSIENT_META );
             delete_transient( self::TRANSIENT_ERROR );
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Cleared cached metadata after successful upgrade.'
+            );
         }
     }
 
     private static function get_remote_meta() {
         if ( null !== self::$remote_meta ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Using in-memory remote metadata cache.'
+            );
             return self::$remote_meta;
         }
 
         $force_refresh = self::is_force_refresh();
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Fetching remote metadata from GitHub.',
+            array(
+                'force_refresh' => $force_refresh,
+            )
+        );
+
         if ( ! $force_refresh ) {
             $cached = get_transient( self::TRANSIENT_META );
             if ( $cached && is_array( $cached ) ) {
+                RFA_Debug::log(
+                    RFA_Debug::COMPONENT_UPDATE,
+                    'Using cached remote metadata.',
+                    array(
+                        'cached_version' => $cached['version'] ?? null,
+                        'cached_branch'  => $cached['branch'] ?? null,
+                    )
+                );
                 self::$remote_meta = $cached;
                 return $cached;
             }
         } else {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Force refresh active; cached metadata deleted.'
+            );
             delete_transient( self::TRANSIENT_META );
         }
 
@@ -303,15 +491,36 @@ class RFA_Updater {
         $repo = self::get_repo_info();
         if ( is_wp_error( $repo ) ) {
             $meta['error'] = $repo->get_error_message();
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Failed to fetch repository info.',
+                array(
+                    'error' => $meta['error'],
+                )
+            );
             return self::cache_after_fetch( $meta );
         }
 
         $branch         = self::determine_branch( $repo );
         $meta['branch'] = $branch;
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Branch selected for update checks.',
+            array(
+                'branch' => $branch,
+            )
+        );
 
         $release = self::get_latest_release();
         if ( is_wp_error( $release ) ) {
             $meta['error'] = $release->get_error_message();
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Failed to load latest release information.',
+                array(
+                    'error' => $meta['error'],
+                )
+            );
         } elseif ( $release ) {
             $release_version = self::normalize_version( $release['tag_name'] ?? '' );
             if ( $release_version ) {
@@ -321,12 +530,27 @@ class RFA_Updater {
                 $meta['download_type']   = 'release';
                 $meta['changelog']       = isset( $release['body'] ) ? $release['body'] : '';
                 $meta['notice']          = self::extract_notice( $meta['changelog'] );
+                RFA_Debug::log(
+                    RFA_Debug::COMPONENT_UPDATE,
+                    'Latest release discovered.',
+                    array(
+                        'release_version' => $release_version,
+                        'zipball_url'     => $meta['package'],
+                    )
+                );
             }
         }
 
         $plugin_contents = self::get_file_from_branch( self::PLUGIN_FILE, $branch );
         if ( is_wp_error( $plugin_contents ) ) {
             $meta['error'] = $plugin_contents->get_error_message();
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Failed to retrieve plugin file from branch.',
+                array(
+                    'error' => $meta['error'],
+                )
+            );
             return self::cache_after_fetch( $meta );
         }
 
@@ -337,24 +561,58 @@ class RFA_Updater {
                 $meta['version']       = $file_version;
                 $meta['package']       = self::build_branch_package_url( $branch );
                 $meta['download_type'] = 'branch';
+                RFA_Debug::log(
+                    RFA_Debug::COMPONENT_UPDATE,
+                    'Branch version supersedes release or release missing.',
+                    array(
+                        'file_version' => $file_version,
+                        'package'      => $meta['package'],
+                    )
+                );
             }
+        } else {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Version header not found in branch plugin file.'
+            );
         }
 
         if ( empty( $meta['changelog'] ) ) {
             $changelog_contents = self::get_file_from_branch( 'CHANGELOG.md', $branch, true );
             if ( is_wp_error( $changelog_contents ) ) {
                 $meta['error'] = $changelog_contents->get_error_message();
+                RFA_Debug::log(
+                    RFA_Debug::COMPONENT_UPDATE,
+                    'Failed to retrieve CHANGELOG from branch.',
+                    array(
+                        'error' => $meta['error'],
+                    )
+                );
             } elseif ( $changelog_contents ) {
                 $meta['changelog'] = $changelog_contents;
                 if ( empty( $meta['notice'] ) ) {
                     $meta['notice'] = self::extract_notice( $meta['changelog'] );
                 }
+                RFA_Debug::log(
+                    RFA_Debug::COMPONENT_UPDATE,
+                    'CHANGELOG content loaded from branch.',
+                    array(
+                        'notice_excerpt' => $meta['notice'],
+                    )
+                );
             }
         }
 
         if ( empty( $meta['package'] ) && ! empty( $meta['version'] ) ) {
             $meta['package']       = self::build_branch_package_url( $branch );
             $meta['download_type'] = 'branch';
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Package URL defaulted to branch zip.',
+                array(
+                    'package' => $meta['package'],
+                )
+            );
         }
 
         if ( empty( $meta['error'] ) ) {
@@ -368,6 +626,19 @@ class RFA_Updater {
         self::$remote_meta = $meta;
         $context = empty( $meta['error'] ) ? 'success' : 'error';
         $ttl     = self::cache_ttl( $context );
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Remote metadata resolution completed.',
+            array(
+                'version'       => $meta['version'],
+                'branch'        => $meta['branch'],
+                'download_type' => $meta['download_type'],
+                'package'       => $meta['package'],
+                'error'         => $meta['error'],
+                'cache_ttl'     => $ttl,
+            )
+        );
 
         if ( $ttl > 0 ) {
             set_transient( self::TRANSIENT_META, $meta, $ttl );
@@ -398,7 +669,20 @@ class RFA_Updater {
             }
         }
 
-        return apply_filters( 'rfa_update_branch', $branch, $repo );
+        $filtered = apply_filters( 'rfa_update_branch', $branch, $repo );
+
+        if ( $filtered !== $branch ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Branch overridden via rfa_update_branch filter.',
+                array(
+                    'original_branch' => $branch,
+                    'filtered_branch' => $filtered,
+                )
+            );
+        }
+
+        return $filtered;
     }
 
     private static function get_repo_info() {
@@ -408,13 +692,33 @@ class RFA_Updater {
         }
 
         if ( ! $response ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Repository request returned empty response.'
+            );
             return new WP_Error( 'rfa_empty_repo', 'پاسخ نامعتبر از GitHub هنگام خواندن اطلاعات مخزن.' );
         }
 
         $body = json_decode( wp_remote_retrieve_body( $response ), true );
         if ( ! is_array( $body ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Repository response body could not be decoded.',
+                array(
+                    'body' => wp_remote_retrieve_body( $response ),
+                )
+            );
             return new WP_Error( 'rfa_invalid_repo_json', 'ساختار JSON اطلاعات مخزن غیرمنتظره است.' );
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Repository information loaded.',
+            array(
+                'default_branch' => $body['default_branch'] ?? null,
+                'private'        => $body['private'] ?? null,
+            )
+        );
 
         return $body;
     }
@@ -431,13 +735,34 @@ class RFA_Updater {
         }
 
         if ( null === $response ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'No releases found (404 from latest release endpoint).'
+            );
             return null;
         }
 
         $body = json_decode( wp_remote_retrieve_body( $response ), true );
         if ( ! is_array( $body ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Latest release response body could not be decoded.',
+                array(
+                    'body' => wp_remote_retrieve_body( $response ),
+                )
+            );
             return new WP_Error( 'rfa_invalid_release_json', 'پاسخ JSON مربوط به آخرین ریلیز نامعتبر است.' );
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Latest release payload received.',
+            array(
+                'tag_name' => $body['tag_name'] ?? null,
+                'draft'    => $body['draft'] ?? null,
+                'prerelease' => $body['prerelease'] ?? null,
+            )
+        );
 
         return $body;
     }
@@ -453,22 +778,66 @@ class RFA_Updater {
 
         $response = self::api_get( $endpoint, array(), $allow_missing ? array( 'allow_status' => array( 404 ) ) : array() );
         if ( is_wp_error( $response ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Failed to fetch file from branch.',
+                array(
+                    'file'    => $file,
+                    'branch'  => $branch,
+                    'error'   => $response->get_error_message(),
+                    'missing' => $allow_missing,
+                )
+            );
             return $response;
         }
 
         if ( null === $response ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'File missing on branch (allowed).',
+                array(
+                    'file'   => $file,
+                    'branch' => $branch,
+                )
+            );
             return '';
         }
 
         $body = json_decode( wp_remote_retrieve_body( $response ), true );
         if ( empty( $body['content'] ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'File content empty or malformed.',
+                array(
+                    'file'   => $file,
+                    'branch' => $branch,
+                )
+            );
             return new WP_Error( 'rfa_empty_content', 'محتوای فایل در GitHub خالی یا غیرقابل پردازش است.' );
         }
 
         $decoded = base64_decode( $body['content'], true );
         if ( false === $decoded ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Failed to decode base64 content from GitHub.',
+                array(
+                    'file'   => $file,
+                    'branch' => $branch,
+                )
+            );
             return new WP_Error( 'rfa_decode_failed', 'امکان تبدیل محتوای base64 فایل در GitHub وجود ندارد.' );
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'File retrieved from branch.',
+            array(
+                'file'        => $file,
+                'branch'      => $branch,
+                'content_size'=> strlen( $decoded ),
+            )
+        );
 
         return $decoded;
     }
@@ -503,6 +872,17 @@ class RFA_Updater {
     private static function api_get( $endpoint, $args = array(), $options = array() ) {
         $endpoint = ltrim( $endpoint, '/' );
         $url      = 'https://api.github.com/' . $endpoint;
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Issuing API GET request.',
+            array(
+                'url'     => $url,
+                'args'    => $args,
+                'options' => $options,
+            )
+        );
+
         return self::remote_get( $url, $args, $options );
     }
 
@@ -516,12 +896,32 @@ class RFA_Updater {
 
         $response = wp_remote_get( $url, $args );
         if ( is_wp_error( $response ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'HTTP request failed.',
+                array(
+                    'url'   => $url,
+                    'args'  => $args,
+                    'error' => $response->get_error_message(),
+                )
+            );
             self::record_error_from_wp_error( $response );
             return $response;
         }
 
         $code    = (int) wp_remote_retrieve_response_code( $response );
         $allowed = isset( $options['allow_status'] ) ? (array) $options['allow_status'] : array();
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'HTTP response received.',
+            array(
+                'url'             => $url,
+                'status'          => $code,
+                'allowed_statuses'=> $allowed,
+                'headers'         => wp_remote_retrieve_headers( $response ),
+            )
+        );
 
         if ( $code >= 400 && ! in_array( $code, $allowed, true ) ) {
             $error = self::error_from_response( $response, $code );
@@ -535,6 +935,14 @@ class RFA_Updater {
         }
 
         if ( $code >= 400 ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Allowed HTTP status encountered; returning null response.',
+                array(
+                    'url'    => $url,
+                    'status' => $code,
+                )
+            );
             return null;
         }
 
@@ -554,6 +962,16 @@ class RFA_Updater {
         if ( in_array( $status, array( 403, 429 ), true ) ) {
             $data['rate_limit'] = self::mentions_rate_limit( $body );
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'HTTP error parsed from response.',
+            array(
+                'status'  => $status,
+                'message' => $message,
+                'data'    => $data,
+            )
+        );
 
         return new WP_Error( 'rfa_http_' . $status, $message, $data );
     }
@@ -621,6 +1039,12 @@ class RFA_Updater {
         }
 
         set_transient( self::TRANSIENT_ERROR, $payload, MINUTE_IN_SECONDS * 10 );
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Recorded WP_Error for updater process.',
+            $payload
+        );
     }
 
     private static function record_error_from_message( $message ) {
@@ -638,6 +1062,14 @@ class RFA_Updater {
                 MINUTE_IN_SECONDS * 10
             );
         }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Recorded message-based error for updater.',
+            array(
+                'message' => $message,
+            )
+        );
     }
 
     private static function clear_error() {

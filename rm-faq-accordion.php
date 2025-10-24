@@ -3,7 +3,7 @@
  * Plugin Name: تنظیمات بایروز
  * Plugin URI: https://github.com/Codruz/buyruz-plugin.git
  * Description: تنظیمات بایروز، مرکز مدیریت امکانات اختصاصی افزونه شامل آکاردئون FAQ و سایر قابلیت‌های سفارشی. از اینجا می‌توانید رفتار افزونه‌های بایروز را تنظیم کنید.
- * Version: 1.3.10
+ * Version: 1.3.11
  * Author: کُدروز
  * Author URI: https://codruz.ir
  * License: Proprietary
@@ -22,12 +22,16 @@ define( 'RFA_VERSION', isset( $plugin_header['Version'] ) ? $plugin_header['Vers
 define( 'RFA_PATH', plugin_dir_path( __FILE__ ) );
 define( 'RFA_URL', plugin_dir_url( __FILE__ ) );
 define( 'RFA_OPTION', 'rfa_options' );
+define( 'RFA_LOG_DIR', trailingslashit( RFA_PATH ) . 'logs/' );
 
+require_once RFA_PATH . 'inc/debug.php';
 require_once RFA_PATH . 'inc/settings.php';
 require_once RFA_PATH . 'inc/detector.php';
 require_once RFA_PATH . 'inc/enqueue.php';
 require_once RFA_PATH . 'inc/updater.php';
 require_once RFA_PATH . 'inc/integration-rankmath.php';
+
+RFA_Debug::init();
 
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), function( $links ) {
     $links['settings'] = '<a href="' . esc_url( admin_url( 'admin.php?page=rfa-settings' ) ) . '">تنظیمات</a>';

@@ -19,6 +19,11 @@ class RFA_Settings {
                 'description' => 'اتصال پایدار به GitHub با امکان انتخاب شاخه و استفادهٔ اختیاری از توکن برای جلوگیری از محدودیت نرخ یا دسترسی به مخزن خصوصی.',
                 'footer'      => 'در صورت تغییر شاخه یا توکن، کش به‌روزرسانی و هشدارها پاک می‌شوند تا بررسی تازه انجام شود.',
             ),
+            'rfa_debug'   => array(
+                'title'       => 'دیباگ و لاگ‌ها',
+                'description' => 'کنترل کامل روی سطح لاگ‌گیری افزونه برای عیب‌یابی نسخه‌های آینده و ردیابی خطاهای احتمالی.',
+                'footer'      => 'پوشهٔ لاگ در مسیر افزونه نگه‌داری می‌شود. برای جلوگیری از پر شدن دیسک، مدت نگهداری با مقدار پیش‌فرض ۷ روز محدود شده است.',
+            ),
             'rfa_guidelines' => array(
                 'title'       => 'راهنمای توسعه و پاکسازی',
                 'description' => 'توصیه‌های کلیدی برای افزودن ماژول‌های آینده بدون قربانی کردن سرعت و سلامت دیتابیس.',
@@ -157,6 +162,30 @@ class RFA_Settings {
         }, 'rfa-settings', 'rfa_updates' );
 
         add_settings_field( 'github_guidance', 'راهنمای اتصال', array( __CLASS__, 'render_updates_guidance_field' ), 'rfa-settings', 'rfa_updates' );
+
+        add_settings_section( 'rfa_debug', 'دیباگ و لاگ‌ها', '__return_false', 'rfa-settings' );
+
+        add_settings_field( 'debug_enabled', 'فعال‌سازی دیباگ', function(){
+            $enabled = (bool) self::get( 'debug_enabled', 0 );
+            echo '<label><input type="checkbox" name="'.RFA_OPTION.'[debug_enabled]" value="1" '.checked( true, $enabled, false ).'> هنگام فعال بودن، لاگ‌گیری بر اساس انتخاب‌های زیر انجام می‌شود.</label>';
+        }, 'rfa-settings', 'rfa_debug' );
+
+        add_settings_field( 'debug_components', 'بخش‌های قابل لاگ', array( __CLASS__, 'render_debug_components_field' ), 'rfa-settings', 'rfa_debug' );
+
+        add_settings_field( 'debug_mask_sensitive', 'ماسک داده‌های حساس', function(){
+            $mask = (bool) self::get( 'debug_mask_sensitive', 1 );
+            echo '<label><input type="checkbox" name="'.RFA_OPTION.'[debug_mask_sensitive]" value="1" '.checked( true, $mask, false ).'> مقادیر شامل توکن، Authorization و رشته‌های محرمانه در لاگ‌ها با [masked] جایگزین شوند.</label>';
+            echo '<p class="description">در صورت نیاز به لاگ کامل برای محیط‌های آزمایشی می‌توانید این گزینه را غیرفعال کنید، اما نسبت به امنیت فایل دقت کنید.</p>';
+        }, 'rfa-settings', 'rfa_debug' );
+
+        add_settings_field( 'debug_retention_days', 'مدت نگهداری لاگ', function(){
+            $days = (int) self::get( 'debug_retention_days', 7 );
+            if ( $days < 1 ) { $days = 1; }
+            echo '<input type="number" class="small-text" name="'.RFA_OPTION.'[debug_retention_days]" value="'.esc_attr( $days ).'" min="1" max="30" />';
+            echo '<p class="description">به‌صورت پیش‌فرض لاگ‌ها هر ۷ روز پاکسازی می‌شوند. می‌توانید بین ۱ تا ۳۰ روز تنظیم کنید.</p>';
+        }, 'rfa-settings', 'rfa_debug' );
+
+        add_settings_field( 'debug_log_path', 'محل ذخیره لاگ', array( __CLASS__, 'render_debug_log_path_field' ), 'rfa-settings', 'rfa_debug' );
     }
 
     public static function render_updates_guidance_field() {
@@ -172,6 +201,56 @@ class RFA_Settings {
         echo '<li>توکن اختیاری است؛ برای ریپوی عمومی سطح <code>public_repo</code> کافی است و برای ریپوی خصوصی سطح <code>repo</code> را انتخاب کنید.</li>';
         echo '<li>شاخهٔ تعیین‌شده در این صفحه روی همهٔ درخواست‌ها (متادیتا و بستهٔ ZIP) اعمال می‌شود؛ در صورت خالی بودن شاخهٔ پیش‌فرض GitHub استفاده می‌شود.</li>';
         echo '<li>اگر <code>WP_HTTP_BLOCK_EXTERNAL</code> فعال باشد، دامنه‌های '. esc_html( implode( ', ', $hosts ) ) .' باید در <code>WP_ACCESSIBLE_HOSTS</code> قرار بگیرند.</li>';
+        echo '</ul>';
+    }
+
+    public static function render_debug_components_field() {
+        $selected = (array) self::get( 'debug_components', array() );
+        $components = RFA_Debug::available_components();
+
+        if ( empty( $components ) ) {
+            echo '<p class="description">در حال حاضر هیچ بخشی برای لاگ‌گیری تعریف نشده است.</p>';
+            return;
+        }
+
+        foreach ( $components as $key => $meta ) {
+            $checked = in_array( $key, $selected, true );
+            echo '<label style="display:block;margin-bottom:4px;">';
+            echo '<input type="checkbox" name="'.RFA_OPTION.'[debug_components][]" value="'.esc_attr( $key ).'" '.checked( true, $checked, false ).'> ';
+            echo '<strong>'.esc_html( $meta['label'] ).'</strong>';
+            if ( ! empty( $meta['description'] ) ) {
+                echo '<span class="description" style="margin-right:6px;">'.esc_html( $meta['description'] ).'</span>';
+            }
+            echo '</label>';
+        }
+
+        echo '<p class="description">برای ثبت رخدادهای بروزرسانی، تیک «فرآیند به‌روزرسانی افزونه» را فعال کنید.</p>';
+    }
+
+    public static function render_debug_log_path_field() {
+        $dir = RFA_Debug::get_log_directory();
+        echo '<p><code style="direction:ltr;display:inline-block;">'.esc_html( $dir ).'</code></p>';
+
+        if ( ! file_exists( $dir ) ) {
+            echo '<p class="description">پوشه به صورت خودکار هنگام اولین ثبت لاگ ساخته می‌شود. اطمینان حاصل کنید دسترسی نوشتن روی پوشهٔ افزونه وجود داشته باشد.</p>';
+            return;
+        }
+
+        $files = glob( trailingslashit( $dir ) . 'rfa-*.log' );
+        if ( empty( $files ) ) {
+            echo '<p class="description">هنوز هیچ لاگی ایجاد نشده است.</p>';
+            return;
+        }
+
+        sort( $files );
+        $recent = array_slice( $files, -5 );
+
+        echo '<p class="description">نمونه فایل‌های اخیر:</p>';
+        echo '<ul style="margin:0 0 0 1.5em; list-style: disc;">';
+        foreach ( $recent as $file ) {
+            $basename = basename( $file );
+            echo '<li><code>'.esc_html( $basename ).'</code></li>';
+        }
         echo '</ul>';
     }
 
@@ -279,6 +358,38 @@ class RFA_Settings {
         }
 
         unset( $input['github_token'], $input['github_token_existing'], $input['github_token_clear'] );
+
+        $allowed_debug_components = array_keys( RFA_Debug::available_components() );
+
+        $output['debug_enabled'] = isset( $input['debug_enabled'] ) ? 1 : 0;
+        unset( $input['debug_enabled'] );
+
+        if ( isset( $input['debug_components'] ) ) {
+            $components = array_map( 'sanitize_text_field', (array) $input['debug_components'] );
+            $components = array_values( array_intersect( $components, $allowed_debug_components ) );
+        } else {
+            $components = array();
+        }
+        $output['debug_components'] = $components;
+        unset( $input['debug_components'] );
+
+        $output['debug_mask_sensitive'] = isset( $input['debug_mask_sensitive'] ) ? 1 : 0;
+        unset( $input['debug_mask_sensitive'] );
+
+        if ( isset( $input['debug_retention_days'] ) ) {
+            $days = (int) $input['debug_retention_days'];
+            if ( $days < 1 ) {
+                $days = 1;
+            } elseif ( $days > 30 ) {
+                $days = 30;
+            }
+            $output['debug_retention_days'] = $days;
+            unset( $input['debug_retention_days'] );
+        } elseif ( isset( $existing['debug_retention_days'] ) ) {
+            $output['debug_retention_days'] = (int) $existing['debug_retention_days'];
+        } else {
+            $output['debug_retention_days'] = 7;
+        }
 
         foreach ( $input as $key => $value ) {
             if ( is_string( $value ) ) {
