@@ -16,8 +16,8 @@ class RFA_Settings {
             ),
             'rfa_updates' => array(
                 'title'       => 'به‌روزرسانی خودکار از گیت‌هاب',
-                'description' => 'اتصال امن به مخزن خصوصی بایروز تا نسخه‌های جدید افزونه به سرعت در پیشخوان وردپرس پیشنهاد شوند.',
-                'footer'      => 'پس از تعویض یا حذف توکن، حافظهٔ کش مربوط به نسخه و هشدارها به طور خودکار پاکسازی می‌شود.',
+                'description' => 'اتصال پایدار به GitHub با امکان انتخاب شاخه و استفادهٔ اختیاری از توکن برای جلوگیری از محدودیت نرخ یا دسترسی به مخزن خصوصی.',
+                'footer'      => 'در صورت تغییر شاخه یا توکن، کش به‌روزرسانی و هشدارها پاک می‌شوند تا بررسی تازه انجام شود.',
             ),
             'rfa_guidelines' => array(
                 'title'       => 'راهنمای توسعه و پاکسازی',
@@ -126,7 +126,7 @@ class RFA_Settings {
                 echo '<input type="hidden" name="'.RFA_OPTION.'[github_token_existing]" value="1" />';
                 echo '<label><input type="checkbox" name="'.RFA_OPTION.'[github_token_clear]" value="1"> حذف توکن ذخیره‌شده</label>';
             } else {
-                echo '<p class="description">برای دسترسی به مخزن خصوصی و پیشنهاد نسخه‌های جدید لازم است.</p>';
+                echo '<p class="description">در صورت خالی بودن، درخواست‌های عمومی بدون توکن انجام می‌شود. برای مخزن خصوصی یا جلوگیری از محدودیت نرخ، توکن با سطح <code>public_repo</code> (یا <code>repo</code> برای خصوصی) را ثبت کنید.</p>';
             }
             if ( $expiry ) {
                 $timestamp = strtotime( $expiry );
@@ -149,6 +149,30 @@ class RFA_Settings {
                 echo '<p class="description">در صورت ارائه از سوی GitHub، تاریخ انقضا پس از اولین ارتباط نمایش داده می‌شود.</p>';
             }
         }, 'rfa-settings', 'rfa_updates' );
+
+        add_settings_field( 'github_branch', 'شاخهٔ به‌روزرسانی', function(){
+            $branch = self::get( 'github_branch', '' );
+            echo '<input type="text" class="regular-text" name="'.RFA_OPTION.'[github_branch]" value="'.esc_attr( $branch ).'" placeholder="main" style="direction:ltr" />';
+            echo '<p class="description">اگر خالی بماند، شاخهٔ پیش‌فرض مخزن در GitHub استفاده می‌شود. این مقدار با فیلتر <code>rfa_update_branch</code> نیز قابل تغییر است.</p>';
+        }, 'rfa-settings', 'rfa_updates' );
+
+        add_settings_field( 'github_guidance', 'راهنمای اتصال', array( __CLASS__, 'render_updates_guidance_field' ), 'rfa-settings', 'rfa_updates' );
+    }
+
+    public static function render_updates_guidance_field() {
+        $hosts = array(
+            'api.github.com',
+            'github.com',
+            'codeload.github.com',
+            'raw.githubusercontent.com',
+        );
+
+        echo '<p class="description">پیش از فعال‌سازی خودکار، نکات زیر را بررسی کنید:</p>';
+        echo '<ul style="margin:0 0 0 1.5em; list-style: disc;">';
+        echo '<li>توکن اختیاری است؛ برای ریپوی عمومی سطح <code>public_repo</code> کافی است و برای ریپوی خصوصی سطح <code>repo</code> را انتخاب کنید.</li>';
+        echo '<li>شاخهٔ تعیین‌شده در این صفحه روی همهٔ درخواست‌ها (متادیتا و بستهٔ ZIP) اعمال می‌شود؛ در صورت خالی بودن شاخهٔ پیش‌فرض GitHub استفاده می‌شود.</li>';
+        echo '<li>اگر <code>WP_HTTP_BLOCK_EXTERNAL</code> فعال باشد، دامنه‌های '. esc_html( implode( ', ', $hosts ) ) .' باید در <code>WP_ACCESSIBLE_HOSTS</code> قرار بگیرند.</li>';
+        echo '</ul>';
     }
 
     public static function render() {
@@ -265,7 +289,7 @@ class RFA_Settings {
         }
 
         delete_transient( 'rfa_remote_meta' );
-        delete_transient( 'rfa_token_error' );
+        delete_transient( 'rfa_update_error' );
         if ( ! isset( $output['github_token'] ) && ! $existing_token_preserved ) {
             delete_transient( 'rfa_token_expiry' );
         }
