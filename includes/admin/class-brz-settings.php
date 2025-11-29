@@ -74,6 +74,7 @@ class BRZ_Settings {
         add_action( 'admin_init', array( __CLASS__, 'register' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
         add_action( 'admin_post_brz_toggle_module', array( __CLASS__, 'handle_toggle_module' ) );
+        add_action( 'wp_ajax_brz_toggle_module', array( __CLASS__, 'handle_toggle_module_ajax' ) );
     }
 
     public static function register() {
@@ -232,6 +233,7 @@ class BRZ_Settings {
     private static function render_shell( $active_slug, callable $content_cb ) {
         ?>
         <div class="brz-admin-wrap" dir="rtl">
+            <div id="brz-snackbar" class="brz-snackbar" aria-live="polite"></div>
             <?php self::render_hero(); ?>
             <?php self::render_top_nav( $active_slug ); ?>
 
@@ -321,27 +323,23 @@ class BRZ_Settings {
             <div class="brz-module-grid">
                 <?php foreach ( $modules as $slug => $meta ) : ?>
                     <?php $enabled = ! empty( $states[ $slug ] ); ?>
-                    <div class="brz-module-card <?php echo $enabled ? 'is-active' : 'is-inactive'; ?>">
-                        <div class="brz-module-card__header">
-                            <div>
-                                <p class="brz-module-card__eyebrow">ماژول</p>
-                                <h3><?php echo esc_html( $meta['label'] ); ?></h3>
-                                <?php if ( ! empty( $meta['description'] ) ) : ?>
-                                    <p class="brz-module-card__desc"><?php echo esc_html( $meta['description'] ); ?></p>
-                                <?php endif; ?>
-                            </div>
-                            <span class="brz-status <?php echo $enabled ? 'is-on' : 'is-off'; ?>"><?php echo $enabled ? 'فعال' : 'غیرفعال'; ?></span>
-                        </div>
-                        <div class="brz-module-card__body">
-                            <?php
-                            if ( 'faq_rankmath' === $slug && ! class_exists( '\RankMath\Schema\DB' ) ) {
-                                echo '<p class="brz-warning">برای استفاده، افزونه Rank Math باید فعال باشد.</p>';
-                            }
-                            ?>
-                        </div>
+                    <?php $icon = self::module_icon_letter( $meta ); ?>
+                    <div class="brz-module-card <?php echo $enabled ? 'is-active' : 'is-inactive'; ?>" data-module="<?php echo esc_attr( $slug ); ?>">
+                        <div class="brz-module-card__badge">ماژول</div>
+                        <div class="brz-module-card__icon" aria-hidden="true"><?php echo esc_html( $icon ); ?></div>
+                        <h3 class="brz-module-card__title"><?php echo esc_html( $meta['label'] ); ?></h3>
+                        <?php if ( ! empty( $meta['description'] ) ) : ?>
+                            <p class="brz-module-card__desc"><?php echo esc_html( $meta['description'] ); ?></p>
+                        <?php endif; ?>
+                        <?php
+                        if ( 'faq_rankmath' === $slug && ! class_exists( '\RankMath\Schema\DB' ) ) {
+                            echo '<p class="brz-warning">برای استفاده، افزونه Rank Math باید فعال باشد.</p>';
+                        }
+                        ?>
                         <div class="brz-module-card__footer">
                             <div class="brz-toggle-wrap">
-                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form">
+                                <span class="brz-toggle-label"><?php echo $enabled ? 'روشن' : 'خاموش'; ?></span>
+                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form" data-module="<?php echo esc_attr( $slug ); ?>" data-label="<?php echo esc_attr( $meta['label'] ); ?>">
                                     <?php wp_nonce_field( 'brz_toggle_module_' . $slug ); ?>
                                     <input type="hidden" name="action" value="brz_toggle_module" />
                                     <input type="hidden" name="module" value="<?php echo esc_attr( $slug ); ?>" />
@@ -351,9 +349,8 @@ class BRZ_Settings {
                                         <span class="screen-reader-text"><?php echo $enabled ? 'غیرفعال کردن ماژول' : 'فعال کردن ماژول'; ?></span>
                                     </button>
                                 </form>
-                                <span class="brz-toggle-label"><?php echo $enabled ? 'روشن' : 'خاموش'; ?></span>
                             </div>
-                            <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-' . $slug ) ); ?>">رفتن به تنظیمات</a>
+                            <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-' . $slug ) ); ?>">تنظیمات</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -562,6 +559,16 @@ class BRZ_Settings {
         echo '</ul>';
     }
 
+    private static function module_icon_letter( $meta ) {
+        $label = isset( $meta['label'] ) ? $meta['label'] : '';
+        if ( function_exists( 'mb_substr' ) ) {
+            $char = mb_substr( $label, 0, 1, 'UTF-8' );
+        } else {
+            $char = substr( $label, 0, 1 );
+        }
+        return $char ? $char : '•';
+    }
+
     private static function render_guidelines_card() {
         ?>
         <div class="brz-card">
@@ -585,6 +592,19 @@ class BRZ_Settings {
             return;
         }
         wp_enqueue_style( 'brz-settings-admin', BRZ_URL . 'assets/admin/settings.css', array(), BRZ_VERSION );
+        wp_enqueue_script( 'brz-settings-admin', BRZ_URL . 'assets/admin/settings.js', array(), BRZ_VERSION, true );
+        wp_localize_script(
+            'brz-settings-admin',
+            'brzSettings',
+            array(
+                'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+                'successOn'    => 'ماژول فعال شد',
+                'successOff'   => 'ماژول غیرفعال شد',
+                'failText'     => 'تغییر وضعیت انجام نشد. دوباره تلاش کنید.',
+                'nonceField'   => '_wpnonce',
+                'screenReader' => 'تغییر وضعیت ماژول',
+            )
+        );
     }
 
     public static function handle_toggle_module() {
@@ -607,10 +627,50 @@ class BRZ_Settings {
 
         check_admin_referer( 'brz_toggle_module_' . $slug );
 
-        $registry = BRZ_Modules::registry();
-        if ( empty( $registry[ $slug ] ) ) {
+        $result = self::toggle_module_state( $slug, $state );
+        if ( is_wp_error( $result ) ) {
             wp_safe_redirect( add_query_arg( array( 'page' => self::PARENT_SLUG, 'brz-msg' => 'module-error', 'module' => $slug ), $redirect ) );
             exit;
+        }
+
+        $msg = $state ? 'module-on' : 'module-off';
+        wp_safe_redirect( add_query_arg( array( 'page' => self::PARENT_SLUG, 'brz-msg' => $msg, 'module' => $slug ), $redirect ) );
+        exit;
+    }
+
+    public static function handle_toggle_module_ajax() {
+        if ( ! current_user_can( self::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'دسترسی غیرمجاز' ), 403 );
+        }
+
+        $slug  = isset( $_POST['module'] ) ? sanitize_key( wp_unslash( $_POST['module'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $state = isset( $_POST['state'] ) ? (int) wp_unslash( $_POST['state'] ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+        if ( empty( $slug ) || null === $state ) {
+            wp_send_json_error( array( 'message' => 'دادهٔ نامعتبر' ), 400 );
+        }
+
+        check_ajax_referer( 'brz_toggle_module_' . $slug );
+
+        $result = self::toggle_module_state( $slug, $state );
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( array( 'message' => $result->get_error_message() ), 400 );
+        }
+
+        wp_send_json_success(
+            array(
+                'state'  => $result['state'],
+                'label'  => $result['label'],
+                'text'   => $result['state'] ? 'فعال' : 'غیرفعال',
+                'status' => $result['state'] ? 'on' : 'off',
+            )
+        );
+    }
+
+    private static function toggle_module_state( $slug, $state ) {
+        $registry = BRZ_Modules::registry();
+        if ( empty( $registry[ $slug ] ) ) {
+            return new WP_Error( 'brz_invalid_module', 'ماژول معتبر نیست' );
         }
 
         $states = BRZ_Modules::get_states();
@@ -624,9 +684,12 @@ class BRZ_Settings {
         $current['modules'] = $states;
         update_option( BRZ_OPTION, $current, false );
 
-        $msg = $state ? 'module-on' : 'module-off';
-        wp_safe_redirect( add_query_arg( array( 'page' => self::PARENT_SLUG, 'brz-msg' => $msg, 'module' => $slug ), $redirect ) );
-        exit;
+        $label = isset( $registry[ $slug ]['label'] ) ? $registry[ $slug ]['label'] : $slug;
+
+        return array(
+            'state' => $states[ $slug ],
+            'label' => $label,
+        );
     }
 
     public static function sanitize( $input ) {
