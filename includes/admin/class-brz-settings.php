@@ -233,26 +233,10 @@ class BRZ_Settings {
         ?>
         <div class="brz-admin-wrap" dir="rtl">
             <?php self::render_hero(); ?>
+            <?php self::render_top_nav( $active_slug ); ?>
 
-            <div class="brz-layout">
-                <aside class="brz-nav">
-                    <div class="brz-nav__title">تنظیمات بایروز</div>
-                    <div class="brz-nav__items">
-                        <?php foreach ( self::nav_items() as $item ) : ?>
-                            <?php $is_active = ( $item['slug'] === $active_slug ); ?>
-                            <a class="brz-nav__item <?php echo $is_active ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $item['slug'] ) ); ?>">
-                                <span><?php echo esc_html( $item['label'] ); ?></span>
-                                <?php if ( isset( $item['module'] ) ) : ?>
-                                    <small>ماژول</small>
-                                <?php endif; ?>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </aside>
-
-                <div class="brz-content">
-                    <?php call_user_func( $content_cb ); ?>
-                </div>
+            <div class="brz-content">
+                <?php call_user_func( $content_cb ); ?>
             </div>
         </div>
         <?php
@@ -261,12 +245,35 @@ class BRZ_Settings {
     private static function render_hero() {
         ?>
         <div class="brz-hero">
-            <span class="brz-hero__glow brz-hero__glow--left"></span>
-            <span class="brz-hero__glow brz-hero__glow--right"></span>
             <div class="brz-hero__content">
-                <span class="brz-hero__pill">Buyruz Dashboard</span>
-                <h1>تنظیمات بایروز</h1>
-                <span class="brz-hero__version">نسخه <?php echo esc_html( BRZ_VERSION ); ?></span>
+                <div class="brz-hero__eyebrow">تنظیمات بایروز</div>
+                <div class="brz-hero__title-row">
+                    <h1>پنل ماژول‌ها و تنظیمات</h1>
+                    <span class="brz-hero__version">نسخه <?php echo esc_html( BRZ_VERSION ); ?></span>
+                </div>
+                <p class="brz-hero__desc">چیدمان الهام‌گرفته از Rank Math برای مدیریت ماژول‌ها، بارگذاری هوشمند و کنترل تجربهٔ کاربری.</p>
+            </div>
+        </div>
+        <?php
+    }
+
+    private static function render_top_nav( $active_slug ) {
+        ?>
+        <div class="brz-top-nav">
+            <div class="brz-top-nav__intro">
+                <span class="brz-chip">ماژول‌ها و تنظیمات</span>
+                <strong>Buyruz Suite</strong>
+            </div>
+            <div class="brz-top-nav__items">
+                <?php foreach ( self::nav_items() as $item ) : ?>
+                    <?php $is_active = ( $item['slug'] === $active_slug ); ?>
+                    <a class="brz-top-nav__item <?php echo $is_active ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $item['slug'] ) ); ?>">
+                        <span><?php echo esc_html( $item['label'] ); ?></span>
+                        <?php if ( isset( $item['module'] ) ) : ?>
+                            <small>ماژول</small>
+                        <?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
             </div>
         </div>
         <?php
@@ -301,12 +308,13 @@ class BRZ_Settings {
         self::render_shell( self::PARENT_SLUG, function() use ( $modules, $states ) {
             self::render_notices();
             ?>
-            <div class="brz-section-header">
+            <div class="brz-section-header brz-section-header--modules">
                 <div>
                     <h2>پیشخوان ماژول‌ها</h2>
+                    <p>طراحی سبک Rank Math: همهٔ ماژول‌ها در یک شبکهٔ منظم با سوئیچ‌های واضح.</p>
                 </div>
                 <div class="brz-section-actions">
-                    <a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>">رفتن به تنظیمات عمومی</a>
+                    <a class="brz-button brz-button--ghost" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>">تنظیمات عمومی</a>
                 </div>
             </div>
 
@@ -316,9 +324,10 @@ class BRZ_Settings {
                     <div class="brz-module-card <?php echo $enabled ? 'is-active' : 'is-inactive'; ?>">
                         <div class="brz-module-card__header">
                             <div>
+                                <p class="brz-module-card__eyebrow">ماژول</p>
                                 <h3><?php echo esc_html( $meta['label'] ); ?></h3>
                                 <?php if ( ! empty( $meta['description'] ) ) : ?>
-                                    <p><?php echo esc_html( $meta['description'] ); ?></p>
+                                    <p class="brz-module-card__desc"><?php echo esc_html( $meta['description'] ); ?></p>
                                 <?php endif; ?>
                             </div>
                             <span class="brz-status <?php echo $enabled ? 'is-on' : 'is-off'; ?>"><?php echo $enabled ? 'فعال' : 'غیرفعال'; ?></span>
@@ -331,16 +340,19 @@ class BRZ_Settings {
                             ?>
                         </div>
                         <div class="brz-module-card__footer">
-                            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form">
-                                <?php wp_nonce_field( 'brz_toggle_module_' . $slug ); ?>
-                                <input type="hidden" name="action" value="brz_toggle_module" />
-                                <input type="hidden" name="module" value="<?php echo esc_attr( $slug ); ?>" />
-                                <input type="hidden" name="state" value="<?php echo $enabled ? '0' : '1'; ?>" />
-                                <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>" />
-                                <button type="submit" class="brz-toggle-btn <?php echo $enabled ? 'is-on' : 'is-off'; ?>">
-                                    <?php echo $enabled ? 'غیرفعال کردن' : 'فعال کردن'; ?>
-                                </button>
-                            </form>
+                            <div class="brz-toggle-wrap">
+                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form">
+                                    <?php wp_nonce_field( 'brz_toggle_module_' . $slug ); ?>
+                                    <input type="hidden" name="action" value="brz_toggle_module" />
+                                    <input type="hidden" name="module" value="<?php echo esc_attr( $slug ); ?>" />
+                                    <input type="hidden" name="state" value="<?php echo $enabled ? '0' : '1'; ?>" />
+                                    <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>" />
+                                    <button type="submit" class="brz-toggle-switch <?php echo $enabled ? 'is-on' : 'is-off'; ?>">
+                                        <span class="screen-reader-text"><?php echo $enabled ? 'غیرفعال کردن ماژول' : 'فعال کردن ماژول'; ?></span>
+                                    </button>
+                                </form>
+                                <span class="brz-toggle-label"><?php echo $enabled ? 'روشن' : 'خاموش'; ?></span>
+                            </div>
                             <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-' . $slug ) ); ?>">رفتن به تنظیمات</a>
                         </div>
                     </div>
