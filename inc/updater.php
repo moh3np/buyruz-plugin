@@ -92,6 +92,7 @@ class RFA_Updater {
                 'new_version'    => $remote['version'],
                 'url'            => 'https://github.com/' . self::OWNER . '/' . self::REPO,
                 'package'        => $remote['package'],
+                'last_updated'   => ! empty( $remote['last_updated'] ) ? $remote['last_updated'] : '',
                 'upgrade_notice' => ! empty( $remote['notice'] ) ? $remote['notice'] : '',
             );
             RFA_Debug::log(
@@ -108,6 +109,7 @@ class RFA_Updater {
                 'slug'        => 'rm-faq-accordion',
                 'plugin'      => $plugin_file,
                 'new_version' => $remote['version'],
+                'last_updated'=> ! empty( $remote['last_updated'] ) ? $remote['last_updated'] : '',
             );
             RFA_Debug::log(
                 RFA_Debug::COMPONENT_UPDATE,
@@ -150,6 +152,7 @@ class RFA_Updater {
         $info->homepage       = 'https://github.com/' . self::OWNER . '/' . self::REPO;
         $info->requires       = '5.8';
         $info->tested         = get_bloginfo( 'version' );
+        $info->last_updated   = ! empty( $remote['last_updated'] ) ? $remote['last_updated'] : '';
         $info->sections       = array(
             'description' => wpautop( self::get_local_readme_description() ),
             'changelog'   => wpautop( self::format_markdown_section( $remote['changelog'] ?? '' ) ),
@@ -485,6 +488,7 @@ class RFA_Updater {
             'file_version'    => '',
             'release_version' => '',
             'download_type'   => '',
+            'last_updated'    => '',
             'error'           => '',
         );
 
@@ -499,6 +503,10 @@ class RFA_Updater {
                 )
             );
             return self::cache_after_fetch( $meta );
+        }
+
+        if ( empty( $meta['last_updated'] ) && is_array( $repo ) && ! empty( $repo['pushed_at'] ) ) {
+            $meta['last_updated'] = self::normalize_datetime( $repo['pushed_at'] );
         }
 
         $branch         = self::determine_branch( $repo );
@@ -530,6 +538,10 @@ class RFA_Updater {
                 $meta['download_type']   = 'release';
                 $meta['changelog']       = isset( $release['body'] ) ? $release['body'] : '';
                 $meta['notice']          = self::extract_notice( $meta['changelog'] );
+                $release_date            = self::normalize_datetime( $release['published_at'] ?? $release['created_at'] ?? '' );
+                if ( $release_date ) {
+                    $meta['last_updated'] = $release_date;
+                }
                 RFA_Debug::log(
                     RFA_Debug::COMPONENT_UPDATE,
                     'Latest release discovered.',
@@ -575,6 +587,14 @@ class RFA_Updater {
                 RFA_Debug::COMPONENT_UPDATE,
                 'Version header not found in branch plugin file.'
             );
+        }
+
+        $needs_branch_date = ( 'branch' === $meta['download_type'] || empty( $meta['last_updated'] ) );
+        if ( $needs_branch_date ) {
+            $branch_last_updated = self::get_branch_last_updated( $branch );
+            if ( $branch_last_updated ) {
+                $meta['last_updated'] = $branch_last_updated;
+            }
         }
 
         if ( empty( $meta['changelog'] ) ) {
@@ -635,6 +655,7 @@ class RFA_Updater {
                 'branch'        => $meta['branch'],
                 'download_type' => $meta['download_type'],
                 'package'       => $meta['package'],
+                'last_updated'  => $meta['last_updated'],
                 'error'         => $meta['error'],
                 'cache_ttl'     => $ttl,
             )
@@ -767,6 +788,78 @@ class RFA_Updater {
         return $body;
     }
 
+    private static function get_branch_last_updated( $branch ) {
+        $endpoint = sprintf(
+            'repos/%s/%s/commits?sha=%s&per_page=1',
+            self::OWNER,
+            self::REPO,
+            rawurlencode( $branch )
+        );
+
+        $response = self::api_get( $endpoint, array(), array( 'allow_status' => array( 404, 409 ) ) );
+        if ( is_wp_error( $response ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Failed to load branch commit data.',
+                array(
+                    'branch' => $branch,
+                    'error'  => $response->get_error_message(),
+                )
+            );
+            return '';
+        }
+
+        if ( null === $response ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'No commit data available for branch.',
+                array(
+                    'branch' => $branch,
+                )
+            );
+            return '';
+        }
+
+        $body = json_decode( wp_remote_retrieve_body( $response ), true );
+        if ( ! is_array( $body ) || empty( $body[0]['commit'] ) ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Commit response missing expected structure.',
+                array(
+                    'branch' => $branch,
+                )
+            );
+            return '';
+        }
+
+        $commit = $body[0]['commit'];
+        $date   = $commit['committer']['date'] ?? $commit['author']['date'] ?? '';
+        $parsed = self::normalize_datetime( $date );
+
+        if ( ! $parsed ) {
+            RFA_Debug::log(
+                RFA_Debug::COMPONENT_UPDATE,
+                'Commit date could not be parsed for branch.',
+                array(
+                    'branch' => $branch,
+                    'raw'    => $date,
+                )
+            );
+            return '';
+        }
+
+        RFA_Debug::log(
+            RFA_Debug::COMPONENT_UPDATE,
+            'Resolved branch last updated timestamp.',
+            array(
+                'branch'       => $branch,
+                'last_updated' => $parsed,
+            )
+        );
+
+        return $parsed;
+    }
+
     private static function get_file_from_branch( $file, $branch, $allow_missing = false ) {
         $endpoint = sprintf(
             'repos/%s/%s/contents/%s?ref=%s',
@@ -867,6 +960,19 @@ class RFA_Updater {
 
         $version = preg_replace( '/^v/iu', '', $version );
         return trim( $version );
+    }
+
+    private static function normalize_datetime( $datetime ) {
+        if ( ! $datetime ) {
+            return '';
+        }
+
+        $timestamp = strtotime( $datetime );
+        if ( false === $timestamp ) {
+            return '';
+        }
+
+        return gmdate( 'Y-m-d H:i:s', $timestamp );
     }
 
     private static function api_get( $endpoint, $args = array(), $options = array() ) {
