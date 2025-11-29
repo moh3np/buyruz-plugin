@@ -230,13 +230,9 @@ class BRZ_Settings {
     }
 
     private static function render_shell( $active_slug, callable $content_cb ) {
-        $states         = BRZ_Modules::get_states();
-        $total_modules  = count( BRZ_Modules::registry() );
-        $active_modules = is_array( $states ) ? array_sum( array_map( 'intval', $states ) ) : 0;
-
         ?>
         <div class="brz-admin-wrap" dir="rtl">
-            <?php self::render_hero( $active_modules, $total_modules ); ?>
+            <?php self::render_hero(); ?>
 
             <div class="brz-layout">
                 <aside class="brz-nav">
@@ -262,22 +258,15 @@ class BRZ_Settings {
         <?php
     }
 
-    private static function render_hero( $active_modules, $total_modules ) {
+    private static function render_hero() {
         ?>
         <div class="brz-hero">
-            <div>
-                <p class="brz-hero__eyebrow">نسخه <?php echo esc_html( BRZ_VERSION ); ?> • تمرکز بر بهینه‌سازی</p>
-                <h1>کانون تنظیمات بایروز</h1>
-                <p>سریع‌تر و شفاف‌تر: مدیریت پیشخوان، تنظیمات عمومی و ماژول‌ها در یک نمای تمیز و مشابه ساختار Rank Math.</p>
-                <ul>
-                    <li>فعال/غیرفعال کردن ماژول‌ها از پیشخوان با یک کلیک.</li>
-                    <li>تنظیمات عمومی برای تجربهٔ نمایش و بارگذاری بهینهٔ FAQ.</li>
-                    <li>جایگاه مشخص برای هر ماژول تا در آینده نیز خودکار اضافه شود.</li>
-                </ul>
-            </div>
-            <div class="brz-hero__meta">
-                <span class="brz-chip brz-chip--primary">اولویت: بهینه‌سازی</span>
-                <span class="brz-chip">ماژول‌های فعال: <?php echo esc_html( $active_modules ); ?> / <?php echo esc_html( $total_modules ); ?></span>
+            <span class="brz-hero__glow brz-hero__glow--left"></span>
+            <span class="brz-hero__glow brz-hero__glow--right"></span>
+            <div class="brz-hero__content">
+                <span class="brz-hero__pill">Buyruz Dashboard</span>
+                <h1>تنظیمات بایروز</h1>
+                <span class="brz-hero__version">نسخه <?php echo esc_html( BRZ_VERSION ); ?></span>
             </div>
         </div>
         <?php
@@ -315,7 +304,6 @@ class BRZ_Settings {
             <div class="brz-section-header">
                 <div>
                     <h2>پیشخوان ماژول‌ها</h2>
-                    <p>ماژول‌های بایروز را اینجا روشن یا خاموش کنید. هر ماژول جدیدی که به افزونه اضافه شود به صورت خودکار اینجا ظاهر می‌شود.</p>
                 </div>
                 <div class="brz-section-actions">
                     <a class="button button-secondary" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>">رفتن به تنظیمات عمومی</a>
@@ -357,24 +345,6 @@ class BRZ_Settings {
                         </div>
                     </div>
                 <?php endforeach; ?>
-            </div>
-
-            <div class="brz-card-stack">
-                <section class="brz-card">
-                    <div class="brz-card__header">
-                        <h2>چک‌لیست سلامت و عملکرد</h2>
-                        <p>اولویت با بهینه‌سازی است؛ این چک‌لیست را پس از هر تغییر مرور کنید.</p>
-                    </div>
-                    <div class="brz-card__body">
-                        <ul class="brz-checklist">
-                            <li>حالت بارگذاری روی «خودکار» باشد مگر نیاز به سلکتور سفارشی.</li>
-                            <li>اگر سایت استیجینگ است، دیباگ فعال و مدت نگهداری کوتاه تنظیم شود.</li>
-                            <li>برای موبایل، حالت فشرده فعال بماند تا محتوا سریع‌تر دیده شود.</li>
-                            <li>پس از افزودن ماژول جدید، وضعیت آن را در همین صفحه فعال کنید.</li>
-                        </ul>
-                    </div>
-                </section>
-                <?php self::render_guidelines_card(); ?>
             </div>
             <?php
         } );
