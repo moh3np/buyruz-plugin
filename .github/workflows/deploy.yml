@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy via FTPS
-        uses: SamKirkland/[email protected]
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -23,11 +23,11 @@ jobs:
           protocol: ftps
           port: 21
 
-          # کل ریپو را می‌فرستیم (فایل‌های پلاگین همین‌جا هستند)
+          # پوشهٔ لوکال (خود ریشه ریپو)
           local-dir: ./
 
-          # چون روت FTP این یوزر خود پوشهٔ پلاگین است،
-          # لازم نیست مسیر بدهیم؛ همین ./ یعنی ریشهٔ آن پوشه
+          # چون روت FTP این یوزر خود پوشهٔ پلاگین است
+          # همین ./ یعنی همون buyruz-plugin روی هاست
           server-dir: ./
 
           # چیزهایی که لازم نیست آپلود شود
