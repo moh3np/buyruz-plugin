@@ -31,7 +31,7 @@ require_once BRZ_PATH . 'includes/autoload.php';
 BRZ_Plugin::init();
 
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), function( $links ) {
-    $links['settings'] = '<a href="' . esc_url( admin_url( 'admin.php?page=brz-settings' ) ) . '">تنظیمات</a>';
+    $links['settings'] = '<a href="' . esc_url( admin_url( 'admin.php?page=buyruz-dashboard' ) ) . '">تنظیمات</a>';
     return $links;
 } );
 
