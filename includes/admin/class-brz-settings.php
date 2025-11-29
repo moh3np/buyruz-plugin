@@ -36,22 +36,11 @@ class BRZ_Settings {
         return isset( $opts[ $key ] ) ? $opts[ $key ] : $default;
     }
 
-    public static function page() {
-        add_menu_page(
-            'تنظیمات بایروز',
-            'تنظیمات بایروز',
-            'manage_options',
-            'brz-settings',
-            array( __CLASS__, 'render' ),
-            'dashicons-admin-generic',
-            3
-        );
-    }
-
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'page' ) );
         add_action( 'admin_init', array( __CLASS__, 'register' ) );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+        add_action( 'admin_post_brz_toggle_module', array( __CLASS__, 'handle_toggle_module' ) );
     }
 
     public static function register() {
@@ -189,8 +178,8 @@ class BRZ_Settings {
         echo '</ul>';
     }
 
-    public static function render() {
-        $sections = self::sections_meta();
+    private static function render_settings_page( array $sections ) {
+        $all_sections = self::sections_meta();
         ?>
         <div class="brz-admin-wrap" dir="rtl">
             <div class="brz-hero">
@@ -209,7 +198,9 @@ class BRZ_Settings {
                 <?php settings_fields( 'brz_group' ); ?>
 
                 <div class="brz-section-grid">
-                    <?php foreach ( $sections as $id => $meta ) : ?>
+                    <?php foreach ( $sections as $id ) : ?>
+                        <?php if ( empty( $all_sections[ $id ] ) ) { continue; } ?>
+                        <?php $meta = $all_sections[ $id ]; ?>
                         <section class="brz-card" id="<?php echo esc_attr( $id ); ?>">
                             <div class="brz-card__header">
                                 <h2><?php echo esc_html( $meta['title'] ); ?></h2>
@@ -248,7 +239,7 @@ class BRZ_Settings {
     }
 
     public static function enqueue_assets( $hook ) {
-        if ( 'toplevel_page_brz-settings' !== $hook ) {
+        if ( strpos( $hook, 'buyruz-' ) !== 0 && 'toplevel_page_buyruz-dashboard' !== $hook ) {
             return;
         }
         wp_enqueue_style( 'brz-settings-admin', BRZ_URL . 'assets/admin/settings.css', array(), BRZ_VERSION );

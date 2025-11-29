@@ -25,12 +25,12 @@ class BRZ_Plugin {
      * @return string[]
      */
     private static function modules() {
-        $modules = array(
-            'BRZ_Debug',
-            'BRZ_Settings',
-            'BRZ_Enqueue',
-            'BRZ_RankMath_Integration',
-        );
+        $modules = array( 'BRZ_Settings' );
+
+        $active = BRZ_Modules::active_classes();
+        if ( ! empty( $active ) ) {
+            $modules = array_merge( $modules, $active );
+        }
 
         return (array) apply_filters( 'brz/modules', $modules );
     }

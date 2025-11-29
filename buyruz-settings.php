@@ -49,6 +49,7 @@ register_activation_hook( __FILE__, function(){
         'compact_mobile'  => 1,
         'load_strategy'   => 'auto', // auto | all | selector
         'custom_selector' => '.rank-math-faq',
+        'modules'         => BRZ_Modules::default_states(),
     );
     $current = get_option( BRZ_OPTION, array() );
     update_option( BRZ_OPTION, wp_parse_args( $current, $defaults ), false );

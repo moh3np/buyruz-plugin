@@ -14,6 +14,7 @@ spl_autoload_register( function( $class ) {
     $map = array(
         'BRZ_Plugin'                 => 'core/class-brz-plugin.php',
         'BRZ_Guard'                  => 'core/class-brz-guard.php',
+        'BRZ_Modules'                => 'core/class-brz-modules.php',
         'BRZ_Debug'                  => 'support/class-brz-debug.php',
         'BRZ_Settings'               => 'admin/class-brz-settings.php',
         'BRZ_Detector'               => 'front/class-brz-detector.php',
