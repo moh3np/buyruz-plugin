@@ -28,10 +28,11 @@ require_once RFA_PATH . 'inc/debug.php';
 require_once RFA_PATH . 'inc/settings.php';
 require_once RFA_PATH . 'inc/detector.php';
 require_once RFA_PATH . 'inc/enqueue.php';
-require_once RFA_PATH . 'inc/updater.php';
+require_once RFA_PATH . 'inc/last-updated.php';
 require_once RFA_PATH . 'inc/integration-rankmath.php';
 
 RFA_Debug::init();
+RFA_Last_Updated::init();
 
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), function( $links ) {
     $links['settings'] = '<a href="' . esc_url( admin_url( 'admin.php?page=rfa-settings' ) ) . '">تنظیمات</a>';

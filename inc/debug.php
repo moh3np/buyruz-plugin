@@ -2,7 +2,6 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class RFA_Debug {
-    const COMPONENT_UPDATE = 'update';
     const MASK_PLACEHOLDER = '[masked]';
     const MAX_CONTEXT_LENGTH = 2000;
 
@@ -61,12 +60,7 @@ class RFA_Debug {
             return self::$available_components;
         }
 
-        self::$available_components = array(
-            self::COMPONENT_UPDATE => array(
-                'label'       => 'فرآیند به‌روزرسانی افزونه',
-                'description' => 'ثبت تمام درخواست‌ها، پاسخ‌ها، تصمیمات کش و خطاهای سیستم آپدیت.',
-            ),
-        );
+        self::$available_components = array();
 
         return self::$available_components;
     }
