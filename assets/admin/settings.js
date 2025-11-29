@@ -1,11 +1,7 @@
 /* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
 (function () {
-  if (!window.brzSettings || !window.brzSettings.ajaxUrl) {
-    return;
-  }
-
-  var forms = document.querySelectorAll('.brz-toggle-form');
-  if (!forms.length) {
+  var settings = window.brzSettings || {};
+  if (!settings.ajaxUrl) {
     return;
   }
 
@@ -23,6 +19,56 @@
     toastTimer = setTimeout(function () {
       toast.classList.remove('is-visible');
     }, 2600);
+  }
+
+  function applyBrandColor(color) {
+    if (!color) {
+      return;
+    }
+    var wrap = document.querySelector('.brz-admin-wrap');
+    if (wrap) {
+      wrap.style.setProperty('--brz-brand', color);
+    }
+  }
+
+  function setBusy(btn, isBusy) {
+    if (!btn) {
+      return;
+    }
+    var isInput = btn.tagName === 'INPUT';
+    if (isBusy) {
+      if (!btn.dataset.originalText) {
+        btn.dataset.originalText = isInput ? btn.value : btn.textContent;
+      }
+      var loadingText = settings.savingText || btn.dataset.originalText;
+      if (isInput) {
+        btn.value = loadingText;
+      } else {
+        btn.textContent = loadingText;
+      }
+      btn.classList.add('is-loading');
+      btn.disabled = true;
+    } else {
+      var original = btn.dataset.originalText;
+      if (original) {
+        if (isInput) {
+          btn.value = original;
+        } else {
+          btn.textContent = original;
+        }
+      }
+      btn.classList.remove('is-loading');
+      btn.disabled = false;
+    }
+  }
+
+  function updateSaveState(el, text, isError) {
+    if (!el) {
+      return;
+    }
+    el.textContent = text;
+    el.classList.toggle('is-error', !!isError);
+    el.classList.toggle('is-success', !isError);
   }
 
   function updateCardState(card, newState) {
@@ -43,18 +89,20 @@
     }
   }
 
-  forms.forEach(function (form) {
+  // Toggle modules without refresh
+  var toggleForms = document.querySelectorAll('.brz-toggle-form');
+  toggleForms.forEach(function (form) {
     form.addEventListener('submit', function (event) {
       event.preventDefault();
 
       var card = form.closest('.brz-module-card');
       var moduleSlug = form.dataset.module || (card && card.dataset.module) || '';
       var hiddenState = form.querySelector('input[name="state"]');
-      var nonceField = form.querySelector('[name="' + (brzSettings.nonceField || '_wpnonce') + '"]');
+      var nonceField = form.querySelector('[name="' + (settings.nonceField || '_wpnonce') + '"]');
       var sendState = hiddenState ? hiddenState.value : '';
 
       if (!moduleSlug || sendState === '') {
-        showToast(brzSettings.failText || 'خطا در داده‌ها', true);
+        showToast(settings.failText || 'خطا در داده‌ها', true);
         return;
       }
 
@@ -63,10 +111,10 @@
       payload.append('module', moduleSlug);
       payload.append('state', sendState);
       if (nonceField) {
-        payload.append(brzSettings.nonceField || '_wpnonce', nonceField.value);
+        payload.append(settings.nonceField || '_wpnonce', nonceField.value);
       }
 
-      fetch(brzSettings.ajaxUrl, {
+      fetch(settings.ajaxUrl, {
         method: 'POST',
         credentials: 'same-origin',
         body: payload
@@ -83,9 +131,55 @@
         if (card) {
           updateCardState(card, newState);
         }
-        showToast(newState ? (brzSettings.successOn || 'ماژول فعال شد') : (brzSettings.successOff || 'ماژول غیرفعال شد'));
+        showToast(newState ? (settings.successOn || 'ماژول فعال شد') : (settings.successOff || 'ماژول غیرفعال شد'));
       }).catch(function () {
-        showToast(brzSettings.failText || 'تغییر وضعیت انجام نشد. دوباره تلاش کنید.', true);
+        showToast(settings.failText || 'تغییر وضعیت انجام نشد. دوباره تلاش کنید.', true);
+      });
+    });
+  });
+
+  // Instant save for settings forms
+  var settingsForms = document.querySelectorAll('.brz-settings-form');
+  settingsForms.forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!settings.saveNonce) {
+        return;
+      }
+      event.preventDefault();
+
+      var submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+      var saveState = form.querySelector('.brz-save-state');
+
+      setBusy(submitBtn, true);
+      updateSaveState(saveState, settings.savingText || 'در حال ذخیره...', false);
+
+      var formData = new FormData(form);
+      formData.append('action', 'brz_save_settings');
+      formData.append('security', settings.saveNonce);
+
+      fetch(settings.ajaxUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData
+      }).then(function (response) {
+        if (!response.ok) {
+          throw new Error('bad_status');
+        }
+        return response.json();
+      }).then(function (json) {
+        if (!json || !json.success) {
+          throw new Error('bad_response');
+        }
+        updateSaveState(saveState, settings.savedText || 'تنظیمات ذخیره شد', false);
+        showToast(settings.savedText || 'تنظیمات ذخیره شد');
+        if (json.data && json.data.accent) {
+          applyBrandColor(json.data.accent);
+        }
+      }).catch(function () {
+        updateSaveState(saveState, settings.saveFailText || 'ذخیره انجام نشد. دوباره تلاش کنید.', true);
+        showToast(settings.saveFailText || 'ذخیره انجام نشد. دوباره تلاش کنید.', true);
+      }).finally(function () {
+        setBusy(submitBtn, false);
       });
     });
   });

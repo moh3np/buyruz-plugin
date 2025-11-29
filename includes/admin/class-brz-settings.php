@@ -6,6 +6,7 @@ class BRZ_Settings {
     const CAPABILITY  = 'manage_options';
     const PARENT_SLUG = 'buyruz-dashboard';
     const MENU_POSITION = 2;
+    private static $options_cache = null;
 
     private static function sections_meta() {
         $sections = array(
@@ -64,7 +65,10 @@ class BRZ_Settings {
     }
 
     public static function get( $key = null, $default = null ) {
-        $opts = get_option( BRZ_OPTION, array() );
+        if ( null === self::$options_cache ) {
+            self::$options_cache = get_option( BRZ_OPTION, array() );
+        }
+        $opts = self::$options_cache;
         if ( $key === null ) { return $opts; }
         return isset( $opts[ $key ] ) ? $opts[ $key ] : $default;
     }
@@ -75,6 +79,7 @@ class BRZ_Settings {
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
         add_action( 'admin_post_brz_toggle_module', array( __CLASS__, 'handle_toggle_module' ) );
         add_action( 'wp_ajax_brz_toggle_module', array( __CLASS__, 'handle_toggle_module_ajax' ) );
+        add_action( 'wp_ajax_brz_save_settings', array( __CLASS__, 'handle_save_settings_ajax' ) );
     }
 
     public static function register() {
@@ -231,10 +236,11 @@ class BRZ_Settings {
     }
 
     private static function render_shell( $active_slug, callable $content_cb ) {
+        $brand = esc_attr( self::get( 'brand_color', '#ff5668' ) );
         ?>
-        <div class="brz-admin-wrap" dir="rtl">
+        <div class="brz-admin-wrap" dir="rtl" style="--brz-brand: <?php echo $brand; ?>;">
             <div id="brz-snackbar" class="brz-snackbar" aria-live="polite"></div>
-            <?php self::render_hero(); ?>
+            <?php self::render_hero( $active_slug ); ?>
             <?php self::render_top_nav( $active_slug ); ?>
 
             <div class="brz-content">
@@ -244,7 +250,14 @@ class BRZ_Settings {
         <?php
     }
 
-    private static function render_hero() {
+    private static function render_hero( $active_slug ) {
+        $stats = self::hero_stats();
+        $cta_href  = admin_url( 'admin.php?page=buyruz-general' );
+        $cta_label = 'ویرایش تنظیمات عمومی';
+        if ( 'buyruz-general' === $active_slug ) {
+            $cta_href  = admin_url( 'admin.php?page=' . self::PARENT_SLUG );
+            $cta_label = 'دیدن پیشخوان ماژول‌ها';
+        }
         ?>
         <div class="brz-hero">
             <div class="brz-hero__content">
@@ -253,10 +266,73 @@ class BRZ_Settings {
                     <h1>پنل ماژول‌ها و تنظیمات</h1>
                     <span class="brz-hero__version">نسخه <?php echo esc_html( BRZ_VERSION ); ?></span>
                 </div>
-                <p class="brz-hero__desc">چیدمان الهام‌گرفته از Rank Math برای مدیریت ماژول‌ها، بارگذاری هوشمند و کنترل تجربهٔ کاربری.</p>
+                <p class="brz-hero__desc">چیدمان الهام‌گرفته از Rank Math با تمرکز بر سرعت، نمایش ماژول‌ها و ذخیره‌سازی بدون رفرش.</p>
+                <div class="brz-hero__meta">
+                    <?php foreach ( $stats as $stat ) : ?>
+                        <div class="brz-pill">
+                            <div class="brz-pill__label"><?php echo esc_html( $stat['label'] ); ?></div>
+                            <div class="brz-pill__value"><?php echo esc_html( $stat['value'] ); ?></div>
+                            <?php if ( ! empty( $stat['hint'] ) ) : ?>
+                                <div class="brz-pill__hint"><?php echo esc_html( $stat['hint'] ); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="brz-hero__aside">
+                <div class="brz-hero__badge">بدون رفرش ذخیره می‌شود</div>
+                <p>تغییرات فرم‌ها و وضعیت ماژول‌ها به‌صورت آنی اعمال می‌شوند و صفحه روی همین نما باقی می‌ماند.</p>
+                <a class="brz-hero__cta" href="<?php echo esc_url( $cta_href ); ?>"><?php echo esc_html( $cta_label ); ?></a>
             </div>
         </div>
         <?php
+    }
+
+    private static function hero_stats() {
+        $registry = BRZ_Modules::registry();
+        $states   = BRZ_Modules::get_states();
+        $total    = count( $registry );
+        $active   = 0;
+        foreach ( $states as $state ) {
+            if ( ! empty( $state ) ) {
+                $active++;
+            }
+        }
+
+        $strategy       = self::get( 'load_strategy', 'auto' );
+        $selector       = self::get( 'custom_selector', '.rank-math-faq' );
+        $strategy_label = 'خودکار';
+        $strategy_hint  = 'تشخیص خودکار FAQ در محتوا';
+        if ( 'all' === $strategy ) {
+            $strategy_label = 'همهٔ صفحات';
+            $strategy_hint  = 'منابع همیشه آماده هستند';
+        } elseif ( 'selector' === $strategy ) {
+            $strategy_label = 'سلکتور سفارشی';
+            $strategy_hint  = 'فعال زمانی که ' . $selector . ' وجود داشته باشد';
+        }
+
+        $css_on   = self::get( 'enable_css', 1 );
+        $js_on    = self::get( 'enable_js', 1 );
+        $inline   = self::get( 'inline_css', 1 );
+        $debug_on = self::get( 'debug_enabled', 0 );
+
+        return array(
+            array(
+                'label' => 'وضعیت ماژول‌ها',
+                'value' => $active . ' / ' . $total,
+                'hint'  => 'سوئیچ‌ها فوری و بدون رفرش عمل می‌کنند.',
+            ),
+            array(
+                'label' => 'استراتژی بارگذاری',
+                'value' => $strategy_label,
+                'hint'  => $strategy_hint,
+            ),
+            array(
+                'label' => 'استایل و دیباگ',
+                'value' => ( $css_on ? 'CSS روشن' : 'CSS خاموش' ) . ' · ' . ( $js_on ? 'JS روشن' : 'JS خاموش' ),
+                'hint'  => ( $inline ? 'CSS اینلاین' : 'فایل مجزا' ) . ' | دیباگ ' . ( $debug_on ? 'فعال' : 'خاموش' ),
+            ),
+        );
     }
 
     private static function render_top_nav( $active_slug ) {
@@ -313,47 +389,67 @@ class BRZ_Settings {
             <div class="brz-section-header brz-section-header--modules">
                 <div>
                     <h2>پیشخوان ماژول‌ها</h2>
-                    <p>طراحی سبک Rank Math: همهٔ ماژول‌ها در یک شبکهٔ منظم با سوئیچ‌های واضح.</p>
+                    <p>شبکهٔ مدرن و واکنش‌گرا برای کنترل سریع ماژول‌ها بدون رفرش صفحه.</p>
                 </div>
                 <div class="brz-section-actions">
+                    <span class="brz-status is-on">واکنش‌گرا و سریع</span>
                     <a class="brz-button brz-button--ghost" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>">تنظیمات عمومی</a>
                 </div>
             </div>
 
-            <div class="brz-module-grid">
-                <?php foreach ( $modules as $slug => $meta ) : ?>
-                    <?php $enabled = ! empty( $states[ $slug ] ); ?>
-                    <?php $icon = self::module_icon_letter( $meta ); ?>
-                    <div class="brz-module-card <?php echo $enabled ? 'is-active' : 'is-inactive'; ?>" data-module="<?php echo esc_attr( $slug ); ?>">
-                        <div class="brz-module-card__badge">ماژول</div>
-                        <div class="brz-module-card__icon" aria-hidden="true"><?php echo esc_html( $icon ); ?></div>
-                        <h3 class="brz-module-card__title"><?php echo esc_html( $meta['label'] ); ?></h3>
-                        <?php if ( ! empty( $meta['description'] ) ) : ?>
-                            <p class="brz-module-card__desc"><?php echo esc_html( $meta['description'] ); ?></p>
-                        <?php endif; ?>
-                        <?php
-                        if ( 'faq_rankmath' === $slug && ! class_exists( '\RankMath\Schema\DB' ) ) {
-                            echo '<p class="brz-warning">برای استفاده، افزونه Rank Math باید فعال باشد.</p>';
-                        }
-                        ?>
-                        <div class="brz-module-card__footer">
-                            <div class="brz-toggle-wrap">
-                                <span class="brz-toggle-label"><?php echo $enabled ? 'روشن' : 'خاموش'; ?></span>
-                                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form" data-module="<?php echo esc_attr( $slug ); ?>" data-label="<?php echo esc_attr( $meta['label'] ); ?>">
-                                    <?php wp_nonce_field( 'brz_toggle_module_' . $slug ); ?>
-                                    <input type="hidden" name="action" value="brz_toggle_module" />
-                                    <input type="hidden" name="module" value="<?php echo esc_attr( $slug ); ?>" />
-                                    <input type="hidden" name="state" value="<?php echo $enabled ? '0' : '1'; ?>" />
-                                    <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>" />
-                                    <button type="submit" class="brz-toggle-switch <?php echo $enabled ? 'is-on' : 'is-off'; ?>">
-                                        <span class="screen-reader-text"><?php echo $enabled ? 'غیرفعال کردن ماژول' : 'فعال کردن ماژول'; ?></span>
-                                    </button>
-                                </form>
+            <div class="brz-inline-alert">
+                ذخیره و تغییر وضعیت ماژول‌ها به‌صورت زنده و بدون رفرش انجام می‌شود. شبکهٔ کارت‌ها روی موبایل و دسکتاپ بهینه شده است.
+            </div>
+
+            <div class="brz-grid">
+                <div class="brz-grid__main">
+                    <div class="brz-module-grid">
+                        <?php foreach ( $modules as $slug => $meta ) : ?>
+                            <?php $enabled = ! empty( $states[ $slug ] ); ?>
+                            <?php $icon = self::module_icon_letter( $meta ); ?>
+                            <div class="brz-module-card <?php echo $enabled ? 'is-active' : 'is-inactive'; ?>" data-module="<?php echo esc_attr( $slug ); ?>">
+                                <div class="brz-module-card__badge">ماژول</div>
+                                <div class="brz-module-card__icon" aria-hidden="true"><?php echo esc_html( $icon ); ?></div>
+                                <h3 class="brz-module-card__title"><?php echo esc_html( $meta['label'] ); ?></h3>
+                                <?php if ( ! empty( $meta['description'] ) ) : ?>
+                                    <p class="brz-module-card__desc"><?php echo esc_html( $meta['description'] ); ?></p>
+                                <?php endif; ?>
+                                <?php
+                                if ( 'faq_rankmath' === $slug && ! class_exists( '\RankMath\Schema\DB' ) ) {
+                                    echo '<p class="brz-warning">برای استفاده، افزونه Rank Math باید فعال باشد.</p>';
+                                }
+                                ?>
+                                <div class="brz-module-card__footer">
+                                    <div class="brz-toggle-wrap">
+                                        <span class="brz-toggle-label"><?php echo $enabled ? 'روشن' : 'خاموش'; ?></span>
+                                        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form" data-module="<?php echo esc_attr( $slug ); ?>" data-label="<?php echo esc_attr( $meta['label'] ); ?>">
+                                            <?php wp_nonce_field( 'brz_toggle_module_' . $slug ); ?>
+                                            <input type="hidden" name="action" value="brz_toggle_module" />
+                                            <input type="hidden" name="module" value="<?php echo esc_attr( $slug ); ?>" />
+                                            <input type="hidden" name="state" value="<?php echo $enabled ? '0' : '1'; ?>" />
+                                            <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>" />
+                                            <button type="submit" class="brz-toggle-switch <?php echo $enabled ? 'is-on' : 'is-off'; ?>">
+                                                <span class="screen-reader-text"><?php echo $enabled ? 'غیرفعال کردن ماژول' : 'فعال کردن ماژول'; ?></span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-' . $slug ) ); ?>">تنظیمات</a>
+                                </div>
                             </div>
-                            <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-' . $slug ) ); ?>">تنظیمات</a>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
-                <?php endforeach; ?>
+                </div>
+                <aside class="brz-grid__aside">
+                    <?php self::render_support_card(
+                        'بهینه و تمیز',
+                        array(
+                            'بدون رفرش و بدون ایجاد دادهٔ اضافی در دیتابیس ذخیره می‌شود.',
+                            'شبکهٔ کارت‌ها روی موبایل فشرده و دو ستونه می‌شود تا دید بهتری بدهد.',
+                            'اگر ماژول غیرفعال باشد، هیچ فایل یا هوکی از آن لود نمی‌شود.',
+                        ),
+                        'راهنما'
+                    ); ?>
+                </aside>
             </div>
             <?php
         } );
@@ -373,16 +469,37 @@ class BRZ_Settings {
                 </div>
             </div>
 
-            <form method="post" action="options.php" class="brz-settings-form">
-                <?php
-                settings_fields( 'brz_group' );
-                echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="general" />';
-                self::render_section_cards( array( 'brz_main', 'brz_load' ) );
-                ?>
-                <div class="brz-save-bar">
-                    <?php submit_button( 'ذخیره تغییرات', 'primary', 'submit', false ); ?>
+            <div class="brz-inline-alert brz-inline-alert--info">
+                ذخیرهٔ تنظیمات به‌صورت لحظه‌ای و بدون رفرش انجام می‌شود. برای سرعت بیشتر، حالت «سلکتور سفارشی» را در صفحات سازنده امتحان کنید.
+            </div>
+
+            <div class="brz-grid">
+                <div class="brz-grid__main">
+                    <form method="post" action="options.php" class="brz-settings-form" data-context="general">
+                        <?php
+                        settings_fields( 'brz_group' );
+                        echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="general" />';
+                        self::render_section_cards( array( 'brz_main', 'brz_load' ) );
+                        ?>
+                        <div class="brz-save-bar">
+                            <span class="brz-save-state" aria-live="polite">تغییرات بدون رفرش ذخیره می‌شود.</span>
+                            <?php submit_button( 'ذخیره تغییرات', 'primary', 'submit', false ); ?>
+                        </div>
+                    </form>
                 </div>
-            </form>
+                <aside class="brz-grid__aside">
+                    <?php self::render_support_card(
+                        'مسیر بهینه‌سازی',
+                        array(
+                            'CSS/JS فقط وقتی لود می‌شود که FAQ یا سلکتور سفارشی وجود داشته باشد.',
+                            'برای صفحات شلوغ، گزینهٔ «اینلاین» درخواست اضافی را حذف می‌کند.',
+                            'غیرفعال کردن هر گزینه فوراً اعمال می‌شود و دادهٔ اضافی در دیتابیس باقی نمی‌گذارد.',
+                        ),
+                        'راهنمای سرعت'
+                    ); ?>
+                    <?php self::render_guidelines_card(); ?>
+                </aside>
+            </div>
             <?php
         } );
     }
@@ -406,16 +523,35 @@ class BRZ_Settings {
                         <span class="brz-status <?php echo $active ? 'is-on' : 'is-off'; ?>"><?php echo $active ? 'ماژول فعال است' : 'ماژول غیرفعال است'; ?></span>
                     </div>
                 </div>
-                <form method="post" action="options.php" class="brz-settings-form">
-                    <?php
-                    settings_fields( 'brz_group' );
-                    echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="debug" />';
-                    self::render_section_cards( array( 'brz_debug' ) );
-                    ?>
-                    <div class="brz-save-bar">
-                        <?php submit_button( 'ذخیره تنظیمات دیباگ', 'primary', 'submit', false ); ?>
+                <div class="brz-inline-alert brz-inline-alert--warning">
+                    دیباگ فقط هنگام نیاز فعال شود؛ ذخیره‌سازی لاگ به صورت زنده و بدون رفرش فعال/غیرفعال می‌شود.
+                </div>
+                <div class="brz-grid">
+                    <div class="brz-grid__main">
+                        <form method="post" action="options.php" class="brz-settings-form" data-context="debug">
+                            <?php
+                            settings_fields( 'brz_group' );
+                            echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="debug" />';
+                            self::render_section_cards( array( 'brz_debug' ) );
+                            ?>
+                            <div class="brz-save-bar">
+                                <span class="brz-save-state" aria-live="polite">تغییرات بدون رفرش ذخیره می‌شود.</span>
+                                <?php submit_button( 'ذخیره تنظیمات دیباگ', 'primary', 'submit', false ); ?>
+                            </div>
+                        </form>
                     </div>
-                </form>
+                    <aside class="brz-grid__aside">
+                        <?php self::render_support_card(
+                            'پاکسازی لاگ‌ها',
+                            array(
+                                'مسیر لاگ در کارت بالا نمایش داده می‌شود تا سریع به آن دسترسی داشته باشید.',
+                                'پاکسازی خودکار بر اساس تعداد روز تعیین‌شده انجام می‌شود و فضا اشغال نمی‌ماند.',
+                                'برای محیط تولید، گزینهٔ ماسک داده‌های حساس را روشن نگه دارید.',
+                            ),
+                            'توصیه'
+                        ); ?>
+                    </aside>
+                </div>
                 <?php
                 return;
             }
@@ -443,38 +579,68 @@ class BRZ_Settings {
             </div>
         </div>
 
-        <div class="brz-card">
-            <div class="brz-card__body">
-                <ul class="brz-checklist">
-                    <li>نیازمند افزونه Rank Math فعال.</li>
-                    <li>در صفحات دارای FAQ Rank Math به صورت خودکار HTML را به آکاردئون تبدیل می‌کند.</li>
-                    <li>برای توقف موقت، از پیشخوان ماژول را غیرفعال کنید.</li>
-                </ul>
-                <?php if ( ! $rankmath_active ) : ?>
-                    <p class="brz-warning">Rank Math روی این سایت فعال نیست. پس از فعال‌سازی، این ماژول به صورت خودکار FAQها را مدیریت می‌کند.</p>
-                <?php endif; ?>
+        <div class="brz-grid">
+            <div class="brz-grid__main">
+                <div class="brz-card">
+                    <div class="brz-card__body">
+                        <ul class="brz-checklist">
+                            <li>نیازمند افزونه Rank Math فعال.</li>
+                            <li>در صفحات دارای FAQ Rank Math به صورت خودکار HTML را به آکاردئون تبدیل می‌کند.</li>
+                            <li>برای توقف موقت، از پیشخوان ماژول را غیرفعال کنید.</li>
+                        </ul>
+                        <?php if ( ! $rankmath_active ) : ?>
+                            <p class="brz-warning">Rank Math روی این سایت فعال نیست. پس از فعال‌سازی، این ماژول به صورت خودکار FAQها را مدیریت می‌کند.</p>
+                        <?php endif; ?>
+                    </div>
+                    <div class="brz-card__footer">
+                        <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>">رفتن به پیشخوان برای تغییر وضعیت ماژول</a>
+                    </div>
+                </div>
             </div>
-            <div class="brz-card__footer">
-                <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>">رفتن به پیشخوان برای تغییر وضعیت ماژول</a>
-            </div>
+            <aside class="brz-grid__aside">
+                <?php self::render_support_card(
+                    'نکات هماهنگی',
+                    array(
+                        'با خاموش شدن ماژول، هیچ خروجی یا فایل اضافه‌ای بارگذاری نمی‌شود.',
+                        'در حالت موبایل، فاصله‌ها فشرده می‌شوند تا FAQ خواناتر باشد.',
+                        'برای تغییر رنگ برند، از تنظیمات عمومی استفاده کنید.',
+                    ),
+                    'سازگاری'
+                ); ?>
+            </aside>
         </div>
         <?php
     }
 
     private static function render_generic_module_card( $label, $active ) {
         ?>
-        <div class="brz-card">
-            <div class="brz-card__header">
-                <h2><?php echo esc_html( $label ); ?></h2>
-                <p>در حال حاضر تنظیمات اختصاصی برای این ماژول تعریف نشده است.</p>
+        <div class="brz-grid">
+            <div class="brz-grid__main">
+                <div class="brz-card">
+                    <div class="brz-card__header">
+                        <h2><?php echo esc_html( $label ); ?></h2>
+                        <p>در حال حاضر تنظیمات اختصاصی برای این ماژول تعریف نشده است.</p>
+                    </div>
+                    <div class="brz-card__body">
+                        <p>برای تغییر وضعیت فعال/غیرفعال به پیشخوان برگردید.</p>
+                        <p class="brz-status <?php echo $active ? 'is-on' : 'is-off'; ?>"><?php echo $active ? 'فعال' : 'غیرفعال'; ?></p>
+                    </div>
+                    <div class="brz-card__footer">
+                        <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>">بازگشت به پیشخوان</a>
+                    </div>
+                </div>
             </div>
-            <div class="brz-card__body">
-                <p>برای تغییر وضعیت فعال/غیرفعال به پیشخوان برگردید.</p>
-                <p class="brz-status <?php echo $active ? 'is-on' : 'is-off'; ?>"><?php echo $active ? 'فعال' : 'غیرفعال'; ?></p>
-            </div>
-            <div class="brz-card__footer">
-                <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>">بازگشت به پیشخوان</a>
-            </div>
+            <aside class="brz-grid__aside">
+                <?php self::render_support_card(
+                    'ساده و تمیز',
+                    array(
+                        'تا زمانی که فعال نباشد، هیچ فایل یا هوکی از این ماژول لود نمی‌شود.',
+                        'می‌توانید بعداً تنظیمات اختصاصی را اضافه کنید بدون آنکه دیتابیس آلوده شود.',
+                        'برای فعال/غیرفعال کردن، از پیشخوان استفاده کنید؛ لحظه‌ای اعمال می‌شود.',
+                    ),
+                    'اطلاعات'
+                ); ?>
+            </aside>
         </div>
         <?php
     }
@@ -587,6 +753,22 @@ class BRZ_Settings {
         <?php
     }
 
+    private static function render_support_card( $title, array $items, $badge = '' ) {
+        echo '<div class="brz-side-card">';
+        if ( ! empty( $badge ) ) {
+            echo '<span class="brz-side-card__badge">' . esc_html( $badge ) . '</span>';
+        }
+        echo '<h3 class="brz-side-card__title">' . esc_html( $title ) . '</h3>';
+        if ( ! empty( $items ) ) {
+            echo '<ul class="brz-side-card__list">';
+            foreach ( $items as $item ) {
+                echo '<li>' . esc_html( $item ) . '</li>';
+            }
+            echo '</ul>';
+        }
+        echo '</div>';
+    }
+
     public static function enqueue_assets( $hook ) {
         if ( strpos( $hook, 'buyruz-' ) === false ) {
             return;
@@ -603,6 +785,10 @@ class BRZ_Settings {
                 'failText'     => 'تغییر وضعیت انجام نشد. دوباره تلاش کنید.',
                 'nonceField'   => '_wpnonce',
                 'screenReader' => 'تغییر وضعیت ماژول',
+                'saveNonce'    => wp_create_nonce( 'brz_save_settings' ),
+                'savingText'   => 'در حال ذخیره...',
+                'savedText'    => 'تنظیمات ذخیره شد',
+                'saveFailText' => 'ذخیره انجام نشد. دوباره تلاش کنید.',
             )
         );
     }
@@ -667,6 +853,27 @@ class BRZ_Settings {
         );
     }
 
+    public static function handle_save_settings_ajax() {
+        if ( ! current_user_can( self::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'دسترسی غیرمجاز' ), 403 );
+        }
+
+        check_ajax_referer( 'brz_save_settings', 'security' );
+
+        $input = isset( $_POST[ BRZ_OPTION ] ) ? (array) wp_unslash( $_POST[ BRZ_OPTION ] ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $sanitized = self::sanitize( $input );
+
+        update_option( BRZ_OPTION, $sanitized, false );
+        self::$options_cache = $sanitized;
+
+        wp_send_json_success(
+            array(
+                'message' => 'تنظیمات ذخیره شد.',
+                'accent'  => isset( $sanitized['brand_color'] ) ? $sanitized['brand_color'] : self::get( 'brand_color', '#ff5668' ),
+            )
+        );
+    }
+
     private static function toggle_module_state( $slug, $state ) {
         $registry = BRZ_Modules::registry();
         if ( empty( $registry[ $slug ] ) ) {
@@ -683,6 +890,7 @@ class BRZ_Settings {
 
         $current['modules'] = $states;
         update_option( BRZ_OPTION, $current, false );
+        self::$options_cache = $current;
 
         $label = isset( $registry[ $slug ]['label'] ) ? $registry[ $slug ]['label'] : $slug;
 
@@ -790,6 +998,7 @@ class BRZ_Settings {
             }
         }
 
+        self::$options_cache = $output;
         return $output;
     }
 }

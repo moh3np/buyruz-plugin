@@ -54,7 +54,10 @@ class BRZ_Modules {
     }
 
     public static function get_states() {
-        $opts = get_option( BRZ_OPTION, array() );
+        $opts = class_exists( 'BRZ_Settings' ) ? BRZ_Settings::get() : get_option( BRZ_OPTION, array() );
+        if ( ! is_array( $opts ) ) {
+            $opts = array();
+        }
         $states = isset( $opts['modules'] ) && is_array( $opts['modules'] ) ? $opts['modules'] : array();
         return wp_parse_args( $states, self::default_states() );
     }
