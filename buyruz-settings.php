@@ -1,13 +1,13 @@
 <?php
 /**
- * Plugin Name: تنظیمات بایروز (Bayruz Settings)
+ * Plugin Name: تنظیمات بایروز (Buyruz Settings)
  * Plugin URI: https://github.com/Codruz/buyruz-plugin.git
  * Description: تنظیمات بایروز، مرکز مدیریت و هماهنگ‌سازی قابلیت‌ها و تنظیمات اختصاصی بایروز در سایت شماست. از این صفحه می‌توانید رفتار افزونه‌های بایروز را یکپارچه کنترل کنید.
- * Version: 4.0.0
+ * Version: 2.2.0
  * Author: کُدروز
  * Author URI: https://codruz.ir
  * License: Proprietary
- * Text Domain: bayruz-settings
+ * Text Domain: buyruz-settings
  * Requires at least: 6.8.3
  * Requires PHP: 8.1
  */
