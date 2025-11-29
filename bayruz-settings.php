@@ -1,16 +1,19 @@
 <?php
 /**
- * Plugin Name: تنظیمات بایروز
+ * Plugin Name: تنظیمات بایروز (Bayruz Settings)
  * Plugin URI: https://github.com/Codruz/buyruz-plugin.git
  * Description: تنظیمات بایروز، مرکز مدیریت و هماهنگ‌سازی قابلیت‌ها و تنظیمات اختصاصی بایروز در سایت شماست. از این صفحه می‌توانید رفتار افزونه‌های بایروز را یکپارچه کنترل کنید.
- * Version: 1.3.12
+ * Version: 4.0.0
  * Author: کُدروز
  * Author URI: https://codruz.ir
  * License: Proprietary
- * Text Domain: rm-faq-accordion
+ * Text Domain: bayruz-settings
+ * Requires at least: 6.8.3
+ * Requires PHP: 8.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
+// هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
 
 $plugin_header = get_file_data(
     __FILE__,
@@ -18,24 +21,17 @@ $plugin_header = get_file_data(
         'Version' => 'Version',
     )
 );
-define( 'RFA_VERSION', isset( $plugin_header['Version'] ) ? $plugin_header['Version'] : '0.0.0' );
-define( 'RFA_PATH', plugin_dir_path( __FILE__ ) );
-define( 'RFA_URL', plugin_dir_url( __FILE__ ) );
-define( 'RFA_OPTION', 'rfa_options' );
-define( 'RFA_LOG_DIR', trailingslashit( RFA_PATH ) . 'logs/' );
+define( 'BRZ_VERSION', isset( $plugin_header['Version'] ) ? $plugin_header['Version'] : '0.0.0' );
+define( 'BRZ_PATH', plugin_dir_path( __FILE__ ) );
+define( 'BRZ_URL', plugin_dir_url( __FILE__ ) );
+define( 'BRZ_OPTION', 'brz_options' );
+define( 'BRZ_LOG_DIR', trailingslashit( BRZ_PATH ) . 'logs/' );
 
-require_once RFA_PATH . 'inc/debug.php';
-require_once RFA_PATH . 'inc/settings.php';
-require_once RFA_PATH . 'inc/detector.php';
-require_once RFA_PATH . 'inc/enqueue.php';
-require_once RFA_PATH . 'inc/last-updated.php';
-require_once RFA_PATH . 'inc/integration-rankmath.php';
-
-RFA_Debug::init();
-RFA_Last_Updated::init();
+require_once BRZ_PATH . 'includes/autoload.php';
+BRZ_Plugin::init();
 
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), function( $links ) {
-    $links['settings'] = '<a href="' . esc_url( admin_url( 'admin.php?page=rfa-settings' ) ) . '">تنظیمات</a>';
+    $links['settings'] = '<a href="' . esc_url( admin_url( 'admin.php?page=brz-settings' ) ) . '">تنظیمات</a>';
     return $links;
 } );
 
@@ -54,8 +50,8 @@ register_activation_hook( __FILE__, function(){
         'load_strategy'   => 'auto', // auto | all | selector
         'custom_selector' => '.rank-math-faq',
     );
-    $current = get_option( RFA_OPTION, array() );
-    update_option( RFA_OPTION, wp_parse_args( $current, $defaults ), false );
+    $current = get_option( BRZ_OPTION, array() );
+    update_option( BRZ_OPTION, wp_parse_args( $current, $defaults ), false );
 });
 
 /**

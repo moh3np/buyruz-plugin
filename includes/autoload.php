@@ -1,0 +1,34 @@
+<?php
+if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+/**
+ * Lightweight class autoloader for BRZ_ prefixed classes.
+ * Keeps file structure declarative so modules can grow without manual requires.
+ * هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
+ */
+spl_autoload_register( function( $class ) {
+    if ( strpos( $class, 'BRZ_' ) !== 0 ) {
+        return;
+    }
+
+    $map = array(
+        'BRZ_Plugin'                 => 'core/class-brz-plugin.php',
+        'BRZ_Guard'                  => 'core/class-brz-guard.php',
+        'BRZ_Debug'                  => 'support/class-brz-debug.php',
+        'BRZ_Settings'               => 'admin/class-brz-settings.php',
+        'BRZ_Detector'               => 'front/class-brz-detector.php',
+        'BRZ_Enqueue'                => 'front/class-brz-enqueue.php',
+        'BRZ_RankMath_Integration'   => 'integration/class-brz-rankmath.php',
+    );
+
+    $map = apply_filters( 'brz/autoload_map', $map );
+
+    if ( empty( $map[ $class ] ) ) {
+        return;
+    }
+
+    $path = BRZ_PATH . 'includes/' . ltrim( $map[ $class ], '/' );
+    if ( file_exists( $path ) ) {
+        require_once $path;
+    }
+} );

@@ -1,6 +1,7 @@
 (function(){
-  // Config from localized window.RFA
-  var cfg = (window.RFA||{});
+  // هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
+  // Config from localized window.BRZ (fallback به window.RFA برای سازگاری)
+  var cfg = (window.BRZ||window.RFA||{});
   var selector = cfg.selector || '.rank-math-faq';
 
   function onReady(fn){ if(document.readyState!=='loading'){fn();} else {document.addEventListener('DOMContentLoaded',fn);} }

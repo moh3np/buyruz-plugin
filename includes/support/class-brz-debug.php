@@ -1,7 +1,8 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) { exit; }
+// هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
 
-class RFA_Debug {
+class BRZ_Debug {
     const MASK_PLACEHOLDER = '[masked]';
     const MAX_CONTEXT_LENGTH = 2000;
 
@@ -66,11 +67,11 @@ class RFA_Debug {
     }
 
     public static function get_log_directory() {
-        return defined( 'RFA_LOG_DIR' ) ? RFA_LOG_DIR : trailingslashit( RFA_PATH ) . 'logs/';
+        return defined( 'BRZ_LOG_DIR' ) ? BRZ_LOG_DIR : trailingslashit( BRZ_PATH ) . 'logs/';
     }
 
     public static function get_retention_days() {
-        $days = (int) RFA_Settings::get( 'debug_retention_days', 7 );
+        $days = (int) BRZ_Settings::get( 'debug_retention_days', 7 );
         if ( $days < 1 ) {
             $days = 1;
         } elseif ( $days > 30 ) {
@@ -80,8 +81,8 @@ class RFA_Debug {
     }
 
     private static function is_any_logging_enabled() {
-        $enabled = (bool) RFA_Settings::get( 'debug_enabled', 0 );
-        $components = (array) RFA_Settings::get( 'debug_components', array() );
+        $enabled = (bool) BRZ_Settings::get( 'debug_enabled', 0 );
+        $components = (array) BRZ_Settings::get( 'debug_components', array() );
         return $enabled && ! empty( $components );
     }
 
@@ -90,7 +91,7 @@ class RFA_Debug {
             return false;
         }
 
-        $components = (array) RFA_Settings::get( 'debug_components', array() );
+        $components = (array) BRZ_Settings::get( 'debug_components', array() );
         return in_array( $component, $components, true );
     }
 
@@ -99,7 +100,7 @@ class RFA_Debug {
             return $context;
         }
 
-        $mask_sensitive = (bool) RFA_Settings::get( 'debug_mask_sensitive', 1 );
+        $mask_sensitive = (bool) BRZ_Settings::get( 'debug_mask_sensitive', 1 );
 
         $prepared = array();
 
@@ -178,7 +179,7 @@ class RFA_Debug {
         $component = sanitize_key( $component );
         $date = current_time( 'Y-m-d' );
 
-        return trailingslashit( self::get_log_directory() ) . 'rfa-' . $component . '-' . $date . '.log';
+        return trailingslashit( self::get_log_directory() ) . 'brz-' . $component . '-' . $date . '.log';
     }
 
     private static function ensure_log_directory() {
@@ -190,13 +191,13 @@ class RFA_Debug {
 
         if ( ! file_exists( $dir ) ) {
             if ( ! wp_mkdir_p( $dir ) ) {
-                error_log( sprintf( '[RFA Debug] Unable to create log directory: %s', $dir ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+                error_log( sprintf( '[BRZ Debug] Unable to create log directory: %s', $dir ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
                 return false;
             }
         }
 
         if ( ! is_writable( $dir ) ) {
-            error_log( sprintf( '[RFA Debug] Log directory not writable: %s', $dir ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+            error_log( sprintf( '[BRZ Debug] Log directory not writable: %s', $dir ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
             return false;
         }
 
@@ -210,7 +211,7 @@ class RFA_Debug {
             return;
         }
 
-        $files = glob( trailingslashit( $dir ) . 'rfa-*.log' );
+        $files = glob( trailingslashit( $dir ) . 'brz-*.log' );
         if ( empty( $files ) ) {
             return;
         }

@@ -1,4 +1,5 @@
-.rfa-admin-wrap {
+/* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
+.brz-admin-wrap {
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 0 64px;
@@ -6,7 +7,7 @@
   color: #1f2933;
 }
 
-.rfa-hero {
+.brz-hero {
   background: linear-gradient(135deg, #f0f5ff 0%, #fff 60%);
   border: 1px solid #dbe7ff;
   border-radius: 18px;
@@ -17,31 +18,31 @@
   gap: 16px;
 }
 
-.rfa-hero h1 {
+.brz-hero h1 {
   margin: 0;
   font-size: 26px;
   font-weight: 700;
   color: #0f172a;
 }
 
-.rfa-hero p {
+.brz-hero p {
   margin: 0;
   line-height: 1.7;
 }
 
-.rfa-hero ul {
+.brz-hero ul {
   margin: 0;
   padding-inline-start: 18px;
   line-height: 1.7;
 }
 
-.rfa-section-grid {
+.brz-section-grid {
   display: grid;
   gap: 24px;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
-.rfa-card {
+.brz-card {
   background: #fff;
   border-radius: 16px;
   border: 1px solid #e5e7eb;
@@ -51,54 +52,54 @@
   overflow: hidden;
 }
 
-.rfa-card__header {
+.brz-card__header {
   padding: 20px 24px 0;
 }
 
-.rfa-card__header h2 {
+.brz-card__header h2 {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
 }
 
-.rfa-card__header p {
+.brz-card__header p {
   margin: 10px 0 0;
   color: #555;
   line-height: 1.6;
 }
 
-.rfa-card__body {
+.brz-card__body {
   padding: 18px 24px 26px;
 }
 
-.rfa-card .form-table,
-.rfa-card .form-table tbody,
-.rfa-card .form-table tr,
-.rfa-card .form-table th,
-.rfa-card .form-table td {
+.brz-card .form-table,
+.brz-card .form-table tbody,
+.brz-card .form-table tr,
+.brz-card .form-table th,
+.brz-card .form-table td {
   display: block;
   width: 100%;
   border: none;
   padding: 0;
 }
 
-.rfa-card .form-table tr + tr {
+.brz-card .form-table tr + tr {
   margin-top: 18px;
 }
 
-.rfa-card .form-table th {
+.brz-card .form-table th {
   font-weight: 600;
   margin-bottom: 6px;
 }
 
-.rfa-card .form-table td {
+.brz-card .form-table td {
   margin: 0;
 }
 
-.rfa-card input[type="text"],
-.rfa-card input[type="password"],
-.rfa-card input[type="url"],
-.rfa-card select {
+.brz-card input[type="text"],
+.brz-card input[type="password"],
+.brz-card input[type="url"],
+.brz-card select {
   width: 100%;
   border-radius: 8px;
   border: 1px solid #d0d7e2;
@@ -108,25 +109,25 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.rfa-card input[type="text"]:focus,
-.rfa-card input[type="password"]:focus,
-.rfa-card input[type="url"]:focus,
-.rfa-card select:focus {
+.brz-card input[type="text"]:focus,
+.brz-card input[type="password"]:focus,
+.brz-card input[type="url"]:focus,
+.brz-card select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   outline: none;
 }
 
-.rfa-card .description {
+.brz-card .description {
   margin-top: 6px;
   color: #6b7280;
 }
 
-.rfa-card label input[type="checkbox"] {
+.brz-card label input[type="checkbox"] {
   margin-right: 6px;
 }
 
-.rfa-card__footer {
+.brz-card__footer {
   border-top: 1px solid #eef2f6;
   background: #f8fafc;
   padding: 16px 24px;
@@ -135,13 +136,13 @@
   line-height: 1.6;
 }
 
-.rfa-save-bar {
+.brz-save-bar {
   margin-top: 32px;
   display: flex;
   justify-content: flex-end;
 }
 
-.rfa-save-bar .button-primary {
+.brz-save-bar .button-primary {
   font-size: 15px;
   padding: 10px 26px;
   height: auto;
@@ -149,7 +150,7 @@
   box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
 }
 
-.rfa-alert {
+.brz-alert {
   margin-top: 16px;
   border-radius: 12px;
   padding: 12px 16px;
@@ -158,35 +159,35 @@
   border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
-.rfa-alert strong {
+.brz-alert strong {
   display: block;
   margin-bottom: 4px;
 }
 
-.rfa-alert ul {
+.brz-alert ul {
   margin: 6px 0 0;
   padding-inline-start: 18px;
 }
 
-.rfa-alert li {
+.brz-alert li {
   margin-bottom: 4px;
   line-height: 1.6;
 }
 
 @media (max-width: 782px) {
-  .rfa-hero {
+  .brz-hero {
     padding: 24px;
   }
 
-  .rfa-card__body {
+  .brz-card__body {
     padding: 16px 20px 22px;
   }
 
-  .rfa-card__header {
+  .brz-card__header {
     padding: 20px 20px 0;
   }
 
-  .rfa-card__footer {
+  .brz-card__footer {
     padding: 14px 20px;
   }
 }

@@ -1,6 +1,7 @@
 /* Styles apply only after JS adds .accordion-init to wrapper.
    This preserves SEO and no-JS accessibility. */
-:root{--rfa-brand:#RFA_BRAND#}
+/* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
+:root{--brz-brand:#BRZ_BRAND#}
 
 /* Wrapper */
 .rank-math-faq{direction:rtl}
@@ -20,7 +21,7 @@
 
 /* Icon bubble at right */
 .rank-math-faq.accordion-init .rank-math-question::before{
-  content:"";width:34px;height:34px;border-radius:999px;flex:0 0 34px;background:var(--rfa-brand,#RFA_BRAND#);display:inline-block;position:relative
+  content:"";width:34px;height:34px;border-radius:999px;flex:0 0 34px;background:var(--brz-brand,#BRZ_BRAND#);display:inline-block;position:relative
 }
 .rank-math-faq.accordion-init .rank-math-question::after{
   content:"";width:14px;height:14px;position:absolute;inset:0;margin:auto;

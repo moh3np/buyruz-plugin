@@ -1,9 +1,10 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) { exit; }
+// هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
 
-class RFA_Detector {
+class BRZ_Detector {
     public static function should_load() {
-        $opts = RFA_Settings::get();
+        $opts = BRZ_Settings::get();
         $strategy = isset($opts['load_strategy']) ? $opts['load_strategy'] : 'auto';
 
         if ( $strategy === 'all' ) { return true; }

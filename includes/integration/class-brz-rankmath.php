@@ -1,7 +1,8 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) { exit; }
+// هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
 
-class RFA_RankMath_Integration {
+class BRZ_RankMath_Integration {
     public static function init() {
         if ( ! class_exists( '\RankMath\Schema\DB' ) ) {
             return;
@@ -106,7 +107,7 @@ class RFA_RankMath_Integration {
          * @param array  $items  Sanitized FAQ items.
          * @param array  $schema Original schema array.
         */
-        return apply_filters( 'rfa/rankmath/faq_markup', $output, $items, $schema );
+        return apply_filters( 'brz/rankmath/faq_markup', $output, $items, $schema );
     }
 
     private static function should_skip_hooks() {
@@ -129,5 +130,3 @@ class RFA_RankMath_Integration {
         return false;
     }
 }
-
-RFA_RankMath_Integration::init();
