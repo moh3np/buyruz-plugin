@@ -1,0 +1,38 @@
+name: Deploy plugin to cPanel via FTPS
+
+on:
+  push:
+    branches:
+      - main    # اگر برنچ اصلی‌ات مثلا master است، همین main را به master تغییر بده
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTPS
+        uses: SamKirkland/[email protected]
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+
+          protocol: ftps
+          port: 21
+
+          # کل ریپو را می‌فرستیم (فایل‌های پلاگین همین‌جا هستند)
+          local-dir: ./
+
+          # چون روت FTP این یوزر خود پوشهٔ پلاگین است،
+          # لازم نیست مسیر بدهیم؛ همین ./ یعنی ریشهٔ آن پوشه
+          server-dir: ./
+
+          # چیزهایی که لازم نیست آپلود شود
+          exclude: |
+            .git*
+            .github/
+            node_modules/
+            *.log
