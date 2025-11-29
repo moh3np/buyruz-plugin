@@ -5,6 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class BRZ_Settings {
     const CAPABILITY  = 'manage_options';
     const PARENT_SLUG = 'buyruz-dashboard';
+    const MENU_POSITION = 1;
 
     private static function sections_meta() {
         $sections = array(
@@ -178,7 +179,7 @@ class BRZ_Settings {
             self::PARENT_SLUG,
             array( __CLASS__, 'render_page' ),
             'dashicons-admin-generic',
-            58
+            self::MENU_POSITION
         );
 
         add_submenu_page(
