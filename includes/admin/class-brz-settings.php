@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class BRZ_Settings {
     const CAPABILITY  = 'manage_options';
     const PARENT_SLUG = 'buyruz-dashboard';
-    const MENU_POSITION = 3;
+    const MENU_POSITION = 2;
 
     private static function sections_meta() {
         $sections = array(
