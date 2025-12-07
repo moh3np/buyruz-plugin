@@ -8,6 +8,7 @@ class BRZ_Tag_Sync_Guard {
 
     public static function init() {
         add_filter( 'rest_pre_insert_product_tag', array( __CLASS__, 'whitelist_sheet_fields' ), 10, 3 );
+        add_filter( 'rest_pre_insert_product_brand', array( __CLASS__, 'whitelist_sheet_fields' ), 10, 3 );
     }
 
     public static function whitelist_sheet_fields( $prepared_term, $request, $creating ) {
