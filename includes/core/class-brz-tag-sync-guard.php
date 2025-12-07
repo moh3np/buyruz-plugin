@@ -7,16 +7,29 @@ class BRZ_Tag_Sync_Guard {
     const HEADER_VALUE = 'sheets';
 
     public static function init() {
-        add_filter( 'rest_pre_insert_product_tag', array( __CLASS__, 'whitelist_sheet_fields' ), 10, 3 );
-        add_filter( 'rest_pre_insert_product_brand', array( __CLASS__, 'whitelist_sheet_fields' ), 10, 3 );
+        add_filter( 'rest_pre_insert_product_tag', array( __CLASS__, 'whitelist_sheet_fields_tag' ), 10, 3 );
+        add_filter( 'rest_pre_insert_product_brand', array( __CLASS__, 'whitelist_sheet_fields_brand' ), 10, 3 );
+        add_filter( 'rest_pre_insert_product_cat', array( __CLASS__, 'whitelist_sheet_fields_category' ), 10, 3 );
     }
 
-    public static function whitelist_sheet_fields( $prepared_term, $request, $creating ) {
+    public static function whitelist_sheet_fields_tag( $prepared_term, $request, $creating ) {
+        return self::whitelist_sheet_fields( $prepared_term, $request, $creating, 'product_tag' );
+    }
+
+    public static function whitelist_sheet_fields_brand( $prepared_term, $request, $creating ) {
+        return self::whitelist_sheet_fields( $prepared_term, $request, $creating, 'product_brand' );
+    }
+
+    public static function whitelist_sheet_fields_category( $prepared_term, $request, $creating ) {
+        return self::whitelist_sheet_fields( $prepared_term, $request, $creating, 'product_cat' );
+    }
+
+    private static function whitelist_sheet_fields( $prepared_term, $request, $creating, $taxonomy ) {
         if ( ! self::is_sheet_request( $request ) ) {
             return $prepared_term;
         }
 
-        self::strip_disallowed_request_params( $request );
+        self::strip_disallowed_request_params( $request, $taxonomy, $creating );
 
         if ( is_wp_error( $prepared_term ) || ! is_object( $prepared_term ) ) {
             return $prepared_term;
@@ -32,8 +45,12 @@ class BRZ_Tag_Sync_Guard {
             $safe->name = $prepared_term->name;
         }
 
-        if ( isset( $prepared_term->slug ) ) {
+        if ( $creating && isset( $prepared_term->slug ) ) {
             $safe->slug = $prepared_term->slug;
+        }
+
+        if ( 'product_cat' === $taxonomy && isset( $prepared_term->parent ) ) {
+            $safe->parent = $prepared_term->parent;
         }
 
         return $safe;
@@ -50,11 +67,15 @@ class BRZ_Tag_Sync_Guard {
         return strtolower( (string) $header ) === self::HEADER_VALUE;
     }
 
-    private static function strip_disallowed_request_params( WP_REST_Request $request ) {
-        $allowed = array( 'name', 'slug' );
+    private static function strip_disallowed_request_params( WP_REST_Request $request, $taxonomy, $creating ) {
+        $allowed = array( 'name' );
 
-        if ( $request->get_param( 'id' ) ) {
-            $allowed[] = 'id';
+        if ( $creating ) {
+            $allowed[] = 'slug';
+        }
+
+        if ( 'product_cat' === $taxonomy ) {
+            $allowed[] = 'parent';
         }
 
         $whitelist = function( $params ) use ( $allowed ) {
