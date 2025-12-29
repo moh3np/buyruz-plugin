@@ -7,6 +7,7 @@ class MyPlugin_RankMath_Faq_Append {
     private static $id_cache      = array();
     private static $content_cache = array();
     private static $faq_cache     = array();
+    private static $schema_cache  = array();
     private static $primed        = false;
     private static $appended_ids  = array();
 
@@ -35,6 +36,9 @@ class MyPlugin_RankMath_Faq_Append {
         
         // Fallback: اضافه کردن پس از محتوای تب توضیحات
         add_action( 'woocommerce_product_after_tabs', array( __CLASS__, 'append_faq_after_tabs' ), 5 );
+
+        // Fallback نهایی: بعد از خلاصهٔ محصول (بیرون از تب‌ها)
+        add_action( 'woocommerce_after_single_product_summary', array( __CLASS__, 'append_faq_after_summary' ), 25 );
         
         add_action( 'wp', array( __CLASS__, 'prime_global_content' ) );
     }
@@ -129,6 +133,35 @@ class MyPlugin_RankMath_Faq_Append {
     public static function maybe_append_faq_to_short_desc( $short_description ) {
         // برای توضیح کوتاه، FAQ اضافه نمی‌کنیم
         return $short_description;
+    }
+
+    /**
+     * Fallback output after summary if tabs are overridden.
+     */
+    public static function append_faq_after_summary() {
+        global $product;
+
+        if ( ! $product ) {
+            return;
+        }
+
+        $post_id = $product->get_id();
+
+        if ( isset( self::$appended_ids[ $post_id ] ) ) {
+            return;
+        }
+
+        if ( ! self::should_run( $post_id, true ) ) {
+            return;
+        }
+
+        $faq_html = self::get_faq_html( $post_id );
+        if ( empty( $faq_html ) ) {
+            return;
+        }
+
+        self::$appended_ids[ $post_id ] = true;
+        echo '<div class="brz-faq-section">' . $faq_html . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     public static function should_run( $post_id, $relaxed = false ) {
@@ -267,7 +300,7 @@ class MyPlugin_RankMath_Faq_Append {
             }
         }
 
-        // روش ۲: استخراج مستقیم از Schema DB
+        // روش ۲: استخراج مستقیم از Schema (DB یا متا)
         $faq_html = self::render_faq_from_schema( $post_id );
         if ( ! empty( $faq_html ) ) {
             self::$faq_cache[ $post_id ] = $faq_html;
@@ -348,11 +381,7 @@ class MyPlugin_RankMath_Faq_Append {
      * Extract FAQ questions and answers from Rank Math schema.
      */
     private static function extract_faq_from_schema( $post_id ) {
-        if ( ! class_exists( '\RankMath\Schema\DB' ) ) {
-            return array();
-        }
-
-        $schemas = \RankMath\Schema\DB::get_schemas( $post_id );
+        $schemas = self::collect_schemas( $post_id );
 
         if ( ! is_array( $schemas ) || empty( $schemas ) ) {
             return array();
@@ -431,6 +460,50 @@ class MyPlugin_RankMath_Faq_Append {
         return $faq_items;
     }
 
+    private static function collect_schemas( $post_id ) {
+        if ( isset( self::$schema_cache[ $post_id ] ) ) {
+            return self::$schema_cache[ $post_id ];
+        }
+
+        $schemas = array();
+
+        if ( class_exists( '\RankMath\Schema\DB' ) && method_exists( '\RankMath\Schema\DB', 'get_schemas' ) ) {
+            $db_schemas = \RankMath\Schema\DB::get_schemas( $post_id );
+            if ( is_array( $db_schemas ) ) {
+                $schemas = $db_schemas;
+            }
+        }
+
+        $meta_keys = array(
+            'rank_math_schema',
+            'rank_math_rich_snippet',
+            'rank_math_schema_FAQPage',
+        );
+
+        foreach ( $meta_keys as $key ) {
+            $raw = get_post_meta( $post_id, $key, true );
+            if ( empty( $raw ) ) {
+                continue;
+            }
+            $value = maybe_unserialize( $raw );
+            if ( is_string( $value ) && self::looks_like_json( $value ) ) {
+                $decoded = json_decode( $value, true );
+                if ( is_array( $decoded ) ) {
+                    $value = $decoded;
+                }
+            }
+            if ( is_array( $value ) ) {
+                // Merge numeric or associative arrays.
+                foreach ( $value as $k => $schema ) {
+                    $schemas[ $k ] = $schema;
+                }
+            }
+        }
+
+        self::$schema_cache[ $post_id ] = $schemas;
+        return $schemas;
+    }
+
     public static function extract_snippet_id( $post_id ) {
         $post_id = absint( $post_id );
 
@@ -442,57 +515,18 @@ class MyPlugin_RankMath_Faq_Append {
             return self::$id_cache[ $post_id ];
         }
 
-        // روش ۱: استفاده از Schema DB رنک‌مث (قابل اعتمادترین)
-        if ( class_exists( '\RankMath\Schema\DB' ) && method_exists( '\RankMath\Schema\DB', 'get_schemas' ) ) {
-            $schemas = \RankMath\Schema\DB::get_schemas( $post_id );
-            if ( is_array( $schemas ) ) {
-                foreach ( $schemas as $schema_id => $schema ) {
-                    if ( ! self::is_faq_schema( $schema ) ) {
-                        continue;
-                    }
-
-                    // schema_id خود ID است
-                    if ( ! empty( $schema_id ) && is_string( $schema_id ) ) {
-                        self::$id_cache[ $post_id ] = $schema_id;
-                        return $schema_id;
-                    }
-
-                    // استخراج از @id
-                    $found = self::extract_id_from_schema( $schema );
-                    if ( $found ) {
-                        self::$id_cache[ $post_id ] = $found;
-                        return $found;
-                    }
-                }
-            }
-        }
-
-        // روش ۲: جستجو در post meta
-        $keys = array(
-            'rank_math_schema',
-            'rank_math_rich_snippet',
-            'rank_math_rich_snippet_id',
-            'rank_math_schema_FAQPage',
-        );
-
-        foreach ( $keys as $key ) {
-            $raw = get_post_meta( $post_id, $key, true );
-
-            if ( empty( $raw ) ) {
+        $schemas = self::collect_schemas( $post_id );
+        foreach ( $schemas as $schema_id => $schema ) {
+            if ( ! self::is_faq_schema( $schema ) ) {
                 continue;
             }
 
-            $value = maybe_unserialize( $raw );
-
-            if ( is_string( $value ) && self::looks_like_json( $value ) ) {
-                $decoded = json_decode( $value, true );
-                if ( is_array( $decoded ) ) {
-                    $value = $decoded;
-                }
+            if ( ! empty( $schema_id ) && is_string( $schema_id ) && strpos( $schema_id, 's-' ) === 0 ) {
+                self::$id_cache[ $post_id ] = $schema_id;
+                return $schema_id;
             }
 
-            $found = self::scan_for_snippet_id( $value );
-
+            $found = self::extract_id_from_schema( $schema );
             if ( $found ) {
                 self::$id_cache[ $post_id ] = $found;
                 return $found;
