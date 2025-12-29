@@ -144,18 +144,16 @@ class MyPlugin_RankMath_Faq_Append {
             return false;
         }
 
-        // برای ووکامرس، is_singular('product') ممکن است قبل از wp کار نکند
+        $post_type = get_post_type( $post_id );
+        $is_product = ( 'product' === $post_type ) || ( function_exists( 'is_product' ) && is_product() );
+
+        if ( ! $is_product && ! is_singular( 'product' ) ) {
+            return false;
+        }
+
+        // در حالت strict، فقط اجازه در لوپ و main query
         if ( ! $relaxed ) {
-            if ( ! is_singular( 'product' ) ) {
-                return false;
-            }
             if ( ! in_the_loop() || ! is_main_query() ) {
-                return false;
-            }
-        } else {
-            // در حالت relaxed، فقط چک می‌کنیم که post_type درست باشد
-            $post_type = get_post_type( $post_id );
-            if ( 'product' !== $post_type ) {
                 return false;
             }
         }
@@ -170,7 +168,7 @@ class MyPlugin_RankMath_Faq_Append {
 
         $post_id = $post ? $post->ID : 0;
 
-        if ( ! self::should_run( $post_id ) ) {
+        if ( ! self::should_run( $post_id, true ) ) {
             return $content;
         }
 
