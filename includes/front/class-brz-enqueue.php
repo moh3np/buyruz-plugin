@@ -18,8 +18,7 @@ class BRZ_Enqueue {
                 'singleOpen'     => ! empty($opts['single_open']),
                 'animate'        => ! empty($opts['animate']),
                 'compactMobile'  => ! empty($opts['compact_mobile']),
-                'selector'       => isset($opts['custom_selector']) ? $opts['custom_selector'] : '.rank-math-faq',
-                'strategy'       => isset($opts['load_strategy']) ? $opts['load_strategy'] : 'auto',
+                'selector'       => '.rank-math-faq',
             );
             wp_register_script(
                 'brz-faq',

@@ -15,11 +15,6 @@ class BRZ_Settings {
                 'description' => 'کنترل رنگ برند، انیمیشن و رفتار آکاردئون FAQ برای همهٔ سایت.',
                 'footer'      => 'تغییرات این بخش فوراً روی صفحات دارای Rank Math FAQ اعمال می‌شود.',
             ),
-            'brz_load'    => array(
-                'title'       => 'بارگذاری و بهینه‌سازی',
-                'description' => 'استراتژی بارگذاری منابع را برای اولویت Performance مشخص کنید.',
-                'footer'      => 'حالت خودکار توصیه می‌شود مگر در شرایط خاص صفحه‌سازها که نیاز به سلکتور سفارشی دارند.',
-            ),
             'brz_debug'   => array(
                 'title'       => 'دیباگ و لاگ‌ها',
                 'description' => 'ثبت رخدادها برای عیب‌یابی بدون قربانی کردن سرعت.',
@@ -148,23 +143,6 @@ class BRZ_Settings {
             echo '<input type="hidden" name="'.BRZ_OPTION.'[compact_mobile]" value="0" />';
             echo '<label><input type="checkbox" name="'.BRZ_OPTION.'[compact_mobile]" value="1" '.checked( 1, $v, false ).'> فعال</label>';
         }, 'brz-settings', 'brz_main' );
-
-        add_settings_section( 'brz_load', 'بارگذاری هوشمند', '__return_false', 'brz-settings' );
-
-        add_settings_field( 'load_strategy', 'حالت بارگذاری', function(){
-            $v = self::get( 'load_strategy', 'auto' );
-            ?>
-            <label><input type="radio" name="<?php echo BRZ_OPTION; ?>[load_strategy]" value="auto" <?php checked( 'auto', $v ); ?>> خودکار (وقتی FAQ موجود باشد)</label><br/>
-            <label><input type="radio" name="<?php echo BRZ_OPTION; ?>[load_strategy]" value="all" <?php checked( 'all', $v ); ?>> همه صفحات</label><br/>
-            <label><input type="radio" name="<?php echo BRZ_OPTION; ?>[load_strategy]" value="selector" <?php checked( 'selector', $v ); ?>> فقط صفحات دارای سلکتور سفارشی</label>
-            <?php
-        }, 'brz-settings', 'brz_load' );
-
-        add_settings_field( 'custom_selector', 'سلکتور سفارشی', function(){
-            $v = esc_attr( self::get( 'custom_selector', '.rank-math-faq' ) );
-            echo '<input type="text" class="regular-text" name="'.BRZ_OPTION.'[custom_selector]" value="'.$v.'" />';
-            echo '<p class="description">وقتی حالت "selector" فعال است، اگر این سلکتور در HTML صفحه وجود داشته باشد، افزونه فعال می‌شود.</p>';
-        }, 'brz-settings', 'brz_load' );
 
         add_settings_section( 'brz_debug', 'دیباگ و لاگ‌ها', '__return_false', 'brz-settings' );
 
@@ -317,18 +295,6 @@ class BRZ_Settings {
             }
         }
 
-        $strategy       = self::get( 'load_strategy', 'auto' );
-        $selector       = self::get( 'custom_selector', '.rank-math-faq' );
-        $strategy_label = 'خودکار';
-        $strategy_hint  = 'تشخیص خودکار FAQ در محتوا';
-        if ( 'all' === $strategy ) {
-            $strategy_label = 'همهٔ صفحات';
-            $strategy_hint  = 'منابع همیشه آماده هستند';
-        } elseif ( 'selector' === $strategy ) {
-            $strategy_label = 'سلکتور سفارشی';
-            $strategy_hint  = 'فعال زمانی که ' . $selector . ' وجود داشته باشد';
-        }
-
         $css_on   = self::get( 'enable_css', 1 );
         $js_on    = self::get( 'enable_js', 1 );
         $inline   = self::get( 'inline_css', 1 );
@@ -339,11 +305,6 @@ class BRZ_Settings {
                 'label' => 'وضعیت ماژول‌ها',
                 'value' => $active . ' / ' . $total,
                 'hint'  => 'سوئیچ‌ها فوری و بدون رفرش عمل می‌کنند.',
-            ),
-            array(
-                'label' => 'استراتژی بارگذاری',
-                'value' => $strategy_label,
-                'hint'  => $strategy_hint,
             ),
             array(
                 'label' => 'استایل و دیباگ',
@@ -480,7 +441,7 @@ class BRZ_Settings {
             <div class="brz-section-header">
                 <div>
                     <h2>تنظیمات عمومی</h2>
-                    <p>تنظیمات اصلی نمایش و بارگذاری FAQ برای همهٔ ماژول‌ها.</p>
+                    <p>تنظیمات اصلی نمایش و تجربهٔ FAQ برای همهٔ ماژول‌ها.</p>
                 </div>
                 <div class="brz-section-actions">
                     <a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>">بازگشت به پیشخوان</a>
@@ -488,7 +449,7 @@ class BRZ_Settings {
             </div>
 
             <div class="brz-inline-alert brz-inline-alert--info">
-                ذخیرهٔ تنظیمات به‌صورت لحظه‌ای و بدون رفرش انجام می‌شود. برای سرعت بیشتر، حالت «سلکتور سفارشی» را در صفحات سازنده امتحان کنید.
+                ذخیرهٔ تنظیمات به‌صورت لحظه‌ای و بدون رفرش انجام می‌شود.
             </div>
 
             <div class="brz-grid">
@@ -497,7 +458,7 @@ class BRZ_Settings {
                         <?php
                         settings_fields( 'brz_group' );
                         echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="general" />';
-                        self::render_section_cards( array( 'brz_main', 'brz_load' ) );
+                        self::render_section_cards( array( 'brz_main' ) );
                         ?>
                         <div class="brz-save-bar">
                             <span class="brz-save-state" aria-live="polite">تغییرات بدون رفرش ذخیره می‌شود.</span>
@@ -533,7 +494,7 @@ class BRZ_Settings {
                     <?php self::render_support_card(
                         'مسیر بهینه‌سازی',
                         array(
-                            'CSS/JS فقط وقتی لود می‌شود که FAQ یا سلکتور سفارشی وجود داشته باشد.',
+                            'CSS/JS فقط وقتی نیاز باشد لود می‌شود.',
                             'برای صفحات شلوغ، گزینهٔ «اینلاین» درخواست اضافی را حذف می‌کند.',
                             'غیرفعال کردن هر گزینه فوراً اعمال می‌شود و دادهٔ اضافی در دیتابیس باقی نمی‌گذارد.',
                         ),
@@ -1022,7 +983,7 @@ class BRZ_Settings {
         }
 
         // General settings.
-        if ( 'general' === $context || isset( $input['enable_css'] ) || isset( $input['load_strategy'] ) ) {
+        if ( 'general' === $context || isset( $input['enable_css'] ) ) {
             $checkboxes = array( 'enable_css', 'inline_css', 'enable_js', 'single_open', 'animate', 'compact_mobile' );
             foreach ( $checkboxes as $checkbox ) {
                 if ( isset( $input[ $checkbox ] ) ) {
@@ -1034,18 +995,6 @@ class BRZ_Settings {
             if ( isset( $input['brand_color'] ) ) {
                 $output['brand_color'] = sanitize_text_field( $input['brand_color'] );
                 unset( $input['brand_color'] );
-            }
-
-            if ( isset( $input['load_strategy'] ) ) {
-                $allowed = array( 'auto', 'all', 'selector' );
-                $strategy = sanitize_text_field( $input['load_strategy'] );
-                $output['load_strategy'] = in_array( $strategy, $allowed, true ) ? $strategy : 'auto';
-                unset( $input['load_strategy'] );
-            }
-
-            if ( isset( $input['custom_selector'] ) ) {
-                $output['custom_selector'] = sanitize_text_field( $input['custom_selector'] );
-                unset( $input['custom_selector'] );
             }
         }
 
