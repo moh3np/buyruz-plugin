@@ -932,12 +932,33 @@ class BRZ_Settings {
         update_option( BRZ_OPTION, $sanitized, false );
         self::$options_cache = $sanitized;
 
+        $extra_saved = self::save_extra_options_from_post();
+
         wp_send_json_success(
             array(
                 'message' => 'تنظیمات ذخیره شد.',
                 'accent'  => isset( $sanitized['brand_color'] ) ? $sanitized['brand_color'] : self::get( 'brand_color', '#ff5668' ),
+                'options' => $extra_saved,
             )
         );
+    }
+
+    private static function save_extra_options_from_post() {
+        $map = array(
+            'myplugin_enable_wc_product_shortcodes' => array( __CLASS__, 'sanitize_wc_product_shortcodes_option' ),
+            'myplugin_enable_rankmath_faq_append'   => array( __CLASS__, 'sanitize_rankmath_faq_append_option' ),
+        );
+
+        $saved = array();
+
+        foreach ( $map as $option => $callback ) {
+            $raw = isset( $_POST[ $option ] ) ? wp_unslash( $_POST[ $option ] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            $value = is_callable( $callback ) ? call_user_func( $callback, $raw ) : ( empty( $raw ) ? 0 : 1 );
+            update_option( $option, $value ? 1 : 0, false );
+            $saved[ $option ] = $value ? 1 : 0;
+        }
+
+        return $saved;
     }
 
     private static function toggle_module_state( $slug, $state ) {
