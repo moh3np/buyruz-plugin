@@ -182,16 +182,63 @@ class MyPlugin_RankMath_Faq_Append {
             }
         }
 
+        // Fallback: lightweight schema fetch via Rank Math if available.
+        if ( class_exists( '\RankMath\Schema\DB' ) && method_exists( '\RankMath\Schema\DB', 'get_schemas' ) ) {
+            $schemas = \RankMath\Schema\DB::get_schemas( $post_id );
+            if ( is_array( $schemas ) ) {
+                foreach ( $schemas as $schema ) {
+                    if ( ! self::is_faq_schema( $schema ) ) {
+                        continue;
+                    }
+                    $found = self::scan_for_snippet_id( $schema );
+                    if ( $found ) {
+                        self::$id_cache[ $post_id ] = $found;
+                        return $found;
+                    }
+                }
+            }
+        }
+
         self::$id_cache[ $post_id ] = '';
 
         return '';
     }
 
+    private static function is_faq_schema( $schema ) {
+        if ( is_object( $schema ) ) {
+            $schema = (array) $schema;
+        }
+
+        if ( ! is_array( $schema ) ) {
+            return false;
+        }
+
+        if ( ! isset( $schema['@type'] ) ) {
+            return false;
+        }
+
+        $type = $schema['@type'];
+
+        if ( is_array( $type ) ) {
+            $type = array_map( 'strtolower', $type );
+            return in_array( 'faqpage', $type, true );
+        }
+
+        if ( is_string( $type ) ) {
+            return strtolower( $type ) === 'faqpage';
+        }
+
+        return false;
+    }
+
     private static function scan_for_snippet_id( $value ) {
         if ( is_string( $value ) ) {
             $value = trim( $value );
-            if ( strlen( $value ) >= 10 && strpos( $value, 's-' ) === 0 ) {
+            if ( strlen( $value ) >= 5 && strpos( $value, 's-' ) === 0 ) {
                 return $value;
+            }
+            if ( str_starts_with( $value, '#s-' ) && strlen( $value ) >= 6 ) {
+                return ltrim( $value, '#' );
             }
             return '';
         }
