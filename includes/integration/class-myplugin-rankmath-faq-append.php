@@ -493,9 +493,17 @@ class MyPlugin_RankMath_Faq_Append {
                 }
             }
             if ( is_array( $value ) ) {
-                // Merge numeric or associative arrays.
-                foreach ( $value as $k => $schema ) {
-                    $schemas[ $k ] = $schema;
+                // اگر خود مقدار یک اسکیما است (دارای @type)
+                if ( isset( $value['@type'] ) ) {
+                    $schemas[] = $value;
+                } else {
+                    // اگر لیستی از اسکیماهاست
+                    foreach ( $value as $k => $schema ) {
+                        // اطمینان حاصل کنیم که $schema واقعاً آرایه یا آبجکت است
+                        if ( is_array( $schema ) || is_object( $schema ) ) {
+                            $schemas[ $k ] = $schema;
+                        }
+                    }
                 }
             }
         }
