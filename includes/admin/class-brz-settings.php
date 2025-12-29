@@ -93,6 +93,15 @@ class BRZ_Settings {
                 'default'           => 0,
             )
         );
+        register_setting(
+            'brz_group',
+            'myplugin_enable_wc_product_shortcodes',
+            array(
+                'type'              => 'boolean',
+                'sanitize_callback' => array( __CLASS__, 'sanitize_wc_product_shortcodes_option' ),
+                'default'           => 0,
+            )
+        );
 
         add_settings_section( 'brz_main', 'نمایش و تجربه کاربری', '__return_false', 'brz-settings' );
 
@@ -495,6 +504,30 @@ class BRZ_Settings {
                             <?php submit_button( 'ذخیره تغییرات', 'primary', 'submit', false ); ?>
                         </div>
                     </form>
+                    <div class="brz-card">
+                        <div class="brz-card__header">
+                            <h3>پردازش شورت‌کد در توضیحات محصول</h3>
+                        </div>
+                        <div class="brz-card__body">
+                            <p>اجرای شورت‌کدها در تب توضیحات اصلی و خلاصهٔ محصولات ووکامرس. برای حفظ کارایی، به‌صورت پیش‌فرض خاموش است.</p>
+                            <form method="post" action="options.php" class="brz-settings-form" data-context="wc-product-shortcodes">
+                                <?php
+                                settings_fields( 'brz_group' );
+                                $wc_shortcodes = (bool) get_option( 'myplugin_enable_wc_product_shortcodes', 0 );
+                                ?>
+                                <input type="hidden" name="myplugin_enable_wc_product_shortcodes" value="0" />
+                                <label>
+                                    <input type="checkbox" name="myplugin_enable_wc_product_shortcodes" value="1" <?php checked( true, $wc_shortcodes ); ?> />
+                                    پردازش شورت‌کدها در توضیحات و خلاصهٔ محصولات
+                                </label>
+                                <p class="description">فقط روی فرانت‌اند و صفحات محصول اعمال می‌شود و از درخواست‌های ادمین/REST دور نگه داشته شده است.</p>
+                                <div class="brz-save-bar">
+                                    <span class="brz-save-state" aria-live="polite">حالت پیش‌فرض خاموش است.</span>
+                                    <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
                 <aside class="brz-grid__aside">
                     <?php self::render_support_card(
@@ -934,6 +967,10 @@ class BRZ_Settings {
     }
 
     public static function sanitize_rankmath_faq_append_option( $value ) {
+        return empty( $value ) ? 0 : 1;
+    }
+
+    public static function sanitize_wc_product_shortcodes_option( $value ) {
         return empty( $value ) ? 0 : 1;
     }
 
