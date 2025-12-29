@@ -84,6 +84,15 @@ class BRZ_Settings {
 
     public static function register() {
         register_setting( 'brz_group', BRZ_OPTION, array( 'sanitize_callback' => array( __CLASS__, 'sanitize' ) ) );
+        register_setting(
+            'brz_group',
+            'myplugin_enable_rankmath_faq_append',
+            array(
+                'type'              => 'boolean',
+                'sanitize_callback' => array( __CLASS__, 'sanitize_rankmath_faq_append_option' ),
+                'default'           => 0,
+            )
+        );
 
         add_settings_section( 'brz_main', 'نمایش و تجربه کاربری', '__return_false', 'brz-settings' );
 
@@ -596,6 +605,30 @@ class BRZ_Settings {
                         <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>">رفتن به پیشخوان برای تغییر وضعیت ماژول</a>
                     </div>
                 </div>
+                <div class="brz-card">
+                    <div class="brz-card__header">
+                        <h3>افزودن FAQ به تب توضیحات محصول</h3>
+                    </div>
+                    <div class="brz-card__body">
+                        <p>اگر برای محصول FAQ در Rank Math تعریف کرده باشید، با فعال کردن این گزینه، FAQ به انتهای توضیحات محصول اضافه می‌شود.</p>
+                        <form method="post" action="options.php" class="brz-settings-form" data-context="rankmath-faq-append">
+                            <?php
+                            settings_fields( 'brz_group' );
+                            $append_enabled = (bool) get_option( 'myplugin_enable_rankmath_faq_append', 0 );
+                            ?>
+                            <input type="hidden" name="myplugin_enable_rankmath_faq_append" value="0" />
+                            <label>
+                                <input type="checkbox" name="myplugin_enable_rankmath_faq_append" value="1" <?php checked( true, $append_enabled ); ?> />
+                                افزودن خودکار FAQ رنک‌مث به انتهای توضیحات محصول
+                            </label>
+                            <p class="description">پردازش فقط روی صفحهٔ اصلی توضیحات محصول ووکامرس انجام می‌شود و هیچ تغییری در دیتابیس ایجاد نمی‌کند.</p>
+                            <div class="brz-save-bar">
+                                <span class="brz-save-state" aria-live="polite">حالت پیش‌فرض خاموش است.</span>
+                                <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
             <aside class="brz-grid__aside">
                 <?php self::render_support_card(
@@ -898,6 +931,10 @@ class BRZ_Settings {
             'state' => $states[ $slug ],
             'label' => $label,
         );
+    }
+
+    public static function sanitize_rankmath_faq_append_option( $value ) {
+        return empty( $value ) ? 0 : 1;
     }
 
     public static function sanitize( $input ) {

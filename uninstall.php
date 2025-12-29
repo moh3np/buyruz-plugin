@@ -3,3 +3,4 @@
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) { exit; }
 delete_option( 'brz_options' );
 delete_option( 'rfa_options' );
+delete_option( 'myplugin_enable_rankmath_faq_append' );
