@@ -5,6 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class MyPlugin_WC_Product_Shortcodes {
     private static $enabled_cache = null;
     private static $processed     = array();
+    private static $primed        = false;
 
     public static function init() {
         if ( ! self::is_enabled() ) {
@@ -18,6 +19,9 @@ class MyPlugin_WC_Product_Shortcodes {
         add_filter( 'woocommerce_product_get_description', array( __CLASS__, 'process_product_content' ), 20, 2 );
         add_filter( 'woocommerce_product_get_short_description', array( __CLASS__, 'process_product_content' ), 20, 2 );
         add_filter( 'the_content', array( __CLASS__, 'process_the_content' ), 11 );
+        add_filter( 'woocommerce_short_description', array( __CLASS__, 'process_woocommerce_short_description' ), 11 );
+        add_filter( 'the_excerpt', array( __CLASS__, 'process_the_excerpt' ), 11 );
+        add_action( 'wp', array( __CLASS__, 'prime_global_post_content' ) );
     }
 
     private static function is_enabled() {
@@ -91,15 +95,7 @@ class MyPlugin_WC_Product_Shortcodes {
         }
 
         $context = current_filter() === 'woocommerce_product_get_short_description' ? 'short' : 'desc';
-
-        if ( isset( self::$processed[ $post_id ][ $context ] ) ) {
-            return self::$processed[ $post_id ][ $context ];
-        }
-
-        $processed = do_shortcode( $content );
-        self::$processed[ $post_id ][ $context ] = is_string( $processed ) ? $processed : $content;
-
-        return self::$processed[ $post_id ][ $context ];
+        return self::process_value( $content, $post_id, $context );
     }
 
     public static function process_the_content( $content ) {
@@ -111,13 +107,64 @@ class MyPlugin_WC_Product_Shortcodes {
             return $content;
         }
 
-        if ( isset( self::$processed[ $post_id ]['content'] ) ) {
-            return self::$processed[ $post_id ]['content'];
+        return self::process_value( $content, $post_id, 'content' );
+    }
+
+    public static function process_the_excerpt( $excerpt ) {
+        $post = get_post();
+        $post_id   = $post ? $post->ID : 0;
+        $post_type = $post ? $post->post_type : '';
+
+        if ( ! self::should_run( $post_id, $post_type ) ) {
+            return $excerpt;
+        }
+
+        return self::process_value( $excerpt, $post_id, 'excerpt' );
+    }
+
+    public static function process_woocommerce_short_description( $excerpt ) {
+        $post = get_post();
+        $post_id   = $post ? $post->ID : 0;
+        $post_type = $post ? $post->post_type : '';
+
+        if ( ! self::should_run( $post_id, $post_type ) ) {
+            return $excerpt;
+        }
+
+        return self::process_value( $excerpt, $post_id, 'wc_short_desc' );
+    }
+
+    public static function prime_global_post_content() {
+        if ( self::$primed ) {
+            return;
+        }
+
+        $post = get_post();
+        if ( ! $post ) {
+            return;
+        }
+
+        $post_id   = $post->ID;
+        $post_type = $post->post_type;
+
+        if ( ! self::should_run( $post_id, $post_type ) ) {
+            return;
+        }
+
+        $post->post_content = self::process_value( $post->post_content, $post_id, 'content' );
+        $post->post_excerpt = self::process_value( $post->post_excerpt, $post_id, 'excerpt' );
+
+        self::$primed = true;
+    }
+
+    private static function process_value( $content, $post_id, $context ) {
+        if ( isset( self::$processed[ $post_id ][ $context ] ) ) {
+            return self::$processed[ $post_id ][ $context ];
         }
 
         $processed = do_shortcode( $content );
-        self::$processed[ $post_id ]['content'] = is_string( $processed ) ? $processed : $content;
+        self::$processed[ $post_id ][ $context ] = is_string( $processed ) ? $processed : $content;
 
-        return self::$processed[ $post_id ]['content'];
+        return self::$processed[ $post_id ][ $context ];
     }
 }
