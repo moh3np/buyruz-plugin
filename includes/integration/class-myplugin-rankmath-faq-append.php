@@ -6,6 +6,7 @@ class MyPlugin_RankMath_Faq_Append {
     private static $enabled_cache = null;
     private static $id_cache      = array();
     private static $content_cache = array();
+    private static $primed        = false;
 
     public static function init() {
         if ( ! self::is_enabled() ) {
@@ -21,6 +22,8 @@ class MyPlugin_RankMath_Faq_Append {
         }
 
         add_filter( 'the_content', array( __CLASS__, 'append_faq_to_content' ), 20 );
+        add_filter( 'woocommerce_product_get_description', array( __CLASS__, 'append_faq_to_wc_description' ), 19, 2 );
+        add_action( 'wp', array( __CLASS__, 'prime_global_content' ) );
     }
 
     public static function is_enabled() {
@@ -35,7 +38,7 @@ class MyPlugin_RankMath_Faq_Append {
         return self::$enabled_cache;
     }
 
-    public static function should_run( $post_id ) {
+    public static function should_run( $post_id, $relaxed = false ) {
         if ( ! self::is_enabled() ) {
             return false;
         }
@@ -52,8 +55,10 @@ class MyPlugin_RankMath_Faq_Append {
             return false;
         }
 
-        if ( ! in_the_loop() || ! is_main_query() ) {
-            return false;
+        if ( ! $relaxed ) {
+            if ( ! in_the_loop() || ! is_main_query() ) {
+                return false;
+            }
         }
 
         $post_id = absint( $post_id );
@@ -70,6 +75,41 @@ class MyPlugin_RankMath_Faq_Append {
             return $content;
         }
 
+        return self::append_faq_html( $content, $post_id );
+    }
+
+    public static function append_faq_to_wc_description( $content, $product ) {
+        $post_id = is_object( $product ) && method_exists( $product, 'get_id' ) ? (int) $product->get_id() : 0;
+
+        if ( ! self::should_run( $post_id, true ) ) {
+            return $content;
+        }
+
+        return self::append_faq_html( $content, $post_id );
+    }
+
+    public static function prime_global_content() {
+        if ( self::$primed ) {
+            return;
+        }
+
+        $post = get_post();
+        if ( ! $post ) {
+            return;
+        }
+
+        $post_id = $post->ID;
+
+        if ( ! self::should_run( $post_id, true ) ) {
+            return;
+        }
+
+        $post->post_content = self::append_faq_html( $post->post_content, $post_id );
+
+        self::$primed = true;
+    }
+
+    private static function append_faq_html( $content, $post_id ) {
         if ( isset( self::$content_cache[ $post_id ] ) ) {
             return self::$content_cache[ $post_id ];
         }
