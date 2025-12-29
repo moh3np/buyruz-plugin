@@ -54,6 +54,14 @@ class MyPlugin_WC_Product_Shortcodes {
             $post_type = get_post_type( $post_id );
         }
 
+        // Normalize WooCommerce product types (simple, variable, etc.) to product post type.
+        if ( $post_type && $post_type !== 'product' && class_exists( 'WC_Product' ) ) {
+            $wc_product = wc_get_product( $post_id );
+            if ( $wc_product && is_a( $wc_product, 'WC_Product' ) ) {
+                $post_type = 'product';
+            }
+        }
+
         if ( 'product' !== $post_type ) {
             return false;
         }
@@ -71,8 +79,7 @@ class MyPlugin_WC_Product_Shortcodes {
 
         if ( $product && is_object( $product ) && method_exists( $product, 'get_id' ) ) {
             $post_id   = (int) $product->get_id();
-            $post_type = method_exists( $product, 'get_type' ) ? $product->get_type() : 'product';
-            $post_type = $post_type ?: 'product';
+            $post_type = get_post_type( $post_id ) ?: 'product';
         } else {
             $post     = get_post();
             $post_id   = $post ? $post->ID : 0;
