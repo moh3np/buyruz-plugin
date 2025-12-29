@@ -8,25 +8,11 @@ class BRZ_RankMath_Integration {
             return;
         }
 
-        self::maybe_init_faq_append();
-
         if ( self::should_skip_hooks() ) {
             return;
         }
 
         add_filter( 'rank_math/snippet/html', array( __CLASS__, 'replace_faq_markup' ), 10, 4 );
-    }
-
-    private static function maybe_init_faq_append() {
-        $path = BRZ_PATH . 'includes/integration/class-myplugin-rankmath-faq-append.php';
-
-        if ( ! class_exists( 'MyPlugin_RankMath_Faq_Append' ) && file_exists( $path ) ) {
-            require_once $path;
-        }
-
-        if ( class_exists( 'MyPlugin_RankMath_Faq_Append' ) ) {
-            MyPlugin_RankMath_Faq_Append::init();
-        }
     }
 
     public static function replace_faq_markup( $html, $schema, $post, $shortcode ) {

@@ -10,11 +10,6 @@ class BRZ_Modules {
                 'description' => 'لود شرطی CSS/JS و تشخیص محتوا.',
                 'class'       => 'BRZ_Enqueue',
             ),
-            'faq_rankmath' => array(
-                'label'       => 'سوالات متداول محصولات (Rank Math)',
-                'description' => 'آکاردئون FAQ از داده‌های Rank Math؛ نیازمند افزونه Rank Math هنگام فعال بودن.',
-                'class'       => 'BRZ_RankMath_Integration',
-            ),
             'debug' => array(
                 'label'       => 'دیباگ و لاگ‌ها',
                 'description' => 'ثبت رخدادهای انتخاب‌شده برای عیب‌یابی.',

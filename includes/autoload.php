@@ -19,7 +19,6 @@ spl_autoload_register( function( $class ) {
         'BRZ_Settings'               => 'admin/class-brz-settings.php',
         'BRZ_Detector'               => 'front/class-brz-detector.php',
         'BRZ_Enqueue'                => 'front/class-brz-enqueue.php',
-        'BRZ_RankMath_Integration'   => 'integration/class-brz-rankmath.php',
         'BRZ_Tag_Sync_Guard'         => 'core/class-brz-tag-sync-guard.php',
     );
 
