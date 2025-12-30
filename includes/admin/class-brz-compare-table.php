@@ -652,10 +652,11 @@ class BRZ_Compare_Table_Admin {
         ?>
         <script>
         (function() {
-            // Remove fallback metabox when the dedicated WooCommerce tab is present to avoid duplicate UIs.
+            // Remove fallback metabox only when the WooCommerce tab (link + panel) is present to avoid duplicate UIs.
             var tabPanel = document.getElementById('brz_compare_table_panel');
+            var tabLink = document.querySelector('.wc-tabs a[href="#brz_compare_table_panel"]');
             var fallback = document.getElementById('brz-compare-table-fallback');
-            if (tabPanel && fallback) { fallback.remove(); }
+            if (tabPanel && tabLink && fallback) { fallback.remove(); }
         })();
         </script>
         <?php
