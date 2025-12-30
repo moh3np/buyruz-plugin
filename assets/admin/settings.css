@@ -864,39 +864,6 @@
   font-weight: 800;
 }
 
-.brz-compare-status {
-  min-width: 150px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 1px dashed var(--brz-border);
-  background: var(--brz-soft);
-  font-weight: 800;
-  color: var(--brz-muted);
-  text-align: center;
-}
-
-.brz-compare-status[data-state="saving"] {
-  color: var(--brz-accent);
-  border-color: currentColor;
-  background: rgba(37, 99, 235, 0.08);
-}
-
-.brz-compare-status[data-state="saved"] {
-  color: #0f766e;
-  border-color: #99f6e4;
-  background: #ecfdf3;
-}
-
-.brz-compare-status[data-state="error"] {
-  color: #dc2626;
-  border-color: #fca5a5;
-  background: #fff1f2;
-}
-
-.brz-compare-status[data-state="muted"] {
-  color: var(--brz-muted);
-}
-
 .brz-compare-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;

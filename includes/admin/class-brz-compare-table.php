@@ -24,7 +24,7 @@ class BRZ_Compare_Table_Admin {
         add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_product_object' ) );
         add_action( 'save_post_product', array( __CLASS__, 'save' ), 10, 2 );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
-        add_action( 'wp_ajax_brz_save_compare_table', array( __CLASS__, 'ajax_save' ) );
+        // حذف ذخیرهٔ فوری: ajax_save و JS متصل حذف شد.
     }
 
     public static function add_product_tab( $tabs ) {
@@ -124,13 +124,6 @@ class BRZ_Compare_Table_Admin {
         }
 
         wp_enqueue_style( 'brz-settings-admin', BRZ_URL . 'assets/admin/settings.css', array(), BRZ_VERSION );
-        wp_enqueue_script(
-            'brz-compare-table-admin',
-            BRZ_URL . 'assets/admin/product-compare.js',
-            array(),
-            BRZ_VERSION,
-            true
-        );
     }
 
     public static function render_product_tab() {
@@ -173,35 +166,6 @@ class BRZ_Compare_Table_Admin {
         self::$processed[ $post_id ] = true;
         $payload = self::sanitize_payload( self::collect_from_request() );
         self::persist_payload( $post_id, $payload );
-    }
-
-    public static function ajax_save() {
-        if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['nonce'] ), 'brz_compare_table_save' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-            wp_send_json_error( array( 'message' => 'اعتبارسنجی انجام نشد.' ), 403 );
-        }
-
-        $post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-        if ( ! $post_id || ! current_user_can( 'edit_product', $post_id ) ) {
-            wp_send_json_error( array( 'message' => 'دسترسی کافی نیست.' ), 403 );
-        }
-
-        $payload_raw = array();
-        if ( isset( $_POST['payload'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-            $decoded = json_decode( wp_unslash( $_POST['payload'] ), true ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
-            if ( is_array( $decoded ) ) {
-                $payload_raw = $decoded;
-            }
-        }
-
-        $payload = self::sanitize_payload( $payload_raw );
-        self::persist_payload( $post_id, $payload );
-
-        $message = empty( $payload ) ? 'جدول غیرفعال شد یا داده‌ای ندارد.' : 'ذخیره شد.';
-        wp_send_json_success(
-            array(
-                'message' => $message,
-            )
-        );
     }
 
     public static function get_meta( $post_id ) {
@@ -566,8 +530,6 @@ class BRZ_Compare_Table_Admin {
                         <input type="checkbox" name="brz_compare_enabled" value="1" <?php checked( true, $data['enabled'] ); ?> />
                         <span>فعال‌سازی</span>
                     </label>
-                    <button type="button" class="button button-primary brz-compare-save">ذخیره فوری</button>
-                    <span class="brz-compare-status" aria-live="polite"></span>
                 </div>
             </div>
 
