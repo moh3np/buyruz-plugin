@@ -416,11 +416,24 @@ class BRZ_Compare_Table_Admin {
         }
 
         $value = (string) $value;
+
+        // Decode escaped \uXXXX sequences
         if ( strpos( $value, '\\u' ) !== false ) {
             $decoded = json_decode( '"' . str_replace( array( "\r", "\n" ), '', addslashes( $value ) ) . '"', true );
             if ( is_string( $decoded ) ) {
                 $value = $decoded;
             }
+        }
+
+        // Decode bare uXXXX sequences that ممکن است قبلاً بک‌اسلش‌شان حذف شده باشد.
+        if ( preg_match( '/u[0-9a-fA-F]{4}/', $value ) ) {
+            $value = preg_replace_callback(
+                '/u([0-9a-fA-F]{4})/',
+                function( $m ) {
+                    return html_entity_decode( '&#x' . $m[1] . ';', ENT_QUOTES, 'UTF-8' );
+                },
+                $value
+            );
         }
 
         return $value;
