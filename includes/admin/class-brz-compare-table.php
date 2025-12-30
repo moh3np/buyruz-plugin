@@ -201,9 +201,9 @@ class BRZ_Compare_Table_Admin {
         $columns_count = count( $columns );
 
         if ( 0 === $columns_count ) {
-            // شروع خالی: دو ستون بدون مقدار برای ویرایش سریع
-            $columns       = array( '', '' );
-            $columns_count = 2;
+            // شروع خالی: یک ستون بدون مقدار برای ویرایش
+            $columns       = array( '' );
+            $columns_count = 1;
         }
 
         $rows_raw = isset( $meta['rows'] ) && is_array( $meta['rows'] ) ? $meta['rows'] : array();
@@ -501,33 +501,26 @@ class BRZ_Compare_Table_Admin {
                 </div>
 
                 <div class="brz-compare-table-card brz-compare-table-card--modern">
-                    <table class="brz-compare-grid" id="brz-compare-grid" data-max="<?php echo esc_attr( $max_columns ); ?>">
-                        <thead>
-                            <tr>
-                                <th class="brz-compare-grid__actions-cell"></th>
-                                <?php foreach ( $data['columns'] as $col_index => $col_value ) : ?>
-                                    <th>
-                                        <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $col_value ); ?>" placeholder="ستون <?php echo esc_attr( $col_index + 1 ); ?>" />
-                                    </th>
-                                <?php endforeach; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
-                                <tr>
-                                    <td class="brz-compare-grid__actions-cell">
-                                        <button type="button" class="brz-compare-btn brz-compare-btn--danger brz-compare-remove-row" aria-label="حذف ردیف">−</button>
-                                    </td>
-                                    <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
-                                        <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
-                                        <td>
-                                            <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" placeholder="—" />
-                                        </td>
-                                    <?php endfor; ?>
-                                </tr>
+                    <div class="brz-compare-grid" id="brz-compare-grid" data-max="<?php echo esc_attr( $max_columns ); ?>">
+                        <div class="brz-compare-row brz-compare-row--header">
+                            <?php foreach ( $data['columns'] as $col_index => $col_value ) : ?>
+                                <div class="brz-compare-cell">
+                                    <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $col_value ); ?>" placeholder="هدر <?php echo esc_attr( $col_index + 1 ); ?>" />
+                                </div>
                             <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                        </div>
+                        <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
+                            <div class="brz-compare-row" data-row="<?php echo esc_attr( $r_index ); ?>">
+                                <button type="button" class="brz-compare-btn brz-compare-btn--danger brz-compare-remove-row" aria-label="حذف ردیف">−</button>
+                                <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
+                                    <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
+                                    <div class="brz-compare-cell">
+                                        <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" placeholder="—" />
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>

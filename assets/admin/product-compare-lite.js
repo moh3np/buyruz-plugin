@@ -4,8 +4,8 @@
   if (!box) { return; }
 
   var grid = box.querySelector('#brz-compare-grid');
-  var headerRow = grid ? grid.querySelector('thead tr') : null;
-  var body = grid ? grid.querySelector('tbody') : null;
+  var headerRow = grid ? grid.querySelector('.brz-compare-row--header') : null;
+  var body = grid;
   var addRowBtn = box.querySelector('[data-add-row]');
   var removeRowBtn = box.querySelector('[data-remove-row]');
   var addColBtn = box.querySelector('[data-add-col]');
@@ -21,7 +21,8 @@
 
   function ensureAtLeastOneRow() {
     if (!body) { return; }
-    if (!body.querySelector('tr')) {
+    var dataRows = body.querySelectorAll('.brz-compare-row:not(.brz-compare-row--header)');
+    if (dataRows.length === 0) {
       addRow();
     }
   }
@@ -29,27 +30,29 @@
   function renumberRowInputs() {
     if (!body) { return; }
     var totalCols = columnCount();
-    Array.prototype.slice.call(body.querySelectorAll('tr')).forEach(function(row, rIndex) {
-      var inputs = row.querySelectorAll('td input');
+    body.style.setProperty('--cols', totalCols);
+    var dataRows = body.querySelectorAll('.brz-compare-row:not(.brz-compare-row--header)');
+    Array.prototype.slice.call(dataRows).forEach(function(row, rIndex) {
+      var inputs = row.querySelectorAll('.brz-compare-cell input');
       for (var c = 0; c < inputs.length; c++) {
         inputs[c].name = 'brz_compare_rows[' + rIndex + '][' + c + ']';
       }
-      // همسان‌سازی تعداد ستون‌ها برای هر ردیف
       while (inputs.length < totalCols) {
-        var td = document.createElement('td');
+        var cell = document.createElement('div');
+        cell.className = 'brz-compare-cell';
         var input = document.createElement('input');
         input.type = 'text';
         input.name = 'brz_compare_rows[' + rIndex + '][' + inputs.length + ']';
-        td.appendChild(input);
-        row.appendChild(td);
-        inputs = row.querySelectorAll('td input');
+        cell.appendChild(input);
+        row.appendChild(cell);
+        inputs = row.querySelectorAll('.brz-compare-cell input');
       }
       while (inputs.length > totalCols && totalCols > 0) {
         var last = inputs[inputs.length - 1];
         if (last && last.parentElement) {
           last.parentElement.remove();
         }
-        inputs = row.querySelectorAll('td input');
+        inputs = row.querySelectorAll('.brz-compare-cell input');
       }
     });
   }
@@ -58,17 +61,20 @@
     if (!headerRow || !body) { return; }
     var count = columnCount();
     if (count >= maxColumns) { return; }
-    var th = document.createElement('th');
+    var cell = document.createElement('div');
+    cell.className = 'brz-compare-cell';
     var input = document.createElement('input');
     input.type = 'text';
     input.name = 'brz_compare_columns[]';
-    input.placeholder = 'ستون ' + (count + 1);
+    input.placeholder = 'هدر ' + (count + 1);
     if (value) { input.value = value; }
-    th.appendChild(input);
-    headerRow.appendChild(th);
+    cell.appendChild(input);
+    headerRow.appendChild(cell);
 
-    Array.prototype.slice.call(body.querySelectorAll('tr')).forEach(function(row) {
-      var td = document.createElement('td');
+    var dataRows = body.querySelectorAll('.brz-compare-row:not(.brz-compare-row--header)');
+    Array.prototype.slice.call(dataRows).forEach(function(row) {
+      var td = document.createElement('div');
+      td.className = 'brz-compare-cell';
       var cellInput = document.createElement('input');
       cellInput.type = 'text';
       cellInput.name = 'brz_compare_rows[0][' + count + ']';
@@ -82,11 +88,12 @@
     if (!headerRow || !body) { return; }
     var count = columnCount();
     if (count <= 1) { return; }
-    var thList = headerRow.querySelectorAll('th');
-    var lastTh = thList[thList.length - 1];
-    if (lastTh) { lastTh.remove(); }
-    Array.prototype.slice.call(body.querySelectorAll('tr')).forEach(function(row) {
-      var cells = row.querySelectorAll('td');
+    var cellList = headerRow.querySelectorAll('.brz-compare-cell');
+    var lastCell = cellList[cellList.length - 1];
+    if (lastCell) { lastCell.remove(); }
+    var dataRows = body.querySelectorAll('.brz-compare-row:not(.brz-compare-row--header)');
+    Array.prototype.slice.call(dataRows).forEach(function(row) {
+      var cells = row.querySelectorAll('.brz-compare-cell');
       if (cells.length > 0) {
         cells[cells.length - 1].remove();
       }
@@ -96,16 +103,14 @@
 
   function addRow(values) {
     if (!body || !headerRow) { return; }
-    var row = document.createElement('tr');
-    var actionCell = document.createElement('td');
-    actionCell.className = 'brz-compare-grid__actions-cell';
+    var row = document.createElement('div');
+    row.className = 'brz-compare-row';
     var removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'brz-compare-btn brz-compare-btn--danger brz-compare-remove-row';
     removeBtn.setAttribute('aria-label', 'حذف ردیف');
     removeBtn.textContent = '−';
-    actionCell.appendChild(removeBtn);
-    row.appendChild(actionCell);
+    row.appendChild(removeBtn);
 
     var count = columnCount() || defaultColumns;
     if (columnCount() === 0) {
@@ -116,7 +121,8 @@
     }
 
     for (var i = 0; i < count; i++) {
-      var td = document.createElement('td');
+      var td = document.createElement('div');
+      td.className = 'brz-compare-cell';
       var input = document.createElement('input');
       input.type = 'text';
       input.name = 'brz_compare_rows[0][' + i + ']';
@@ -130,7 +136,7 @@
   }
 
   function removeRow(target) {
-    var row = target ? target.closest('tr') : null;
+    var row = target ? target.closest('.brz-compare-row') : null;
     if (!row) { return; }
     row.remove();
     renumberRowInputs();
@@ -167,8 +173,12 @@
   // هم‌سان‌سازی اولیه
   if (headerRow && columnCount() === 0) {
     addColumn('');
-    addColumn('');
   }
   ensureAtLeastOneRow();
   renumberRowInputs();
+
+  // نگه داشتن هدر روی یک سطر بدون فضای خاکستری
+  if (grid) {
+    grid.classList.add('brz-compare-grid--hydrated');
+  }
 })();

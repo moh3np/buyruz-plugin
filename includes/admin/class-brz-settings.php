@@ -183,26 +183,6 @@ class BRZ_Settings {
             echo '<p class="description">حداقل یکی از گزینه‌ها را انتخاب کنید تا استایل روی همان بخش‌ها اعمال شود.</p>';
         }, 'brz-settings', 'brz_tables' );
 
-        add_settings_section( 'brz_compare', 'جدول متا', '__return_false', 'brz-settings' );
-
-        add_settings_field( 'compare_table_default_title', 'عنوان پیش‌فرض جدول', function() {
-            $val = esc_attr( self::get( 'compare_table_default_title', '' ) );
-            echo '<input type="text" class="regular-text" name="'.BRZ_OPTION.'[compare_table_default_title]" value="'.$val.'" placeholder="مثال: جدول سایزبندی یا جدول مقایسه محصول" />';
-            echo '<p class="description">در صورت خالی بودن، عنوان در فرانت نمایش داده نمی‌شود.</p>';
-        }, 'brz-settings', 'brz_compare' );
-
-        add_settings_field( 'compare_table_columns', 'نام ستون‌های پیش‌فرض', function() {
-            $cols = self::get( 'compare_table_columns', array() );
-            if ( ! is_array( $cols ) ) { $cols = array(); }
-            $cols = array_slice( array_merge( $cols, array( '', '', '' ) ), 0, 3 );
-            foreach ( $cols as $index => $col ) {
-                $label = 'ستون ' . ( $index + 1 );
-                echo '<p><label>' . esc_html( $label ) . '<br />';
-                echo '<input type="text" class="regular-text" name="'.BRZ_OPTION.'[compare_table_columns][]" value="'.esc_attr( $col ).'" /></label></p>';
-            }
-            echo '<p class="description">نام‌های پیشنهادی اختیاری هستند و جدول بدون مقدار پیش‌فرض ساخته می‌شود.</p>';
-        }, 'brz-settings', 'brz_compare' );
-
         add_settings_section( 'brz_debug', 'دیباگ و لاگ‌ها', '__return_false', 'brz-settings' );
 
         add_settings_field( 'debug_enabled', 'فعال‌سازی دیباگ', function(){
@@ -1042,16 +1022,7 @@ class BRZ_Settings {
 
         // Compare table settings.
         if ( 'compare' === $context ) {
-            if ( isset( $input['compare_table_default_title'] ) ) {
-                $output['compare_table_default_title'] = sanitize_text_field( $input['compare_table_default_title'] );
-                unset( $input['compare_table_default_title'] );
-            }
-            if ( isset( $input['compare_table_columns'] ) ) {
-                $cols = array_map( 'sanitize_text_field', (array) $input['compare_table_columns'] );
-                $cols = array_slice( $cols, 0, 3 );
-                $output['compare_table_columns'] = array_values( $cols );
-                unset( $input['compare_table_columns'] );
-            }
+            // فیلدهای پیش‌فرض جدول مقایسه حذف شده‌اند.
         }
 
         // Debug settings.
