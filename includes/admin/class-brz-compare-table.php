@@ -656,7 +656,9 @@ class BRZ_Compare_Table_Admin {
             var tabPanel = document.getElementById('brz_compare_table_panel');
             var tabLink = document.querySelector('.wc-tabs a[href="#brz_compare_table_panel"]');
             var fallback = document.getElementById('brz-compare-table-fallback');
-            if (tabPanel && tabLink && fallback) { fallback.remove(); }
+            var tabVisible = tabLink && tabLink.offsetParent !== null;
+            var panelVisible = tabPanel && tabPanel.offsetParent !== null;
+            if (tabVisible && panelVisible && fallback) { fallback.remove(); }
         })();
         </script>
         <?php
