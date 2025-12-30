@@ -222,7 +222,7 @@ class BRZ_Compare_Table_Admin {
 
         if ( isset( $meta['columns'] ) && is_array( $meta['columns'] ) ) {
             foreach ( $meta['columns'] as $col ) {
-                $columns[] = sanitize_text_field( $col );
+                $columns[] = sanitize_text_field( self::normalize_cell( $col ) );
             }
         }
 
@@ -245,7 +245,7 @@ class BRZ_Compare_Table_Admin {
                 }
                 $clean_row = array();
                 for ( $i = 0; $i < $columns_count; $i++ ) {
-                    $clean_row[] = isset( $row[ $i ] ) ? sanitize_text_field( $row[ $i ] ) : '';
+                    $clean_row[] = isset( $row[ $i ] ) ? sanitize_text_field( self::normalize_cell( $row[ $i ] ) ) : '';
                 }
                 $rows[] = $clean_row;
             }
@@ -286,7 +286,7 @@ class BRZ_Compare_Table_Admin {
         $columns  = array();
         if ( isset( $raw['columns'] ) && is_array( $raw['columns'] ) ) {
             foreach ( $raw['columns'] as $col ) {
-                $columns[] = sanitize_text_field( $col );
+                $columns[] = sanitize_text_field( self::normalize_cell( $col ) );
             }
         }
 
@@ -306,7 +306,7 @@ class BRZ_Compare_Table_Admin {
                 $clean_row = array();
                 $has_value = false;
                 for ( $i = 0; $i < $column_count; $i++ ) {
-                    $cell        = isset( $row[ $i ] ) ? $row[ $i ] : '';
+                    $cell        = isset( $row[ $i ] ) ? self::normalize_cell( $row[ $i ] ) : '';
                     $clean_cell  = sanitize_text_field( $cell );
                     $clean_row[] = $clean_cell;
                     if ( '' !== $clean_cell ) {
@@ -408,6 +408,22 @@ class BRZ_Compare_Table_Admin {
         }
 
         return array_values( $columns );
+    }
+
+    private static function normalize_cell( $value ) {
+        if ( is_array( $value ) || is_object( $value ) ) {
+            return '';
+        }
+
+        $value = (string) $value;
+        if ( strpos( $value, '\\u' ) !== false ) {
+            $decoded = json_decode( '"' . str_replace( array( "\r", "\n" ), '', addslashes( $value ) ) . '"', true );
+            if ( is_string( $decoded ) ) {
+                $value = $decoded;
+            }
+        }
+
+        return $value;
     }
 
     public static function register_admin_page() {
