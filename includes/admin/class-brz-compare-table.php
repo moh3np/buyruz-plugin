@@ -47,7 +47,10 @@ class BRZ_Compare_Table_Admin {
         $enabled = ! empty( $data['enabled'] );
         $title   = isset( $data['title'] ) ? $data['title'] : '';
         $columns = isset( $data['columns'] ) && is_array( $data['columns'] ) ? $data['columns'] : self::default_columns();
-        $columns = array_slice( array_merge( $columns, self::default_columns() ), 0, 3 );
+        if ( count( $columns ) < 3 ) {
+            $columns = array_merge( $columns, self::default_columns() );
+        }
+        $columns = array_slice( $columns, 0, 6 );
         $rows    = isset( $data['rows'] ) && is_array( $data['rows'] ) ? $data['rows'] : array();
 
         wp_nonce_field( 'brz_compare_table_save', 'brz_compare_table_nonce' );
@@ -67,14 +70,17 @@ class BRZ_Compare_Table_Admin {
             <div class="brz-compare-section">
                 <h4>ستون‌ها</h4>
                 <p class="description">نام ستون‌ها را ویرایش کنید. حداقل سه ستون ثابت هستند.</p>
-                <div class="brz-compare-columns" data-fixed="3">
-                    <?php
-                    for ( $i = 0; $i < 3; $i++ ) :
-                        $value = isset( $columns[ $i ] ) ? $columns[ $i ] : '';
-                        ?>
-                        <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $value ); ?>" placeholder="ستون <?php echo esc_attr( $i + 1 ); ?>" class="regular-text" />
-                    <?php endfor; ?>
+                <div class="brz-compare-columns" data-fixed="3" data-max="6">
+                    <?php foreach ( $columns as $index => $value ) : ?>
+                        <div class="brz-compare-col">
+                            <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $value ); ?>" placeholder="ستون <?php echo esc_attr( $index + 1 ); ?>" class="regular-text" />
+                            <?php if ( $index >= 2 ) : ?>
+                                <button type="button" class="button link-delete brz-compare-remove-col" aria-label="حذف ستون">&times;</button>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
+                <p><button type="button" class="button button-secondary" id="brz-compare-add-col">افزودن ستون</button></p>
             </div>
 
             <div class="brz-compare-section">
@@ -92,13 +98,13 @@ class BRZ_Compare_Table_Admin {
                     <tbody>
                         <?php
                         if ( empty( $rows ) ) {
-                            $rows = array( array( '', '', '' ) );
+                            $rows = array( array_fill( 0, count( $columns ), '' ) );
                         }
                         foreach ( $rows as $r_index => $row ) :
                             $row = is_array( $row ) ? $row : array();
                             ?>
                             <tr>
-                                <?php for ( $c = 0; $c < 3; $c++ ) : ?>
+                                <?php for ( $c = 0; $c < count( $columns ); $c++ ) : ?>
                                     <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
                                     <td>
                                         <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" class="widefat" />
@@ -143,8 +149,13 @@ class BRZ_Compare_Table_Admin {
         foreach ( $columns_raw as $col ) {
             $columns[] = sanitize_text_field( $col );
         }
-        $columns = array_slice( $columns, 0, 3 ); // سه ستون ثابت
-        $columns = array_pad( $columns, 3, '' );
+        $columns = array_slice( $columns, 0, 6 ); // سقف ۶ ستون
+        $columns = array_values( array_filter( $columns, 'strlen' ) );
+        if ( count( $columns ) < 3 ) {
+            $columns = array_merge( $columns, array_slice( self::default_columns(), 0, 3 - count( $columns ) ) );
+        }
+
+        $column_count = count( $columns );
 
         $rows_raw = isset( $_POST['brz_compare_rows'] ) ? (array) wp_unslash( $_POST['brz_compare_rows'] ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing
         $rows     = array();
@@ -153,7 +164,7 @@ class BRZ_Compare_Table_Admin {
                 continue;
             }
             $clean_row = array();
-            for ( $i = 0; $i < 3; $i++ ) {
+            for ( $i = 0; $i < $column_count; $i++ ) {
                 $cell = isset( $row[ $i ] ) ? $row[ $i ] : '';
                 $clean_row[] = sanitize_text_field( $cell );
             }

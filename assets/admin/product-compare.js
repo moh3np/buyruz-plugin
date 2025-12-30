@@ -6,6 +6,8 @@
   var rowsTable = document.getElementById('brz-compare-rows');
   var addRowBtn = document.getElementById('brz-compare-add-row');
   var preview = document.getElementById('brz-compare-preview');
+  var addColBtn = document.getElementById('brz-compare-add-col');
+  var columnsWrap = document.querySelector('.brz-compare-columns');
 
   function renumberRows() {
     var rows = rowsTable.querySelectorAll('tbody tr');
@@ -20,7 +22,8 @@
   function addRow(values) {
     var tbody = rowsTable.querySelector('tbody');
     var row = document.createElement('tr');
-    for (var i = 0; i < 3; i++) {
+    var cols = getColumns().length;
+    for (var i = 0; i < cols; i++) {
       var td = document.createElement('td');
       var input = document.createElement('input');
       input.type = 'text';
@@ -38,11 +41,56 @@
     refreshPreview();
   }
 
-  function refreshPreview() {
-    if (!preview) { return; }
-    var cols = Array.prototype.slice.call(document.querySelectorAll('.brz-compare-columns input')).map(function(input) {
+  function getColumns() {
+    if (!columnsWrap) { return []; }
+    return Array.prototype.slice.call(columnsWrap.querySelectorAll('input')).map(function(input) {
       return input.value.trim();
     });
+  }
+
+  function rebuildTableForColumns() {
+    var cols = getColumns();
+    var theadRow = rowsTable.querySelector('thead tr');
+    theadRow.innerHTML = '';
+    cols.forEach(function(col) {
+      var th = document.createElement('th');
+      th.textContent = col || 'ستون';
+      theadRow.appendChild(th);
+    });
+    var removeTh = document.createElement('th');
+    removeTh.style.width = '90px';
+    removeTh.textContent = 'حذف';
+    theadRow.appendChild(removeTh);
+
+    rowsTable.querySelectorAll('tbody tr').forEach(function(row) {
+      var currentInputs = row.querySelectorAll('input[type="text"]');
+      var desired = cols.length;
+      var removeCell = row.querySelector('td:last-child');
+      while (currentInputs.length < desired) {
+        var td = document.createElement('td');
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'widefat';
+        input.name = 'brz_compare_rows[0][' + currentInputs.length + ']';
+        td.appendChild(input);
+        row.insertBefore(td, removeCell);
+        currentInputs = row.querySelectorAll('input[type="text"]');
+      }
+      while (currentInputs.length > desired) {
+        var lastIndex = currentInputs.length - 1;
+        var cell = currentInputs[lastIndex].parentElement;
+        if (cell && cell !== removeCell) {
+          cell.remove();
+        }
+        currentInputs = row.querySelectorAll('input[type="text"]');
+      }
+    });
+    renumberRows();
+  }
+
+  function refreshPreview() {
+    if (!preview) { return; }
+    var cols = getColumns();
     var rows = [];
     rowsTable.querySelectorAll('tbody tr').forEach(function(row) {
       var cells = [];
@@ -109,10 +157,40 @@
   });
 
   rowsTable.addEventListener('input', refreshPreview);
-  var columnInputs = document.querySelectorAll('.brz-compare-columns input');
-  columnInputs.forEach(function(input) {
-    input.addEventListener('input', refreshPreview);
-  });
+  if (columnsWrap) {
+    columnsWrap.addEventListener('input', function(e) {
+      if (e.target && e.target.tagName === 'INPUT') {
+        rebuildTableForColumns();
+        refreshPreview();
+      }
+    });
+    columnsWrap.addEventListener('click', function(e) {
+      if (e.target && e.target.classList.contains('brz-compare-remove-col')) {
+        var col = e.target.closest('.brz-compare-col');
+        if (!col) { return; }
+        var cols = columnsWrap.querySelectorAll('.brz-compare-col');
+        if (cols.length <= 3) { return; }
+        col.remove();
+        rebuildTableForColumns();
+        refreshPreview();
+      }
+    });
+  }
 
+  if (addColBtn) {
+    addColBtn.addEventListener('click', function() {
+      var max = parseInt(columnsWrap.dataset.max || '6', 10);
+      var cols = columnsWrap.querySelectorAll('.brz-compare-col');
+      if (cols.length >= max) { return; }
+      var col = document.createElement('div');
+      col.className = 'brz-compare-col';
+      col.innerHTML = '<input type="text" name="brz_compare_columns[]" class="regular-text" placeholder="ستون ' + (cols.length + 1) + '" /> <button type="button" class="button link-delete brz-compare-remove-col" aria-label="حذف ستون">&times;</button>';
+      columnsWrap.appendChild(col);
+      rebuildTableForColumns();
+      refreshPreview();
+    });
+  }
+
+  rebuildTableForColumns();
   refreshPreview();
 })();

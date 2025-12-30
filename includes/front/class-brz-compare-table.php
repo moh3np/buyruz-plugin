@@ -115,10 +115,6 @@ class BRZ_Compare_Table {
             return $content;
         }
 
-        if ( isset( self::$rendered[ $post_id ] ) ) {
-            return $content;
-        }
-
         $html = self::render_table( $data );
         if ( empty( $html ) ) {
             return $content;
@@ -130,7 +126,6 @@ class BRZ_Compare_Table {
             $content .= $html;
         }
 
-        self::$rendered[ $post_id ] = true;
         return $content;
     }
 
