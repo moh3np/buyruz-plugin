@@ -7,12 +7,14 @@ class BRZ_Compare_Table_Admin {
     const MIN_COLUMNS = 3;
     const MAX_COLUMNS = 6;
     private static $processed = array();
-    private static $forced_classic_editor = false;
+    private static $blocked_new_editor = false;
+    private static $panel_rendered = false;
 
     public static function init() {
         add_filter( 'woocommerce_admin_features', array( __CLASS__, 'guard_product_editor_features' ), 5 );
         add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'disable_block_editor_for_product' ), 20, 2 );
         add_action( 'admin_notices', array( __CLASS__, 'maybe_show_editor_notice' ) );
+        add_action( 'add_meta_boxes_product', array( __CLASS__, 'register_fallback_metabox' ), 50 );
         add_filter( 'woocommerce_product_data_tabs', array( __CLASS__, 'add_product_tab' ), 25 );
         add_action( 'woocommerce_product_data_panels', array( __CLASS__, 'render_product_tab' ) );
         add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_product_object' ) );
@@ -45,7 +47,6 @@ class BRZ_Compare_Table_Admin {
             if ( is_string( $feature ) ) {
                 foreach ( $needles as $needle ) {
                     if ( '' !== $needle && strpos( $feature, $needle ) !== false ) {
-                        self::$forced_classic_editor = true;
                         $keep = false;
                         break;
                     }
@@ -53,6 +54,8 @@ class BRZ_Compare_Table_Admin {
             }
             if ( $keep ) {
                 $blocked[] = $feature;
+            } else {
+                self::$blocked_new_editor = true;
             }
         }
 
@@ -65,14 +68,14 @@ class BRZ_Compare_Table_Admin {
         }
 
         if ( $use_block_editor ) {
-            self::$forced_classic_editor = true;
+            self::$blocked_new_editor = true;
         }
 
         return false;
     }
 
     public static function maybe_show_editor_notice() {
-        if ( ! self::$forced_classic_editor ) {
+        if ( ! self::$blocked_new_editor ) {
             return;
         }
 
@@ -92,6 +95,17 @@ class BRZ_Compare_Table_Admin {
         echo '<div class="notice notice-warning"><p>';
         echo esc_html( 'برای نمایش تب «جدول مقایسه»، ویرایشگر جدید محصول ووکامرس غیرفعال و حالت کلاسیک فعال شد.' );
         echo '</p></div>';
+    }
+
+    public static function register_fallback_metabox() {
+        add_meta_box(
+            'brz-compare-table-fallback',
+            'جدول مقایسه (پشتیبان)',
+            array( __CLASS__, 'render_fallback_metabox' ),
+            'product',
+            'normal',
+            'low'
+        );
     }
 
     public static function enqueue( $hook ) {
@@ -120,111 +134,21 @@ class BRZ_Compare_Table_Admin {
             return;
         }
 
-        $data          = self::editor_data( $post->ID );
-        $defaults      = self::default_columns();
-        $max_columns   = self::MAX_COLUMNS;
-        $nonce         = wp_create_nonce( 'brz_compare_table_save' );
-        $columns_count = count( $data['columns'] );
+        self::$panel_rendered = true;
         ?>
         <div id="brz_compare_table_panel" class="panel woocommerce_options_panel">
-            <div class="brz-compare-box" data-default-columns="<?php echo esc_attr( wp_json_encode( $defaults ) ); ?>" data-product-id="<?php echo esc_attr( $post->ID ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>" data-max-cols="<?php echo esc_attr( $max_columns ); ?>">
-                <?php wp_nonce_field( 'brz_compare_table_save', 'brz_compare_table_nonce' ); ?>
-
-                <div class="brz-compare-head">
-                    <div class="brz-compare-head__titles">
-                        <span class="brz-chip">جدول مقایسه محصول</span>
-                        <h3>ستون‌های اصلی: نام محصول مشابه، مخاطب (سن/نفرات)، تمایز کلیدی (چرا این؟)</h3>
-                        <p class="description">با ویرایش این فرم، جدول مقایسه به‌صورت خودکار در توضیحات محصول جای‌گذاری می‌شود. اگر توکن <code>[[COMPARE_TABLE]]</code> در محتوا باشد جدول دقیقاً همان‌جا قرار می‌گیرد و نیازی به افزودن HTML دستی نیست.</p>
-                    </div>
-                    <div class="brz-compare-head__actions">
-                        <label class="brz-toggle">
-                            <input type="checkbox" name="brz_compare_enabled" value="1" <?php checked( true, $data['enabled'] ); ?> />
-                            <span>فعال‌سازی</span>
-                        </label>
-                        <button type="button" class="button button-primary brz-compare-save">ذخیره فوری</button>
-                        <span class="brz-compare-status" aria-live="polite"></span>
-                    </div>
-                </div>
-
-                <div class="brz-compare-grid">
-                    <div class="brz-compare-card">
-                        <label for="brz-compare-title"><strong>عنوان جدول (اختیاری)</strong></label>
-                        <input id="brz-compare-title" type="text" name="brz_compare_title" class="widefat" value="<?php echo esc_attr( $data['title'] ); ?>" placeholder="مثلاً مقایسه با رقبا" />
-                        <p class="description">در صورت خالی بودن، عنوان در فرانت نمایش داده نمی‌شود.</p>
-                    </div>
-                    <div class="brz-compare-card">
-                        <div class="brz-compare-card__header">
-                            <h4>ستون‌ها</h4>
-                            <p class="description">سه ستون اصلی همیشه وجود دارند. می‌توانید تا <?php echo esc_html( self::MAX_COLUMNS ); ?> ستون اضافه کنید.</p>
-                        </div>
-                        <div class="brz-compare-columns" data-fixed="<?php echo esc_attr( self::MIN_COLUMNS ); ?>" data-max="<?php echo esc_attr( self::MAX_COLUMNS ); ?>">
-                            <?php foreach ( $data['columns'] as $index => $value ) : ?>
-                                <div class="brz-compare-col">
-                                    <div class="brz-compare-col__meta">
-                                        <span class="brz-compare-col__index"><?php echo esc_html( $index + 1 ); ?></span>
-                                        <?php if ( $index < self::MIN_COLUMNS ) : ?>
-                                            <span class="brz-compare-col__badge">ستون پایه</span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $value ); ?>" placeholder="ستون <?php echo esc_attr( $index + 1 ); ?>" class="regular-text" />
-                                    <?php if ( $index >= self::MIN_COLUMNS ) : ?>
-                                        <button type="button" class="button link-delete brz-compare-remove-col" aria-label="حذف ستون">&times;</button>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                        <div class="brz-compare-col-actions">
-                            <button type="button" class="button button-secondary" id="brz-compare-add-col">افزودن ستون</button>
-                            <span class="description">ستون‌ها و ردیف‌ها بعد از هر تغییر در متا ذخیره می‌شوند.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="brz-compare-table-card">
-                    <div class="brz-compare-table-card__head">
-                        <div>
-                            <h4>ردیف‌ها</h4>
-                            <p class="description">مقادیر هر ستون را وارد کنید؛ می‌توانید ستون و ردیف جدید اضافه یا حذف کنید.</p>
-                        </div>
-                        <button type="button" class="button button-secondary brz-compare-add-row" id="brz-compare-add-row">افزودن ردیف</button>
-                    </div>
-                    <div class="brz-compare-table-card__body">
-                        <table class="widefat striped brz-compare-table" id="brz-compare-rows">
-                            <thead>
-                                <tr>
-                                    <?php foreach ( $data['columns'] as $col ) : ?>
-                                        <th><?php echo esc_html( $col ); ?></th>
-                                    <?php endforeach; ?>
-                                    <th class="brz-compare-remove-col-cell">حذف</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
-                                    <tr>
-                                        <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
-                                            <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
-                                            <td>
-                                                <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" class="widefat" />
-                                            </td>
-                                        <?php endfor; ?>
-                                        <td class="brz-compare-remove-cell"><button type="button" class="button link-delete brz-compare-remove-row" aria-label="حذف ردیف">&times;</button></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="brz-compare-preview-card">
-                    <div class="brz-compare-preview-card__head">
-                        <h4>پیش‌نمایش زنده</h4>
-                        <p class="description">هر تغییری بلافاصله در متا ذخیره و در این پیش‌نمایش بازتاب داده می‌شود.</p>
-                    </div>
-                    <div class="brz-compare-preview" id="brz-compare-preview"></div>
-                </div>
-            </div>
+            <?php self::render_editor_inner( $post ); ?>
         </div>
         <?php
+    }
+
+    public static function render_fallback_metabox( $post ) {
+        if ( self::$panel_rendered ) {
+            echo '<p class="description">تب «جدول مقایسه» در بخش «اطلاعات محصول» فعال است. اگر آن را نمی‌بینید، در بالای صفحه از «تنظیمات صفحه» تیک «اطلاعات محصول» را بزنید.</p>';
+            return;
+        }
+
+        self::render_editor_inner( $post );
     }
 
     public static function save_product_object( $product ) {
@@ -483,5 +407,112 @@ class BRZ_Compare_Table_Admin {
         }
 
         return array_values( $columns );
+    }
+
+    private static function render_editor_inner( $post ) {
+        $post_id       = is_object( $post ) ? $post->ID : (int) $post;
+        $data          = self::editor_data( $post_id );
+        $defaults      = self::default_columns();
+        $max_columns   = self::MAX_COLUMNS;
+        $nonce         = wp_create_nonce( 'brz_compare_table_save' );
+        $columns_count = count( $data['columns'] );
+        ?>
+        <div class="brz-compare-box" data-default-columns="<?php echo esc_attr( wp_json_encode( $defaults ) ); ?>" data-product-id="<?php echo esc_attr( $post_id ); ?>" data-nonce="<?php echo esc_attr( $nonce ); ?>" data-max-cols="<?php echo esc_attr( $max_columns ); ?>">
+            <?php wp_nonce_field( 'brz_compare_table_save', 'brz_compare_table_nonce' ); ?>
+
+            <div class="brz-compare-head">
+                <div class="brz-compare-head__titles">
+                    <span class="brz-chip">جدول مقایسه محصول</span>
+                    <h3>ستون‌های اصلی: نام محصول مشابه، مخاطب (سن/نفرات)، تمایز کلیدی (چرا این؟)</h3>
+                    <p class="description">با ویرایش این فرم، جدول مقایسه به‌صورت خودکار در توضیحات محصول جای‌گذاری می‌شود. اگر توکن <code>[[COMPARE_TABLE]]</code> در محتوا باشد جدول دقیقاً همان‌جا قرار می‌گیرد و نیازی به افزودن HTML دستی نیست.</p>
+                </div>
+                <div class="brz-compare-head__actions">
+                    <label class="brz-toggle">
+                        <input type="checkbox" name="brz_compare_enabled" value="1" <?php checked( true, $data['enabled'] ); ?> />
+                        <span>فعال‌سازی</span>
+                    </label>
+                    <button type="button" class="button button-primary brz-compare-save">ذخیره فوری</button>
+                    <span class="brz-compare-status" aria-live="polite"></span>
+                </div>
+            </div>
+
+            <div class="brz-compare-grid">
+                <div class="brz-compare-card">
+                    <label for="brz-compare-title"><strong>عنوان جدول (اختیاری)</strong></label>
+                    <input id="brz-compare-title" type="text" name="brz_compare_title" class="widefat" value="<?php echo esc_attr( $data['title'] ); ?>" placeholder="مثلاً مقایسه با رقبا" />
+                    <p class="description">در صورت خالی بودن، عنوان در فرانت نمایش داده نمی‌شود.</p>
+                </div>
+                <div class="brz-compare-card">
+                    <div class="brz-compare-card__header">
+                        <h4>ستون‌ها</h4>
+                        <p class="description">سه ستون اصلی همیشه وجود دارند. می‌توانید تا <?php echo esc_html( self::MAX_COLUMNS ); ?> ستون اضافه کنید.</p>
+                    </div>
+                    <div class="brz-compare-columns" data-fixed="<?php echo esc_attr( self::MIN_COLUMNS ); ?>" data-max="<?php echo esc_attr( self::MAX_COLUMNS ); ?>">
+                        <?php foreach ( $data['columns'] as $index => $value ) : ?>
+                            <div class="brz-compare-col">
+                                <div class="brz-compare-col__meta">
+                                    <span class="brz-compare-col__index"><?php echo esc_html( $index + 1 ); ?></span>
+                                    <?php if ( $index < self::MIN_COLUMNS ) : ?>
+                                        <span class="brz-compare-col__badge">ستون پایه</span>
+                                    <?php endif; ?>
+                                </div>
+                                <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $value ); ?>" placeholder="ستون <?php echo esc_attr( $index + 1 ); ?>" class="regular-text" />
+                                <?php if ( $index >= self::MIN_COLUMNS ) : ?>
+                                    <button type="button" class="button link-delete brz-compare-remove-col" aria-label="حذف ستون">&times;</button>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="brz-compare-col-actions">
+                        <button type="button" class="button button-secondary" id="brz-compare-add-col">افزودن ستون</button>
+                        <span class="description">ستون‌ها و ردیف‌ها بعد از هر تغییر در متا ذخیره می‌شوند.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="brz-compare-table-card">
+                <div class="brz-compare-table-card__head">
+                    <div>
+                        <h4>ردیف‌ها</h4>
+                        <p class="description">مقادیر هر ستون را وارد کنید؛ می‌توانید ستون و ردیف جدید اضافه یا حذف کنید.</p>
+                    </div>
+                    <button type="button" class="button button-secondary brz-compare-add-row" id="brz-compare-add-row">افزودن ردیف</button>
+                </div>
+                <div class="brz-compare-table-card__body">
+                    <table class="widefat striped brz-compare-table" id="brz-compare-rows">
+                        <thead>
+                            <tr>
+                                <?php foreach ( $data['columns'] as $col ) : ?>
+                                    <th><?php echo esc_html( $col ); ?></th>
+                                <?php endforeach; ?>
+                                <th class="brz-compare-remove-col-cell">حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
+                                <tr>
+                                    <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
+                                        <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
+                                        <td>
+                                            <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" class="widefat" />
+                                        </td>
+                                    <?php endfor; ?>
+                                    <td class="brz-compare-remove-cell"><button type="button" class="button link-delete brz-compare-remove-row" aria-label="حذف ردیف">&times;</button></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="brz-compare-preview-card">
+                <div class="brz-compare-preview-card__head">
+                    <h4>پیش‌نمایش زنده</h4>
+                    <p class="description">هر تغییری بلافاصله در متا ذخیره و در این پیش‌نمایش بازتاب داده می‌شود.</p>
+                </div>
+                <div class="brz-compare-preview" id="brz-compare-preview"></div>
+            </div>
+        </div>
+        <?php
     }
 }
