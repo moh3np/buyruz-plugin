@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class BRZ_Compare_Table_Admin {
     const META_KEY = '_buyruz_compare_table';
+    const META_ID_KEY = '_buyruz_compare_table_id';
     const MIN_COLUMNS = 1;
     const MAX_COLUMNS = 6;
     const ADMIN_PAGE = 'buyruz-compare-editor';
@@ -172,7 +173,11 @@ class BRZ_Compare_Table_Admin {
 
         self::$processed[ $post_id ] = true;
         $payload = self::sanitize_payload( self::collect_from_request() );
-        self::persist_payload( $post_id, $payload );
+        $table_id = self::get_table_id( $post_id );
+        if ( ! empty( $payload ) ) {
+            $payload['id'] = $table_id;
+        }
+        self::persist_payload( $post_id, $payload, $table_id );
     }
 
     public static function get_meta( $post_id ) {
@@ -187,9 +192,100 @@ class BRZ_Compare_Table_Admin {
         return $decoded;
     }
 
+    public static function get_table_id( $post_id ) {
+        $post_id = absint( $post_id );
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $existing   = get_post_meta( $post_id, self::META_ID_KEY, true );
+        $normalized = self::normalize_table_id( $existing, $post_id );
+
+        if ( $normalized !== $existing ) {
+            update_post_meta( $post_id, self::META_ID_KEY, $normalized );
+        }
+
+        return $normalized;
+    }
+
+    private static function normalize_table_id( $value, $post_id ) {
+        $value = is_string( $value ) ? $value : '';
+        $value = preg_replace( '/[^a-zA-Z0-9_-]/', '', $value );
+        if ( empty( $value ) ) {
+            $value = 'brz-ct-' . absint( $post_id );
+        }
+        return $value;
+    }
+
+    public static function build_editor_url( $product_id ) {
+        $product_id = absint( $product_id );
+        if ( ! $product_id ) {
+            return '';
+        }
+
+        return add_query_arg(
+            array(
+                'page'     => self::ADMIN_PAGE,
+                'product'  => $product_id,
+                '_wpnonce' => wp_create_nonce( 'brz_compare_editor_' . $product_id ),
+            ),
+            admin_url( 'admin.php' )
+        );
+    }
+
+    public static function delete_table( $post_id ) {
+        $post_id = absint( $post_id );
+        if ( ! $post_id ) {
+            return;
+        }
+        delete_post_meta( $post_id, self::META_KEY );
+        delete_post_meta( $post_id, self::META_ID_KEY );
+    }
+
+    public static function get_tables_index( array $args = array() ) {
+        $defaults = array(
+            'posts_per_page' => 200,
+            'post_type'      => 'product',
+            'post_status'    => array( 'publish', 'draft', 'pending', 'private' ),
+            'meta_key'       => self::META_KEY,
+            'fields'         => 'all',
+            'orderby'        => 'date',
+            'order'          => 'DESC',
+        );
+        $query = new WP_Query( wp_parse_args( $args, $defaults ) );
+        $items = array();
+
+        if ( $query->have_posts() ) {
+            while ( $query->have_posts() ) {
+                $query->the_post();
+                $product_id = get_the_ID();
+                $meta       = self::get_meta( $product_id );
+                if ( empty( $meta ) ) {
+                    continue;
+                }
+                $columns   = isset( $meta['columns'] ) && is_array( $meta['columns'] ) ? $meta['columns'] : array();
+                $rows      = isset( $meta['rows'] ) && is_array( $meta['rows'] ) ? $meta['rows'] : array();
+                $table_id  = self::get_table_id( $product_id );
+                $items[]   = array(
+                    'product_id' => $product_id,
+                    'product_title' => get_the_title( $product_id ),
+                    'table_id'  => $table_id,
+                    'title'     => isset( $meta['title'] ) ? $meta['title'] : '',
+                    'columns'   => $columns,
+                    'rows'      => $rows,
+                    'edit_url'  => self::build_editor_url( $product_id ),
+                );
+            }
+            wp_reset_postdata();
+        }
+
+        return $items;
+    }
+
     private static function editor_data( $post_id ) {
         $meta    = self::get_meta( $post_id );
         $columns = array();
+        $table_id = self::get_table_id( $post_id );
 
         if ( isset( $meta['columns'] ) && is_array( $meta['columns'] ) ) {
             foreach ( $meta['columns'] as $col ) {
@@ -227,9 +323,10 @@ class BRZ_Compare_Table_Admin {
         }
 
         return array(
-            'title'   => isset( $meta['title'] ) ? sanitize_text_field( $meta['title'] ) : '',
-            'columns' => $columns,
-            'rows'    => $rows,
+            'title'    => isset( $meta['title'] ) ? sanitize_text_field( $meta['title'] ) : '',
+            'columns'  => $columns,
+            'rows'     => $rows,
+            'table_id' => $table_id,
         );
     }
 
@@ -333,10 +430,20 @@ class BRZ_Compare_Table_Admin {
         );
     }
 
-    private static function persist_payload( $post_id, array $payload ) {
+    private static function persist_payload( $post_id, array $payload, $table_id = '' ) {
+        $post_id = absint( $post_id );
+
+        if ( $table_id ) {
+            update_post_meta( $post_id, self::META_ID_KEY, $table_id );
+        }
+
         if ( empty( $payload ) ) {
             delete_post_meta( $post_id, self::META_KEY );
             return;
+        }
+
+        if ( $table_id ) {
+            $payload['id'] = $table_id;
         }
 
         update_post_meta( $post_id, self::META_KEY, wp_json_encode( $payload ) );
@@ -414,15 +521,7 @@ class BRZ_Compare_Table_Admin {
             return $actions;
         }
 
-        $url = add_query_arg(
-            array(
-                'page'     => self::ADMIN_PAGE,
-                'product'  => $post->ID,
-                '_wpnonce' => wp_create_nonce( 'brz_compare_editor_' . $post->ID ),
-            ),
-            admin_url( 'admin.php' )
-        );
-
+        $url = self::build_editor_url( $post->ID );
         $actions['brz_compare'] = '<a href="' . esc_url( $url ) . '">جدول مقایسه</a>';
         return $actions;
     }
@@ -486,32 +585,38 @@ class BRZ_Compare_Table_Admin {
             <hr class="brz-compare-divider" />
 
             <div class="brz-compare-sheet">
-                <div class="brz-compare-sheet__actions">
-                    <div class="brz-compare-sheet__hint">برای افزودن ستون/سطر از دکمه‌های سبز و برای حذف از قرمز استفاده کنید. سطر اول هدر است.</div>
-                    <div class="brz-compare-sheet__buttons">
-                        <div class="brz-compare-sheet__group">
-                            <button type="button" class="brz-compare-btn brz-compare-btn--danger" data-remove-col aria-label="حذف ستون">−</button>
-                            <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-col aria-label="افزودن ستون">+</button>
-                        </div>
-                        <div class="brz-compare-sheet__group">
-                            <button type="button" class="brz-compare-btn brz-compare-btn--danger" data-remove-row aria-label="حذف ردیف">−</button>
-                            <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row aria-label="افزودن ردیف">+</button>
-                        </div>
+                <div class="brz-compare-sheet__actions brz-compare-sheet__actions--stacked">
+                    <div class="brz-compare-sheet__hint">برای افزودن/حذف ستون از دکمه‌های بالای سطر هدر و برای مدیریت سطرها از کنترل سمت چپ هر سطر استفاده کنید. سطر اول هدر است و حذف نمی‌شود.</div>
+                    <div class="brz-compare-id">
+                        <div class="brz-compare-id__label">شناسه جدول</div>
+                        <div class="brz-compare-id__value" data-compare-id><?php echo esc_html( $data['table_id'] ); ?></div>
+                        <div class="brz-compare-id__shortcode">شورت‌کد: <code>[buyruz_compare_table id="<?php echo esc_attr( $data['table_id'] ); ?>"]</code></div>
+                        <input type="hidden" name="brz_compare_table_id" value="<?php echo esc_attr( $data['table_id'] ); ?>" />
                     </div>
                 </div>
 
                 <div class="brz-compare-table-card brz-compare-table-card--modern">
-                    <div class="brz-compare-grid" id="brz-compare-grid" data-max="<?php echo esc_attr( $max_columns ); ?>">
-                        <div class="brz-compare-row brz-compare-row--header">
+                    <div class="brz-compare-grid brz-compare-grid--inline" id="brz-compare-grid" data-max="<?php echo esc_attr( $max_columns ); ?>">
+                        <div class="brz-compare-row brz-compare-row--header" data-row="header">
+                            <div class="brz-compare-row-actions">
+                                <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row="header" aria-label="افزودن ردیف بعد از هدر">+</button>
+                            </div>
                             <?php foreach ( $data['columns'] as $col_index => $col_value ) : ?>
-                                <div class="brz-compare-cell">
+                                <div class="brz-compare-cell brz-compare-cell--header" data-col="<?php echo esc_attr( $col_index ); ?>">
+                                    <div class="brz-compare-col-actions">
+                                        <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-col="<?php echo esc_attr( $col_index ); ?>" aria-label="افزودن ستون بعد از ستون <?php echo esc_attr( $col_index + 1 ); ?>">+</button>
+                                        <button type="button" class="brz-compare-btn brz-compare-btn--danger" data-remove-col="<?php echo esc_attr( $col_index ); ?>" aria-label="حذف ستون <?php echo esc_attr( $col_index + 1 ); ?>">−</button>
+                                    </div>
                                     <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $col_value ); ?>" placeholder="هدر <?php echo esc_attr( $col_index + 1 ); ?>" />
                                 </div>
                             <?php endforeach; ?>
                         </div>
                         <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
                             <div class="brz-compare-row" data-row="<?php echo esc_attr( $r_index ); ?>">
-                                <button type="button" class="brz-compare-btn brz-compare-btn--danger brz-compare-remove-row" aria-label="حذف ردیف">−</button>
+                                <div class="brz-compare-row-actions">
+                                    <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row="<?php echo esc_attr( $r_index ); ?>" aria-label="افزودن ردیف بعد از ردیف <?php echo esc_attr( $r_index + 1 ); ?>">+</button>
+                                    <button type="button" class="brz-compare-btn brz-compare-btn--danger brz-compare-remove-row" data-remove-row="<?php echo esc_attr( $r_index ); ?>" aria-label="حذف ردیف <?php echo esc_attr( $r_index + 1 ); ?>">−</button>
+                                </div>
                                 <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
                                     <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
                                     <div class="brz-compare-cell">

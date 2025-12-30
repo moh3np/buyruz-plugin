@@ -4,6 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class BRZ_Compare_Table {
     const META_KEY = '_buyruz_compare_table';
+    const META_ID_KEY = '_buyruz_compare_table_id';
     const MIN_COLUMNS = 1;
     const MAX_COLUMNS = 6;
     private static $cache = array();
@@ -13,6 +14,8 @@ class BRZ_Compare_Table {
         add_filter( 'the_content', array( __CLASS__, 'inject_into_content' ), 25 );
         add_filter( 'woocommerce_product_get_description', array( __CLASS__, 'inject_into_wc_description' ), 25, 2 );
         add_action( 'woocommerce_after_single_product_summary', array( __CLASS__, 'render_after_summary' ), 25 );
+        add_shortcode( 'buyruz_compare_table', array( __CLASS__, 'shortcode' ) );
+        add_shortcode( 'brz_compare_table', array( __CLASS__, 'shortcode' ) );
     }
 
     public static function has_table( $post_id ) {
@@ -20,9 +23,48 @@ class BRZ_Compare_Table {
         return ! empty( $data['rows'] );
     }
 
+    public static function get_table_id( $post_id ) {
+        $post_id = absint( $post_id );
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $existing   = get_post_meta( $post_id, self::META_ID_KEY, true );
+        $normalized = self::normalize_table_id( $existing, $post_id );
+
+        if ( $normalized !== $existing ) {
+            update_post_meta( $post_id, self::META_ID_KEY, $normalized );
+        }
+
+        return $normalized;
+    }
+
+    private static function normalize_table_id( $value, $post_id ) {
+        $value = is_string( $value ) ? $value : '';
+        $value = preg_replace( '/[^a-zA-Z0-9_-]/', '', $value );
+        if ( empty( $value ) ) {
+            $value = 'brz-ct-' . absint( $post_id );
+        }
+        return $value;
+    }
+
+    private static function product_id_from_table_id( $value ) {
+        if ( is_numeric( $value ) ) {
+            return absint( $value );
+        }
+
+        if ( is_string( $value ) && preg_match( '/(\\d+)/', $value, $m ) ) {
+            return absint( $m[1] );
+        }
+
+        return 0;
+    }
+
     private static function get_table_data( $post_id ) {
         $post_id = absint( $post_id );
         if ( ! $post_id ) { return array(); }
+
+        $table_id = self::get_table_id( $post_id );
 
         if ( isset( self::$cache[ $post_id ] ) ) {
             return self::$cache[ $post_id ];
@@ -103,6 +145,7 @@ class BRZ_Compare_Table {
         }
 
         self::$cache[ $post_id ] = array(
+            'id'      => $table_id,
             'title'   => $title,
             'columns' => $columns,
             'rows'    => $rows,
@@ -182,6 +225,45 @@ class BRZ_Compare_Table {
         </div>
         <?php
         return ob_get_clean();
+    }
+
+    public static function shortcode( $atts ) {
+        $atts = shortcode_atts(
+            array(
+                'id'         => '',
+                'product_id' => '',
+            ),
+            $atts,
+            'buyruz_compare_table'
+        );
+
+        $post_id = 0;
+        if ( ! empty( $atts['product_id'] ) ) {
+            $post_id = absint( $atts['product_id'] );
+        }
+
+        if ( ! $post_id && ! empty( $atts['id'] ) ) {
+            $post_id = self::product_id_from_table_id( $atts['id'] );
+        }
+
+        if ( ! $post_id ) {
+            return '';
+        }
+
+        $expected_id = self::get_table_id( $post_id );
+        if ( ! empty( $atts['id'] ) ) {
+            $input_id = self::normalize_table_id( $atts['id'], $post_id );
+            if ( $expected_id && $input_id && $input_id !== $expected_id ) {
+                return '';
+            }
+        }
+
+        $data = self::get_table_data( $post_id );
+        if ( empty( $data ) ) {
+            return '';
+        }
+
+        return self::render_table( $data );
     }
 
     public static function render_after_summary() {

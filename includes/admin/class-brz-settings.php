@@ -97,6 +97,8 @@ class BRZ_Settings {
         add_action( 'admin_post_brz_toggle_module', array( __CLASS__, 'handle_toggle_module' ) );
         add_action( 'wp_ajax_brz_toggle_module', array( __CLASS__, 'handle_toggle_module_ajax' ) );
         add_action( 'wp_ajax_brz_save_settings', array( __CLASS__, 'handle_save_settings_ajax' ) );
+        add_action( 'admin_post_brz_delete_compare_table', array( __CLASS__, 'handle_delete_compare_table' ) );
+        add_action( 'admin_post_brz_create_compare_table', array( __CLASS__, 'handle_create_compare_table' ) );
     }
 
     public static function register() {
@@ -554,6 +556,8 @@ class BRZ_Settings {
             }
 
             if ( 'compare_table' === $module_slug ) {
+                $compare_msg = isset( $_GET['brz-compare-msg'] ) ? sanitize_key( wp_unslash( $_GET['brz-compare-msg'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $compare_product = isset( $_GET['product'] ) ? absint( $_GET['product'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
                 ?>
                 <div class="brz-section-header">
                     <div>
@@ -564,6 +568,26 @@ class BRZ_Settings {
                         <span class="brz-status <?php echo $active ? 'is-on' : 'is-off'; ?>"><?php echo $active ? 'فعال است' : 'غیرفعال است'; ?></span>
                     </div>
                 </div>
+
+                <?php if ( ! empty( $compare_msg ) ) : ?>
+                    <?php
+                    $notice_class = 'notice-info';
+                    $notice_text  = '';
+                    if ( 'deleted' === $compare_msg ) {
+                        $notice_class = 'notice-success';
+                        $notice_text  = 'جدول متا برای محصول ' . ( $compare_product ? '#' . $compare_product : '' ) . ' حذف شد.';
+                    } elseif ( 'delete-error' === $compare_msg ) {
+                        $notice_class = 'notice-error';
+                        $notice_text  = 'حذف جدول متا امکان‌پذیر نبود. لطفاً دوباره تلاش کنید.';
+                    } elseif ( 'create-error' === $compare_msg ) {
+                        $notice_class = 'notice-error';
+                        $notice_text  = 'ایجاد جدول جدید انجام نشد. شناسه محصول را بررسی کنید.';
+                    }
+                    ?>
+                    <?php if ( ! empty( $notice_text ) ) : ?>
+                        <div class="notice <?php echo esc_attr( $notice_class ); ?>"><p><?php echo esc_html( $notice_text ); ?></p></div>
+                    <?php endif; ?>
+                <?php endif; ?>
 
                 <div class="brz-card">
                     <div class="brz-card__body">
@@ -591,6 +615,7 @@ class BRZ_Settings {
                             <?php submit_button( 'ذخیره تنظیمات جدول متا', 'primary', 'submit', false ); ?>
                         </div>
                     </form>
+                    <?php self::render_compare_tables_index_card(); ?>
                 </div>
                 <?php
                 return;
@@ -681,6 +706,84 @@ class BRZ_Settings {
                     'اطلاعات'
                 ); ?>
             </aside>
+        </div>
+        <?php
+    }
+
+    private static function render_compare_tables_index_card() {
+        $tables   = BRZ_Compare_Table_Admin::get_tables_index();
+        $redirect = admin_url( 'admin.php?page=buyruz-module-compare_table' );
+        ?>
+        <div class="brz-card">
+            <div class="brz-card__header">
+                <h3>فهرست جداول متا</h3>
+                <p>شناسه یکتا، شورت‌کد و لینک ویرایش جدول برای هر محصول.</p>
+            </div>
+            <div class="brz-card__body">
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-inline-form">
+                    <?php wp_nonce_field( 'brz_create_compare_table' ); ?>
+                    <input type="hidden" name="action" value="brz_create_compare_table" />
+                    <input type="hidden" name="redirect" value="<?php echo esc_url( $redirect ); ?>" />
+                    <label for="brz-compare-product-id"><strong>ایجاد جدول جدید برای محصول</strong></label>
+                    <input id="brz-compare-product-id" type="number" name="product_id" min="1" required style="width:140px;" placeholder="ID محصول" />
+                    <button type="submit" class="brz-button brz-button--primary">ایجاد و ویرایش</button>
+                </form>
+
+                <?php if ( empty( $tables ) ) : ?>
+                    <p class="description">هنوز جدولی ثبت نشده است.</p>
+                <?php else : ?>
+                    <div class="brz-table-responsive">
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th>محصول</th>
+                                    <th>شناسه و شورت‌کد</th>
+                                    <th>تعداد ستون</th>
+                                    <th>تعداد ردیف</th>
+                                    <th>اقدامات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ( $tables as $item ) : ?>
+                                    <?php
+                                    $product_id  = $item['product_id'];
+                                    $product_link = get_edit_post_link( $product_id, '' );
+                                    $col_count   = is_array( $item['columns'] ) ? count( $item['columns'] ) : 0;
+                                    $row_count   = is_array( $item['rows'] ) ? count( $item['rows'] ) : 0;
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <strong><?php echo esc_html( $item['product_title'] ); ?></strong>
+                                            <div class="description">#<?php echo esc_html( $product_id ); ?></div>
+                                            <?php if ( $product_link ) : ?>
+                                                <a class="brz-link" href="<?php echo esc_url( $product_link ); ?>">ویرایش محصول</a>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <code dir="ltr"><?php echo esc_html( $item['table_id'] ); ?></code>
+                                            <div class="description" dir="ltr">[buyruz_compare_table id="<?php echo esc_attr( $item['table_id'] ); ?>"]</div>
+                                        </td>
+                                        <td><?php echo esc_html( $col_count ); ?></td>
+                                        <td><?php echo esc_html( $row_count ); ?></td>
+                                        <td class="brz-compare-table-actions">
+                                            <?php if ( ! empty( $item['edit_url'] ) ) : ?>
+                                                <a class="brz-button brz-button--ghost" href="<?php echo esc_url( $item['edit_url'] ); ?>">ویرایش جدول</a>
+                                            <?php endif; ?>
+                                            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('حذف جدول برای این محصول قطعی است؟');">
+                                                <?php wp_nonce_field( 'brz_delete_compare_table_' . $product_id ); ?>
+                                                <input type="hidden" name="action" value="brz_delete_compare_table" />
+                                                <input type="hidden" name="product_id" value="<?php echo esc_attr( $product_id ); ?>" />
+                                                <input type="hidden" name="redirect" value="<?php echo esc_url( $redirect ); ?>" />
+                                                <button type="submit" class="brz-button brz-button--ghost">حذف جدول</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
         <?php
     }
@@ -932,6 +1035,78 @@ class BRZ_Settings {
         }
 
         return $saved;
+    }
+
+    public static function handle_delete_compare_table() {
+        if ( ! current_user_can( self::CAPABILITY ) ) {
+            wp_die( esc_html__( 'شما مجوز کافی ندارید.', 'buyruz' ) );
+        }
+
+        $product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $redirect   = isset( $_POST['redirect'] ) ? esc_url_raw( wp_unslash( $_POST['redirect'] ) ) : admin_url( 'admin.php?page=buyruz-module-compare_table' ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        if ( empty( $redirect ) ) {
+            $redirect = admin_url( 'admin.php?page=buyruz-module-compare_table' );
+        }
+
+        $nonce_action = 'brz_delete_compare_table_' . $product_id;
+        if ( ! $product_id || ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), $nonce_action ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            wp_safe_redirect( add_query_arg( array( 'page' => 'buyruz-module-compare_table', 'brz-compare-msg' => 'delete-error' ), $redirect ) );
+            exit;
+        }
+
+        BRZ_Compare_Table_Admin::delete_table( $product_id );
+        wp_safe_redirect( add_query_arg( array( 'page' => 'buyruz-module-compare_table', 'brz-compare-msg' => 'deleted', 'product' => $product_id ), $redirect ) );
+        exit;
+    }
+
+    public static function handle_create_compare_table() {
+        if ( ! current_user_can( self::CAPABILITY ) ) {
+            wp_die( esc_html__( 'شما مجوز کافی ندارید.', 'buyruz' ) );
+        }
+
+        $redirect   = isset( $_POST['redirect'] ) ? esc_url_raw( wp_unslash( $_POST['redirect'] ) ) : admin_url( 'admin.php?page=buyruz-module-compare_table' ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+        if ( empty( $redirect ) ) {
+            $redirect = admin_url( 'admin.php?page=buyruz-module-compare_table' );
+        }
+
+        if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( wp_unslash( $_POST['_wpnonce'] ), 'brz_create_compare_table' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            wp_safe_redirect( add_query_arg( array( 'page' => 'buyruz-module-compare_table', 'brz-compare-msg' => 'create-error' ), $redirect ) );
+            exit;
+        }
+
+        if ( ! $product_id ) {
+            wp_safe_redirect( add_query_arg( array( 'page' => 'buyruz-module-compare_table', 'brz-compare-msg' => 'create-error' ), $redirect ) );
+            exit;
+        }
+
+        $product = get_post( $product_id );
+        if ( ! $product || 'product' !== $product->post_type ) {
+            wp_safe_redirect( add_query_arg( array( 'page' => 'buyruz-module-compare_table', 'brz-compare-msg' => 'create-error' ), $redirect ) );
+            exit;
+        }
+
+        $existing = BRZ_Compare_Table_Admin::get_meta( $product_id );
+        $table_id = BRZ_Compare_Table_Admin::get_table_id( $product_id );
+
+        if ( empty( $existing ) ) {
+            $columns = array( '', '' );
+            $rows    = array( array( '', '' ) );
+            $payload = array(
+                'id'      => $table_id,
+                'title'   => '',
+                'columns' => $columns,
+                'rows'    => $rows,
+            );
+
+            update_post_meta( $product_id, BRZ_Compare_Table_Admin::META_ID_KEY, $table_id );
+            update_post_meta( $product_id, BRZ_Compare_Table_Admin::META_KEY, wp_json_encode( $payload ) );
+        }
+
+        $edit_url = BRZ_Compare_Table_Admin::build_editor_url( $product_id );
+        wp_safe_redirect( $edit_url ? $edit_url : $redirect );
+        exit;
     }
 
     private static function toggle_module_state( $slug, $state ) {
