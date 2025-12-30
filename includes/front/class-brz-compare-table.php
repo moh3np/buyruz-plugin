@@ -60,6 +60,35 @@ class BRZ_Compare_Table {
         return 0;
     }
 
+    private static function normalize_cell( $value ) {
+        if ( is_array( $value ) || is_object( $value ) ) {
+            return '';
+        }
+
+        $value = (string) $value;
+
+        // Decode escaped \uXXXX sequences
+        if ( strpos( $value, '\\u' ) !== false ) {
+            $decoded = json_decode( '"' . str_replace( array( "\r", "\n" ), '', addslashes( $value ) ) . '"', true );
+            if ( is_string( $decoded ) ) {
+                $value = $decoded;
+            }
+        }
+
+        // Decode bare uXXXX sequences (when backslash was stripped earlier)
+        if ( preg_match( '/u[0-9a-fA-F]{4}/', $value ) ) {
+            $value = preg_replace_callback(
+                '/u([0-9a-fA-F]{4})/',
+                function( $m ) {
+                    return html_entity_decode( '&#x' . $m[1] . ';', ENT_QUOTES, 'UTF-8' );
+                },
+                $value
+            );
+        }
+
+        return $value;
+    }
+
     private static function get_table_data( $post_id ) {
         $post_id = absint( $post_id );
         if ( ! $post_id ) { return array(); }
@@ -102,7 +131,7 @@ class BRZ_Compare_Table {
         $columns = array();
         if ( isset( $decoded['columns'] ) && is_array( $decoded['columns'] ) ) {
             foreach ( $decoded['columns'] as $col ) {
-                $columns[] = is_string( $col ) ? $col : '';
+                $columns[] = is_string( $col ) ? self::normalize_cell( $col ) : '';
             }
         }
         $columns      = array_values( array_slice( $columns, 0, self::MAX_COLUMNS ) );
@@ -124,7 +153,7 @@ class BRZ_Compare_Table {
             $clean = array();
             for ( $i = 0; $i < $column_count; $i++ ) {
                 $cell = isset( $row[ $i ] ) ? $row[ $i ] : '';
-                $clean[] = is_string( $cell ) ? $cell : '';
+                $clean[] = is_string( $cell ) ? self::normalize_cell( $cell ) : '';
             }
             if ( array_filter( $clean, 'strlen' ) ) {
                 $rows[] = $clean;
@@ -136,7 +165,7 @@ class BRZ_Compare_Table {
             return self::$cache[ $post_id ];
         }
 
-        $title = isset( $decoded['title'] ) ? $decoded['title'] : '';
+        $title = isset( $decoded['title'] ) ? self::normalize_cell( $decoded['title'] ) : '';
         if ( empty( $title ) && class_exists( 'BRZ_Settings' ) ) {
             $fallback_title = BRZ_Settings::get( 'compare_table_default_title', '' );
             if ( ! empty( $fallback_title ) ) {
