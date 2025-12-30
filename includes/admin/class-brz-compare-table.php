@@ -201,6 +201,7 @@ class BRZ_Compare_Table_Admin {
         $columns_count = max( count( $columns ), self::MIN_COLUMNS );
 
         list( $columns, $rows_raw ) = self::dedupe_repeated_columns( $columns, isset( $meta['rows'] ) && is_array( $meta['rows'] ) ? $meta['rows'] : array() );
+        list( $columns, $rows_raw ) = self::strip_trailing_default_chunk( $columns, isset( $rows_raw ) ? $rows_raw : array(), $defaults );
         $columns_count = count( $columns );
         for ( $i = 0; $i < $columns_count; $i++ ) {
             if ( ! isset( $columns[ $i ] ) || '' === $columns[ $i ] ) {
@@ -267,6 +268,7 @@ class BRZ_Compare_Table_Admin {
         $columns = array_values( $columns );
 
         list( $columns, $rows_raw ) = self::dedupe_repeated_columns( $columns, isset( $raw['rows'] ) && is_array( $raw['rows'] ) ? $raw['rows'] : array() );
+        list( $columns, $rows_raw ) = self::strip_trailing_default_chunk( $columns, isset( $rows_raw ) ? $rows_raw : array(), $defaults );
 
         $column_count = min( max( count( $columns ), self::MIN_COLUMNS ), self::MAX_COLUMNS );
 
@@ -448,6 +450,29 @@ class BRZ_Compare_Table_Admin {
         return array( $columns, $rows_clean );
     }
 
+    private static function strip_trailing_default_chunk( array $columns, array $rows, array $defaults ) {
+        $count = count( $columns );
+        if ( $count <= self::MIN_COLUMNS ) {
+            return array( $columns, $rows );
+        }
+
+        $first_min = array_slice( $columns, 0, self::MIN_COLUMNS );
+        $last_min  = array_slice( $columns, -1 * self::MIN_COLUMNS );
+
+        if ( $first_min === $last_min ) {
+            $columns = array_slice( $columns, 0, $count - self::MIN_COLUMNS );
+            $trimmed_rows = array();
+            foreach ( $rows as $row ) {
+                if ( is_array( $row ) ) {
+                    $trimmed_rows[] = array_slice( $row, 0, count( $columns ) );
+                }
+            }
+            $rows = $trimmed_rows;
+        }
+
+        return array( $columns, $rows );
+    }
+
     public static function register_admin_page() {
         add_submenu_page(
             null,
@@ -608,13 +633,6 @@ class BRZ_Compare_Table_Admin {
                 </div>
             </div>
 
-            <div class="brz-compare-preview-card">
-                <div class="brz-compare-preview-card__head">
-                    <h4>پیش‌نمایش زنده</h4>
-                    <p class="description">هر تغییری بلافاصله در متا ذخیره و در این پیش‌نمایش بازتاب داده می‌شود.</p>
-                </div>
-                <div class="brz-compare-preview" id="brz-compare-preview"></div>
-            </div>
         </div>
         <?php
     }

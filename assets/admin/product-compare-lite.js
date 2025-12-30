@@ -7,7 +7,6 @@
   var rowsTable = box.querySelector('#brz-compare-rows');
   var addColBtn = box.querySelector('#brz-compare-add-col');
   var addRowBtn = box.querySelector('#brz-compare-add-row');
-  var preview = box.querySelector('#brz-compare-preview');
   var enabledToggle = box.querySelector('input[name="brz_compare_enabled"]');
   var titleInput = box.querySelector('#brz-compare-title');
 
@@ -102,7 +101,6 @@
     });
 
     renumberRows();
-    refreshPreview();
   }
 
   function renumberRows() {
@@ -143,62 +141,6 @@
 
     tbody.appendChild(row);
     renumberRows();
-    refreshPreview();
-  }
-
-  function refreshPreview() {
-    if (!preview) { return; }
-    var payload = collectState();
-    var cols = payload.columns;
-    preview.innerHTML = '';
-
-    if (!payload.enabled) {
-      preview.innerHTML = '<p class="description">جدول غیرفعال است.</p>';
-      return;
-    }
-    if (!payload.rows.length) {
-      preview.innerHTML = '<p class="description">برای مشاهده پیش‌نمایش، حداقل یک ردیف را پر کنید.</p>';
-      return;
-    }
-
-    var wrap = document.createElement('div');
-    wrap.className = 'buyruz-table-wrap';
-
-    if (payload.title) {
-      var heading = document.createElement('h4');
-      heading.className = 'buyruz-table-title';
-      heading.textContent = payload.title;
-      wrap.appendChild(heading);
-    }
-
-    var table = document.createElement('table');
-    table.className = 'buyruz-table buyruz-table--preview';
-
-    var thead = document.createElement('thead');
-    var htr = document.createElement('tr');
-    cols.forEach(function(col) {
-      var th = document.createElement('th');
-      th.textContent = col || 'ستون';
-      htr.appendChild(th);
-    });
-    thead.appendChild(htr);
-    table.appendChild(thead);
-
-    var tbody = document.createElement('tbody');
-    payload.rows.forEach(function(rowCells) {
-      var tr = document.createElement('tr');
-      for (var i = 0; i < cols.length; i++) {
-        var td = document.createElement('td');
-        td.textContent = rowCells[i] || '';
-        td.setAttribute('data-label', cols[i] || 'ستون');
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    wrap.appendChild(table);
-
-    preview.appendChild(wrap);
   }
 
   function collectState() {
@@ -267,24 +209,21 @@
       if (e.target && e.target.classList.contains('brz-compare-remove-row')) {
         var row = e.target.closest('tr');
         if (row) { row.remove(); renumberRows(); refreshPreview(); }
+        if (row) { row.remove(); renumberRows(); }
       }
     });
-    rowsTable.addEventListener('input', refreshPreview);
+    rowsTable.addEventListener('input', function() {});
   }
 
   if (titleInput) {
-    titleInput.addEventListener('input', refreshPreview);
+    titleInput.addEventListener('input', function() {});
   }
   if (enabledToggle) {
-    enabledToggle.addEventListener('change', function() {
-      setDisabledState();
-      refreshPreview();
-    });
+    enabledToggle.addEventListener('change', function() { setDisabledState(); });
     setDisabledState();
   }
 
   rebuildTableForColumns();
   renumberColumns();
   if (rowsTable && !rowsTable.querySelector('tbody tr')) { addRow(); }
-  refreshPreview();
 })();
