@@ -12,6 +12,7 @@ class BRZ_Compare_Table {
     public static function init() {
         add_filter( 'the_content', array( __CLASS__, 'inject_into_content' ), 25 );
         add_filter( 'woocommerce_product_get_description', array( __CLASS__, 'inject_into_wc_description' ), 25, 2 );
+        add_action( 'woocommerce_after_single_product_summary', array( __CLASS__, 'render_after_summary' ), 25 );
     }
 
     public static function has_table( $post_id ) {
@@ -138,6 +139,8 @@ class BRZ_Compare_Table {
             return $content;
         }
 
+        self::$rendered[ $post_id ] = true;
+
         if ( strpos( $content, '[[COMPARE_TABLE]]' ) !== false ) {
             $content = str_replace( '[[COMPARE_TABLE]]', $html, $content );
         } else {
@@ -197,5 +200,29 @@ class BRZ_Compare_Table {
         }
 
         return array_values( $defaults );
+    }
+
+    public static function render_after_summary() {
+        if ( ! is_singular( 'product' ) ) {
+            return;
+        }
+
+        $post_id = get_the_ID();
+        if ( isset( self::$rendered[ $post_id ] ) ) {
+            return;
+        }
+
+        $data = self::get_table_data( $post_id );
+        if ( empty( $data ) ) {
+            return;
+        }
+
+        $html = self::render_table( $data );
+        if ( empty( $html ) ) {
+            return;
+        }
+
+        self::$rendered[ $post_id ] = true;
+        echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 }
