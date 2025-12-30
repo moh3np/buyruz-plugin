@@ -24,6 +24,7 @@ class BRZ_Compare_Table_Admin {
         add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_product_object' ) );
         add_action( 'save_post_product', array( __CLASS__, 'save' ), 10, 2 );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
+        add_action( 'admin_footer', array( __CLASS__, 'maybe_hide_duplicate_fallback' ) );
     }
 
     public static function add_product_tab( $tabs ) {
@@ -103,7 +104,7 @@ class BRZ_Compare_Table_Admin {
     public static function register_fallback_metabox() {
         add_meta_box(
             'brz-compare-table-fallback',
-            'جدول مقایسه (پشتیبان)',
+            'جدول مقایسه محصول',
             array( __CLASS__, 'render_fallback_metabox' ),
             'product',
             'normal',
@@ -634,6 +635,29 @@ class BRZ_Compare_Table_Admin {
             </div>
 
         </div>
+        <?php
+    }
+
+    public static function maybe_hide_duplicate_fallback() {
+        if ( ! function_exists( 'get_current_screen' ) ) {
+            return;
+        }
+
+        $screen = get_current_screen();
+        $is_product_screen = ( $screen && 'product' === $screen->post_type && in_array( $screen->base, array( 'post', 'post-new' ), true ) );
+        if ( ! $is_product_screen ) {
+            return;
+        }
+
+        ?>
+        <script>
+        (function() {
+            // Remove fallback metabox when the dedicated WooCommerce tab is present to avoid duplicate UIs.
+            var tabPanel = document.getElementById('brz_compare_table_panel');
+            var fallback = document.getElementById('brz-compare-table-fallback');
+            if (tabPanel && fallback) { fallback.remove(); }
+        })();
+        </script>
         <?php
     }
 }
