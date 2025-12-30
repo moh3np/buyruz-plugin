@@ -366,7 +366,6 @@ class BRZ_Compare_Table_Admin {
         if ( $column_count > count( $columns ) ) {
             $columns = array_pad( $columns, $column_count, '' );
         }
-        $column_has_value = array_fill( 0, $column_count, false );
         $prepared_rows    = array();
 
         if ( ! empty( $rows_raw ) ) {
@@ -382,7 +381,6 @@ class BRZ_Compare_Table_Admin {
                     $clean_row[] = $clean_cell;
                     if ( '' !== $clean_cell ) {
                         $has_value = true;
-                        $column_has_value[ $i ] = true;
                     }
                 }
                 if ( $has_value ) {
@@ -391,31 +389,17 @@ class BRZ_Compare_Table_Admin {
             }
         }
 
-        // حذف ستون‌هایی که هیچ هدر و دیتایی ندارند
-        $keep_map = array();
-        for ( $i = 0; $i < $column_count; $i++ ) {
-            if ( ! empty( $columns[ $i ] ) || ! empty( $column_has_value[ $i ] ) ) {
-                $keep_map[] = $i;
-            }
-        }
-
-        if ( empty( $keep_map ) || empty( $prepared_rows ) ) {
+        if ( empty( $prepared_rows ) ) {
             return array();
-        }
-
-        $final_columns = array();
-        foreach ( $keep_map as $index ) {
-            $final_columns[] = isset( $columns[ $index ] ) ? $columns[ $index ] : '';
         }
 
         $rows = array();
         foreach ( $prepared_rows as $row ) {
+            // نگه داشتن عرض کامل جدول حتی اگر ستون خالی باشد.
             $mapped = array();
-            foreach ( $keep_map as $index ) {
-                $mapped[] = isset( $row[ $index ] ) ? $row[ $index ] : '';
+            for ( $i = 0; $i < $column_count; $i++ ) {
+                $mapped[] = isset( $row[ $i ] ) ? $row[ $i ] : '';
             }
-            // ردیف را حتی اگر پس از حذف ستون‌های خالی مقدار قابل‌ملاحظه‌ای نماند نگه می‌داریم،
-            // چون کاربر آن را پر کرده و قصد حذف خودکار ندارد.
             $rows[] = $mapped;
         }
 
@@ -425,7 +409,7 @@ class BRZ_Compare_Table_Admin {
 
         return array(
             'title'   => $title,
-            'columns' => array_slice( $final_columns, 0, self::MAX_COLUMNS ),
+            'columns' => array_slice( $columns, 0, self::MAX_COLUMNS ),
             'rows'    => $rows,
         );
     }
