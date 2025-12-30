@@ -13,9 +13,10 @@ class BRZ_Compare_Table_Admin {
 
     public static function init() {
         add_filter( 'woocommerce_admin_features', array( __CLASS__, 'guard_product_editor_features' ), 5 );
+        add_filter( 'woocommerce_new_product_management_experience_enabled', '__return_false', 5 );
         add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'disable_block_editor_for_product' ), 20, 2 );
         add_action( 'admin_notices', array( __CLASS__, 'maybe_show_editor_notice' ) );
-        add_action( 'add_meta_boxes_product', array( __CLASS__, 'register_fallback_metabox' ), 50 );
+        add_action( 'add_meta_boxes_product', array( __CLASS__, 'register_fallback_metabox' ), 5 );
         add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
         add_filter( 'post_row_actions', array( __CLASS__, 'add_row_action' ), 10, 2 );
         add_filter( 'woocommerce_product_data_tabs', array( __CLASS__, 'add_product_tab' ), 25 );
@@ -107,7 +108,7 @@ class BRZ_Compare_Table_Admin {
             array( __CLASS__, 'render_fallback_metabox' ),
             'product',
             'normal',
-            'low'
+            'high'
         );
     }
 
@@ -148,11 +149,6 @@ class BRZ_Compare_Table_Admin {
     }
 
     public static function render_fallback_metabox( $post ) {
-        if ( self::$panel_rendered ) {
-            echo '<p class="description">تب «جدول مقایسه» در بخش «اطلاعات محصول» فعال است. اگر آن را نمی‌بینید، در بالای صفحه از «تنظیمات صفحه» تیک «اطلاعات محصول» را بزنید.</p>';
-            return;
-        }
-
         self::render_editor_inner( $post );
     }
 
