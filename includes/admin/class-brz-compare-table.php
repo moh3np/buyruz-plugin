@@ -7,8 +7,12 @@ class BRZ_Compare_Table_Admin {
     const MIN_COLUMNS = 3;
     const MAX_COLUMNS = 6;
     private static $processed = array();
+    private static $forced_classic_editor = false;
 
     public static function init() {
+        add_filter( 'woocommerce_admin_features', array( __CLASS__, 'guard_product_editor_features' ), 5 );
+        add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'disable_block_editor_for_product' ), 20, 2 );
+        add_action( 'admin_notices', array( __CLASS__, 'maybe_show_editor_notice' ) );
         add_filter( 'woocommerce_product_data_tabs', array( __CLASS__, 'add_product_tab' ), 25 );
         add_action( 'woocommerce_product_data_panels', array( __CLASS__, 'render_product_tab' ) );
         add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_product_object' ) );
@@ -26,6 +30,68 @@ class BRZ_Compare_Table_Admin {
         );
 
         return $tabs;
+    }
+
+    public static function guard_product_editor_features( $features ) {
+        if ( ! is_array( $features ) ) {
+            return $features;
+        }
+
+        $blocked = array();
+        $needles = array( 'product_block_editor', 'product-block-editor', 'new-product-management-experience' );
+
+        foreach ( $features as $feature ) {
+            $keep = true;
+            if ( is_string( $feature ) ) {
+                foreach ( $needles as $needle ) {
+                    if ( '' !== $needle && strpos( $feature, $needle ) !== false ) {
+                        self::$forced_classic_editor = true;
+                        $keep = false;
+                        break;
+                    }
+                }
+            }
+            if ( $keep ) {
+                $blocked[] = $feature;
+            }
+        }
+
+        return array_values( $blocked );
+    }
+
+    public static function disable_block_editor_for_product( $use_block_editor, $post_type ) {
+        if ( 'product' !== $post_type ) {
+            return $use_block_editor;
+        }
+
+        if ( $use_block_editor ) {
+            self::$forced_classic_editor = true;
+        }
+
+        return false;
+    }
+
+    public static function maybe_show_editor_notice() {
+        if ( ! self::$forced_classic_editor ) {
+            return;
+        }
+
+        if ( ! function_exists( 'get_current_screen' ) ) {
+            return;
+        }
+
+        $screen = get_current_screen();
+        if ( empty( $screen ) || 'product' !== $screen->post_type ) {
+            return;
+        }
+
+        if ( ! current_user_can( 'manage_woocommerce' ) && ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        echo '<div class="notice notice-warning"><p>';
+        echo esc_html( 'برای نمایش تب «جدول مقایسه»، ویرایشگر جدید محصول ووکامرس غیرفعال و حالت کلاسیک فعال شد.' );
+        echo '</p></div>';
     }
 
     public static function enqueue( $hook ) {
