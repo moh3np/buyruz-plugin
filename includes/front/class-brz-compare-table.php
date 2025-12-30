@@ -72,10 +72,16 @@ class BRZ_Compare_Table {
             $columns = array_merge( $columns, array_fill( 0, 3 - count( $columns ), '' ) );
         }
         if ( empty( array_filter( $columns, 'strlen' ) ) ) {
-            $columns = array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' );
+            $columns = self::default_columns();
         }
 
         $title = isset( $decoded['title'] ) ? $decoded['title'] : '';
+        if ( empty( $title ) && class_exists( 'BRZ_Settings' ) ) {
+            $fallback_title = BRZ_Settings::get( 'compare_table_default_title', '' );
+            if ( ! empty( $fallback_title ) ) {
+                $title = $fallback_title;
+            }
+        }
 
         self::$cache[ $post_id ] = array(
             'title'   => $title,
@@ -160,5 +166,17 @@ class BRZ_Compare_Table {
         </div>
         <?php
         return ob_get_clean();
+    }
+
+    private static function default_columns() {
+        $defaults = class_exists( 'BRZ_Settings' ) ? BRZ_Settings::get( 'compare_table_columns', array() ) : array();
+        if ( ! is_array( $defaults ) ) {
+            $defaults = array();
+        }
+        $defaults = array_filter( $defaults, 'strlen' );
+        if ( empty( $defaults ) ) {
+            return array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' );
+        }
+        return array_slice( array_merge( $defaults, array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' ) ), 0, 3 );
     }
 }

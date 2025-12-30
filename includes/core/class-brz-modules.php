@@ -15,6 +15,11 @@ class BRZ_Modules {
                 'description' => 'ثبت رخدادهای انتخاب‌شده برای عیب‌یابی.',
                 'class'       => 'BRZ_Debug',
             ),
+            'compare_table' => array(
+                'label'       => 'جدول متا',
+                'description' => 'جدول مقایسهٔ محصول را مدیریت و در فرانت نمایش می‌دهد.',
+                'class'       => 'BRZ_Compare_Table',
+            ),
         );
     }
 

@@ -198,6 +198,14 @@ class BRZ_Compare_Table_Admin {
     }
 
     private static function default_columns() {
-        return array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' );
+        $saved = class_exists( 'BRZ_Settings' ) ? BRZ_Settings::get( 'compare_table_columns', array() ) : array();
+        if ( ! is_array( $saved ) ) {
+            $saved = array();
+        }
+        $saved = array_filter( $saved, 'strlen' );
+        if ( empty( $saved ) ) {
+            return array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' );
+        }
+        return array_slice( array_merge( $saved, array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' ) ), 0, 3 );
     }
 }

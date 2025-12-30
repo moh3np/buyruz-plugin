@@ -130,6 +130,8 @@
         var newState = json.data.state ? 1 : 0;
         if (card) {
           updateCardState(card, newState);
+        } else {
+          window.location.reload();
         }
         showToast(newState ? (settings.successOn || 'ماژول فعال شد') : (settings.successOff || 'ماژول غیرفعال شد'));
       }).catch(function () {
