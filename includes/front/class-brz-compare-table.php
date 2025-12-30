@@ -4,6 +4,8 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class BRZ_Compare_Table {
     const META_KEY = '_buyruz_compare_table';
+    const MIN_COLUMNS = 3;
+    const MAX_COLUMNS = 6;
     private static $cache = array();
     private static $rendered = array();
 
@@ -31,24 +33,54 @@ class BRZ_Compare_Table {
             return self::$cache[ $post_id ];
         }
 
-        $decoded = json_decode( $raw, true );
-        if ( json_last_error() !== JSON_ERROR_NONE || ! is_array( $decoded ) ) {
+        $decoded = is_array( $raw ) ? $raw : json_decode( $raw, true );
+        if ( json_last_error() !== JSON_ERROR_NONE && ! is_array( $raw ) ) {
             self::$cache[ $post_id ] = array();
             return self::$cache[ $post_id ];
         }
 
-        if ( empty( $decoded['enabled'] ) || empty( $decoded['rows'] ) || ! is_array( $decoded['rows'] ) ) {
+        if ( ! is_array( $decoded ) ) {
             self::$cache[ $post_id ] = array();
             return self::$cache[ $post_id ];
         }
+
+        $rows_raw = isset( $decoded['rows'] ) && is_array( $decoded['rows'] ) ? $decoded['rows'] : array();
+        if ( empty( $rows_raw ) ) {
+            self::$cache[ $post_id ] = array();
+            return self::$cache[ $post_id ];
+        }
+
+        $enabled = array_key_exists( 'enabled', $decoded ) ? (bool) $decoded['enabled'] : true;
+        if ( ! $enabled ) {
+            self::$cache[ $post_id ] = array();
+            return self::$cache[ $post_id ];
+        }
+
+        $defaults = self::default_columns();
+        $columns = array();
+        if ( isset( $decoded['columns'] ) && is_array( $decoded['columns'] ) ) {
+            foreach ( $decoded['columns'] as $col ) {
+                $columns[] = is_string( $col ) ? $col : '';
+            }
+        }
+        $columns = array_slice( $columns, 0, self::MAX_COLUMNS );
+        for ( $i = 0; $i < self::MIN_COLUMNS; $i++ ) {
+            if ( ! isset( $columns[ $i ] ) || '' === $columns[ $i ] ) {
+                $columns[ $i ] = isset( $defaults[ $i ] ) ? $defaults[ $i ] : '';
+            }
+        }
+        $columns      = array_slice( $columns, 0, self::MAX_COLUMNS );
+        $columns      = array_values( $columns );
+        $column_count = min( max( count( $columns ), self::MIN_COLUMNS ), self::MAX_COLUMNS );
 
         $rows = array();
-        foreach ( $decoded['rows'] as $row ) {
+        foreach ( $rows_raw as $row ) {
             if ( ! is_array( $row ) ) {
                 continue;
             }
             $clean = array();
-            foreach ( $row as $cell ) {
+            for ( $i = 0; $i < $column_count; $i++ ) {
+                $cell = isset( $row[ $i ] ) ? $row[ $i ] : '';
                 $clean[] = is_string( $cell ) ? $cell : '';
             }
             if ( array_filter( $clean, 'strlen' ) ) {
@@ -61,23 +93,9 @@ class BRZ_Compare_Table {
             return self::$cache[ $post_id ];
         }
 
-        $columns = array();
-        if ( isset( $decoded['columns'] ) && is_array( $decoded['columns'] ) ) {
-            foreach ( $decoded['columns'] as $col ) {
-                $columns[] = is_string( $col ) ? $col : '';
-            }
-        }
-        $columns = array_slice( $columns, 0, 3 );
-        if ( count( $columns ) < 3 ) {
-            $columns = array_merge( $columns, array_fill( 0, 3 - count( $columns ), '' ) );
-        }
-        if ( empty( array_filter( $columns, 'strlen' ) ) ) {
-            $columns = self::default_columns();
-        }
-
         $title = isset( $decoded['title'] ) ? $decoded['title'] : '';
         if ( empty( $title ) && class_exists( 'BRZ_Settings' ) ) {
-            $fallback_title = BRZ_Settings::get( 'compare_table_default_title', '' );
+            $fallback_title = BRZ_Settings::get( 'compare_table_default_title', 'مقایسه با محصولات مشابه' );
             if ( ! empty( $fallback_title ) ) {
                 $title = $fallback_title;
             }
@@ -152,7 +170,7 @@ class BRZ_Compare_Table {
                     <?php foreach ( $data['rows'] as $row ) : ?>
                         <tr>
                             <?php foreach ( $data['columns'] as $index => $col ) : ?>
-                                <td><?php echo esc_html( isset( $row[ $index ] ) ? $row[ $index ] : '' ); ?></td>
+                                <td data-label="<?php echo esc_attr( $data['columns'][ $index ] ); ?>"><?php echo esc_html( isset( $row[ $index ] ) ? $row[ $index ] : '' ); ?></td>
                             <?php endforeach; ?>
                         </tr>
                     <?php endforeach; ?>
@@ -169,9 +187,15 @@ class BRZ_Compare_Table {
             $defaults = array();
         }
         $defaults = array_filter( $defaults, 'strlen' );
-        if ( empty( $defaults ) ) {
-            return array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' );
+        $fallback = array( 'نام محصول مشابه', 'مخاطب (سن/نفرات)', 'تمایز کلیدی (چرا این؟)' );
+        $defaults = array_slice( array_merge( $defaults, $fallback ), 0, self::MAX_COLUMNS );
+
+        for ( $i = 0; $i < self::MIN_COLUMNS; $i++ ) {
+            if ( ! isset( $defaults[ $i ] ) || '' === $defaults[ $i ] ) {
+                $defaults[ $i ] = isset( $fallback[ $i ] ) ? $fallback[ $i ] : '';
+            }
         }
-        return array_slice( array_merge( $defaults, array( 'نام محصول مشابه', 'سبک', 'تمایز کلیدی' ) ), 0, 3 );
+
+        return array_values( $defaults );
     }
 }
