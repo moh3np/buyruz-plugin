@@ -414,9 +414,9 @@ class BRZ_Compare_Table_Admin {
             foreach ( $keep_map as $index ) {
                 $mapped[] = isset( $row[ $index ] ) ? $row[ $index ] : '';
             }
-            if ( array_filter( $mapped, 'strlen' ) ) {
-                $rows[] = $mapped;
-            }
+            // ردیف را حتی اگر پس از حذف ستون‌های خالی مقدار قابل‌ملاحظه‌ای نماند نگه می‌داریم،
+            // چون کاربر آن را پر کرده و قصد حذف خودکار ندارد.
+            $rows[] = $mapped;
         }
 
         if ( empty( $rows ) ) {
