@@ -17,8 +17,10 @@ spl_autoload_register( function( $class ) {
         'BRZ_Modules'                => 'core/class-brz-modules.php',
         'BRZ_Debug'                  => 'support/class-brz-debug.php',
         'BRZ_Settings'               => 'admin/class-brz-settings.php',
+        'BRZ_Compare_Table_Admin'    => 'admin/class-brz-compare-table.php',
         'BRZ_Detector'               => 'front/class-brz-detector.php',
         'BRZ_Enqueue'                => 'front/class-brz-enqueue.php',
+        'BRZ_Compare_Table'          => 'front/class-brz-compare-table.php',
         'BRZ_Tag_Sync_Guard'         => 'core/class-brz-tag-sync-guard.php',
     );
 
