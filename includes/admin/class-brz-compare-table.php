@@ -6,6 +6,7 @@ class BRZ_Compare_Table_Admin {
     const META_KEY = '_buyruz_compare_table';
     const MIN_COLUMNS = 3;
     const MAX_COLUMNS = 6;
+    const ADMIN_PAGE = 'buyruz-compare-editor';
     private static $processed = array();
     private static $blocked_new_editor = false;
     private static $panel_rendered = false;
@@ -15,6 +16,8 @@ class BRZ_Compare_Table_Admin {
         add_filter( 'use_block_editor_for_post_type', array( __CLASS__, 'disable_block_editor_for_product' ), 20, 2 );
         add_action( 'admin_notices', array( __CLASS__, 'maybe_show_editor_notice' ) );
         add_action( 'add_meta_boxes_product', array( __CLASS__, 'register_fallback_metabox' ), 50 );
+        add_action( 'admin_menu', array( __CLASS__, 'register_admin_page' ) );
+        add_filter( 'post_row_actions', array( __CLASS__, 'add_row_action' ), 10, 2 );
         add_filter( 'woocommerce_product_data_tabs', array( __CLASS__, 'add_product_tab' ), 25 );
         add_action( 'woocommerce_product_data_panels', array( __CLASS__, 'render_product_tab' ) );
         add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_product_object' ) );
@@ -109,11 +112,13 @@ class BRZ_Compare_Table_Admin {
     }
 
     public static function enqueue( $hook ) {
-        if ( 'post.php' !== $hook && 'post-new.php' !== $hook ) {
+        $screen = get_current_screen();
+        $is_editor_page = ( ! empty( $screen ) && self::ADMIN_PAGE === $screen->id );
+
+        if ( 'post.php' !== $hook && 'post-new.php' !== $hook && ! $is_editor_page ) {
             return;
         }
-        $screen = get_current_screen();
-        if ( empty( $screen ) || 'product' !== $screen->post_type ) {
+        if ( empty( $screen ) || ( 'product' !== $screen->post_type && ! $is_editor_page ) ) {
             return;
         }
 
@@ -407,6 +412,72 @@ class BRZ_Compare_Table_Admin {
         }
 
         return array_values( $columns );
+    }
+
+    public static function register_admin_page() {
+        add_submenu_page(
+            null,
+            'جدول مقایسه',
+            'جدول مقایسه',
+            'edit_products',
+            self::ADMIN_PAGE,
+            array( __CLASS__, 'render_admin_page' )
+        );
+    }
+
+    public static function add_row_action( $actions, $post ) {
+        if ( empty( $post ) || 'product' !== $post->post_type ) {
+            return $actions;
+        }
+        if ( ! current_user_can( 'edit_product', $post->ID ) ) {
+            return $actions;
+        }
+
+        $url = add_query_arg(
+            array(
+                'page'     => self::ADMIN_PAGE,
+                'product'  => $post->ID,
+                '_wpnonce' => wp_create_nonce( 'brz_compare_editor_' . $post->ID ),
+            ),
+            admin_url( 'admin.php' )
+        );
+
+        $actions['brz_compare'] = '<a href="' . esc_url( $url ) . '">جدول مقایسه</a>';
+        return $actions;
+    }
+
+    public static function render_admin_page() {
+        $product_id = isset( $_GET['product'] ) ? absint( $_GET['product'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( ! $product_id ) {
+            echo '<div class="notice notice-error"><p>محصولی انتخاب نشده است.</p></div>';
+            return;
+        }
+
+        $nonce = isset( $_GET['_wpnonce'] ) ? wp_unslash( $_GET['_wpnonce'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( ! wp_verify_nonce( $nonce, 'brz_compare_editor_' . $product_id ) ) {
+            echo '<div class="notice notice-error"><p>دسترسی مجاز نیست.</p></div>';
+            return;
+        }
+
+        if ( ! current_user_can( 'edit_product', $product_id ) ) {
+            echo '<div class="notice notice-error"><p>دسترسی کافی برای ویرایش این محصول ندارید.</p></div>';
+            return;
+        }
+
+        $product = get_post( $product_id );
+        if ( ! $product || 'product' !== $product->post_type ) {
+            echo '<div class="notice notice-error"><p>محصول یافت نشد.</p></div>';
+            return;
+        }
+
+        echo '<div class="wrap" dir="rtl">';
+        echo '<h1 class="wp-heading-inline">جدول مقایسه محصول</h1>';
+        echo ' <a class="page-title-action" href="' . esc_url( get_edit_post_link( $product_id, '' ) ) . '">بازگشت به ویرایش محصول</a>';
+        echo '<hr class="wp-header-end" />';
+        echo '<div style="max-width:1200px;">';
+        self::render_editor_inner( $product );
+        echo '</div>';
+        echo '</div>';
     }
 
     private static function render_editor_inner( $post ) {
