@@ -1145,6 +1145,7 @@
 
 .brz-compare-grid {
   width: 100%;
+  direction: rtl;
 }
 .brz-compare-row {
   position: relative;
@@ -1153,7 +1154,7 @@
   gap: 10px;
   padding: 10px 10px 10px 6px;
   align-items: stretch;
-  direction: ltr;
+  direction: rtl;
 }
 .brz-compare-row--header {
   margin-bottom: 10px;
@@ -1164,6 +1165,7 @@
   align-content: flex-start;
   justify-items: center;
   padding-top: 6px;
+  direction: ltr;
 }
 .brz-compare-row--header .brz-compare-row-actions {
   padding-top: 0;
