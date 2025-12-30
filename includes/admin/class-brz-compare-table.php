@@ -229,6 +229,9 @@ class BRZ_Compare_Table_Admin {
         $defaults      = self::default_columns();
         $columns       = array_slice( $columns, 0, self::MAX_COLUMNS );
         $columns_count = max( count( $columns ), self::MIN_COLUMNS );
+
+        list( $columns, $rows_raw ) = self::dedupe_repeated_columns( $columns, isset( $meta['rows'] ) && is_array( $meta['rows'] ) ? $meta['rows'] : array() );
+        $columns_count = count( $columns );
         for ( $i = 0; $i < $columns_count; $i++ ) {
             if ( ! isset( $columns[ $i ] ) || '' === $columns[ $i ] ) {
                 $columns[ $i ] = isset( $defaults[ $i ] ) ? $defaults[ $i ] : 'ستون ' . ( $i + 1 );
@@ -238,8 +241,8 @@ class BRZ_Compare_Table_Admin {
         $columns_count = count( $columns );
 
         $rows = array();
-        if ( isset( $meta['rows'] ) && is_array( $meta['rows'] ) ) {
-            foreach ( $meta['rows'] as $row ) {
+        if ( ! empty( $rows_raw ) ) {
+            foreach ( $rows_raw as $row ) {
                 if ( ! is_array( $row ) ) {
                     continue;
                 }
@@ -290,16 +293,19 @@ class BRZ_Compare_Table_Admin {
             }
         }
 
-        $columns      = array_slice( $columns, 0, self::MAX_COLUMNS );
-        $columns      = array_values( $columns );
+        $columns = array_slice( $columns, 0, self::MAX_COLUMNS );
+        $columns = array_values( $columns );
+
+        list( $columns, $rows_raw ) = self::dedupe_repeated_columns( $columns, isset( $raw['rows'] ) && is_array( $raw['rows'] ) ? $raw['rows'] : array() );
+
         $column_count = min( max( count( $columns ), self::MIN_COLUMNS ), self::MAX_COLUMNS );
 
         $columns = array_slice( $columns, 0, $column_count );
 
         $column_has_value = array_fill( 0, $column_count, false );
         $prepared_rows    = array();
-        if ( isset( $raw['rows'] ) && is_array( $raw['rows'] ) ) {
-            foreach ( $raw['rows'] as $row ) {
+        if ( isset( $rows_raw ) && is_array( $rows_raw ) ) {
+            foreach ( $rows_raw as $row ) {
                 if ( ! is_array( $row ) ) {
                     continue;
                 }
@@ -437,6 +443,39 @@ class BRZ_Compare_Table_Admin {
         }
 
         return $value;
+    }
+
+    private static function dedupe_repeated_columns( array $columns, array $rows ) {
+        $count = count( $columns );
+        if ( $count <= self::MIN_COLUMNS || $count % self::MIN_COLUMNS !== 0 ) {
+            return array( $columns, $rows );
+        }
+
+        $chunk_size = self::MIN_COLUMNS;
+        $chunks     = array_chunk( $columns, $chunk_size );
+        $first      = $chunks[0];
+        $all_same   = true;
+        foreach ( $chunks as $chunk ) {
+            if ( $chunk !== $first ) {
+                $all_same = false;
+                break;
+            }
+        }
+
+        if ( ! $all_same ) {
+            return array( $columns, $rows );
+        }
+
+        $columns = $first;
+        $rows_clean = array();
+        foreach ( $rows as $row ) {
+            if ( ! is_array( $row ) ) {
+                continue;
+            }
+            $rows_clean[] = array_slice( $row, 0, $chunk_size );
+        }
+
+        return array( $columns, $rows_clean );
     }
 
     public static function register_admin_page() {
