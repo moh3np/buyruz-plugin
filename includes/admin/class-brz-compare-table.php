@@ -5,7 +5,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class BRZ_Compare_Table_Admin {
     const META_KEY = '_buyruz_compare_table';
     const MIN_COLUMNS = 1;
-    const MAX_COLUMNS = 1;
+    const MAX_COLUMNS = 6;
     const ADMIN_PAGE = 'buyruz-compare-editor';
     private static $processed = array();
     private static $blocked_new_editor = false;
@@ -256,17 +256,20 @@ class BRZ_Compare_Table_Admin {
             }
         }
 
-        // فقط یک ستون هدر پشتیبانی می‌شود.
-        $columns = array_slice( $columns, 0, 1 );
+        $columns = array_slice( $columns, 0, self::MAX_COLUMNS );
         $columns = array_values( $columns );
 
         $rows_raw = isset( $raw['rows'] ) && is_array( $raw['rows'] ) ? $raw['rows'] : array();
-        $column_count = 1;
-        if ( empty( $columns ) ) {
-            $columns = array( '' );
+        $column_count = max( min( count( $columns ), self::MAX_COLUMNS ), self::MIN_COLUMNS );
+        $first_row    = reset( $rows_raw );
+        $row_width    = is_array( $first_row ) ? count( $first_row ) : 0;
+        if ( $row_width > $column_count ) {
+            $column_count = min( $row_width, self::MAX_COLUMNS );
         }
-
-        $column_has_value = array( false );
+        if ( $column_count > count( $columns ) ) {
+            $columns = array_pad( $columns, $column_count, '' );
+        }
+        $column_has_value = array_fill( 0, $column_count, false );
         $prepared_rows    = array();
 
         if ( ! empty( $rows_raw ) ) {
@@ -276,12 +279,14 @@ class BRZ_Compare_Table_Admin {
                 }
                 $clean_row = array();
                 $has_value = false;
-                $cell        = isset( $row[0] ) ? self::normalize_cell( $row[0] ) : '';
-                $clean_cell  = sanitize_text_field( $cell );
-                $clean_row[] = $clean_cell;
-                if ( '' !== $clean_cell ) {
-                    $has_value = true;
-                    $column_has_value[0] = true;
+                for ( $i = 0; $i < $column_count; $i++ ) {
+                    $cell        = isset( $row[ $i ] ) ? self::normalize_cell( $row[ $i ] ) : '';
+                    $clean_cell  = sanitize_text_field( $cell );
+                    $clean_row[] = $clean_cell;
+                    if ( '' !== $clean_cell ) {
+                        $has_value = true;
+                        $column_has_value[ $i ] = true;
+                    }
                 }
                 if ( $has_value ) {
                     $prepared_rows[] = $clean_row;
@@ -289,18 +294,31 @@ class BRZ_Compare_Table_Admin {
             }
         }
 
-        // حذف در صورت خالی بودن هدر و داده
-        if ( ( empty( $columns[0] ) && empty( $column_has_value[0] ) ) || empty( $prepared_rows ) ) {
+        // حذف ستون‌هایی که هیچ هدر و دیتایی ندارند
+        $keep_map = array();
+        for ( $i = 0; $i < $column_count; $i++ ) {
+            if ( ! empty( $columns[ $i ] ) || ! empty( $column_has_value[ $i ] ) ) {
+                $keep_map[] = $i;
+            }
+        }
+
+        if ( empty( $keep_map ) || empty( $prepared_rows ) ) {
             return array();
         }
 
-        $final_columns = array( isset( $columns[0] ) ? $columns[0] : '' );
+        $final_columns = array();
+        foreach ( $keep_map as $index ) {
+            $final_columns[] = isset( $columns[ $index ] ) ? $columns[ $index ] : '';
+        }
 
         $rows = array();
         foreach ( $prepared_rows as $row ) {
-            $cell = isset( $row[0] ) ? $row[0] : '';
-            if ( '' !== $cell ) {
-                $rows[] = array( $cell );
+            $mapped = array();
+            foreach ( $keep_map as $index ) {
+                $mapped[] = isset( $row[ $index ] ) ? $row[ $index ] : '';
+            }
+            if ( array_filter( $mapped, 'strlen' ) ) {
+                $rows[] = $mapped;
             }
         }
 
@@ -469,8 +487,12 @@ class BRZ_Compare_Table_Admin {
 
             <div class="brz-compare-sheet">
                 <div class="brz-compare-sheet__actions">
-                    <div class="brz-compare-sheet__hint">سطر اول هدر است؛ برای افزودن/حذف ردیف از دکمه‌های سبز/قرمز استفاده کنید.</div>
+                    <div class="brz-compare-sheet__hint">برای افزودن ستون/سطر از دکمه‌های سبز و برای حذف از قرمز استفاده کنید. سطر اول هدر است.</div>
                     <div class="brz-compare-sheet__buttons">
+                        <div class="brz-compare-sheet__group">
+                            <button type="button" class="brz-compare-btn brz-compare-btn--danger" data-remove-col aria-label="حذف ستون">−</button>
+                            <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-col aria-label="افزودن ستون">+</button>
+                        </div>
                         <div class="brz-compare-sheet__group">
                             <button type="button" class="brz-compare-btn brz-compare-btn--danger" data-remove-row aria-label="حذف ردیف">−</button>
                             <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row aria-label="افزودن ردیف">+</button>
@@ -487,17 +509,17 @@ class BRZ_Compare_Table_Admin {
                                 </div>
                             <?php endforeach; ?>
                         </div>
-                        <div id="brz-compare-rows">
-                            <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
-                                <div class="brz-compare-row" data-row="<?php echo esc_attr( $r_index ); ?>">
-                                    <button type="button" class="brz-compare-btn brz-compare-btn--danger brz-compare-remove-row" aria-label="حذف ردیف">−</button>
-                                    <?php $cell = isset( $row[0] ) ? $row[0] : ''; ?>
+                        <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
+                            <div class="brz-compare-row" data-row="<?php echo esc_attr( $r_index ); ?>">
+                                <button type="button" class="brz-compare-btn brz-compare-btn--danger brz-compare-remove-row" aria-label="حذف ردیف">−</button>
+                                <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
+                                    <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
                                     <div class="brz-compare-cell">
-                                        <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][0]" value="<?php echo esc_attr( $cell ); ?>" placeholder="—" />
+                                        <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" placeholder="—" />
                                     </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
+                                <?php endfor; ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
