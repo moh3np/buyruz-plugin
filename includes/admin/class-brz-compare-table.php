@@ -24,7 +24,6 @@ class BRZ_Compare_Table_Admin {
         add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_product_object' ) );
         add_action( 'save_post_product', array( __CLASS__, 'save' ), 10, 2 );
         add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
-        // حذف ذخیرهٔ فوری: ajax_save و JS متصل حذف شد.
     }
 
     public static function add_product_tab( $tabs ) {
@@ -124,6 +123,13 @@ class BRZ_Compare_Table_Admin {
         }
 
         wp_enqueue_style( 'brz-settings-admin', BRZ_URL . 'assets/admin/settings.css', array(), BRZ_VERSION );
+        wp_enqueue_script(
+            'brz-compare-table-admin',
+            BRZ_URL . 'assets/admin/product-compare-lite.js',
+            array(),
+            BRZ_VERSION,
+            true
+        );
     }
 
     public static function render_product_tab() {
