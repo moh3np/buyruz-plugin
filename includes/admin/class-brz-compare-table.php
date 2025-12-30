@@ -344,73 +344,45 @@ class BRZ_Compare_Table_Admin {
     }
 
     private static function sanitize_payload( array $raw ) {
-        $title   = isset( $raw['title'] ) ? sanitize_text_field( $raw['title'] ) : '';
+        $title  = isset( $raw['title'] ) ? sanitize_text_field( $raw['title'] ) : '';
+        $cols   = isset( $raw['columns'] ) && is_array( $raw['columns'] ) ? $raw['columns'] : array();
+        $rows   = isset( $raw['rows'] ) && is_array( $raw['rows'] ) ? $raw['rows'] : array();
 
-        $columns  = array();
-        if ( isset( $raw['columns'] ) && is_array( $raw['columns'] ) ) {
-            foreach ( $raw['columns'] as $col ) {
-                $columns[] = sanitize_text_field( self::normalize_cell( $col ) );
+        $clean_columns = array();
+        foreach ( $cols as $col ) {
+            $clean_columns[] = sanitize_text_field( self::normalize_cell( $col ) );
+        }
+        // تعیین تعداد ستون بر اساس بیشترین مقدار بین هدر و پهن‌ترین ردیف
+        $max_row_width = 0;
+        foreach ( $rows as $row ) {
+            if ( is_array( $row ) ) {
+                $max_row_width = max( $max_row_width, count( $row ) );
             }
         }
+        $column_count = min( max( max( count( $clean_columns ), $max_row_width ), self::MIN_COLUMNS ), self::MAX_COLUMNS );
+        $clean_columns = array_slice( array_pad( $clean_columns, $column_count, '' ), 0, self::MAX_COLUMNS );
 
-        $columns = array_slice( $columns, 0, self::MAX_COLUMNS );
-        $columns = array_values( $columns );
-
-        $rows_raw = isset( $raw['rows'] ) && is_array( $raw['rows'] ) ? $raw['rows'] : array();
-        $column_count = max( min( count( $columns ), self::MAX_COLUMNS ), self::MIN_COLUMNS );
-        $first_row    = reset( $rows_raw );
-        $row_width    = is_array( $first_row ) ? count( $first_row ) : 0;
-        if ( $row_width > $column_count ) {
-            $column_count = min( $row_width, self::MAX_COLUMNS );
-        }
-        if ( $column_count > count( $columns ) ) {
-            $columns = array_pad( $columns, $column_count, '' );
-        }
-        $prepared_rows    = array();
-
-        if ( ! empty( $rows_raw ) ) {
-            foreach ( $rows_raw as $row ) {
-                if ( ! is_array( $row ) ) {
-                    continue;
-                }
-                $clean_row = array();
-                $has_value = false;
-                for ( $i = 0; $i < $column_count; $i++ ) {
-                    $cell        = isset( $row[ $i ] ) ? self::normalize_cell( $row[ $i ] ) : '';
-                    $clean_cell  = sanitize_text_field( $cell );
-                    $clean_row[] = $clean_cell;
-                    if ( '' !== $clean_cell ) {
-                        $has_value = true;
-                    }
-                }
-                if ( $has_value ) {
-                    $prepared_rows[] = $clean_row;
-                }
+        $clean_rows = array();
+        foreach ( $rows as $row ) {
+            if ( ! is_array( $row ) ) {
+                continue;
             }
-        }
-
-        if ( empty( $prepared_rows ) ) {
-            return array();
-        }
-
-        $rows = array();
-        foreach ( $prepared_rows as $row ) {
-            // نگه داشتن عرض کامل جدول حتی اگر ستون خالی باشد.
-            $mapped = array();
+            $clean_row = array();
             for ( $i = 0; $i < $column_count; $i++ ) {
-                $mapped[] = isset( $row[ $i ] ) ? $row[ $i ] : '';
+                $cell = isset( $row[ $i ] ) ? $row[ $i ] : '';
+                $clean_row[] = sanitize_text_field( self::normalize_cell( $cell ) );
             }
-            $rows[] = $mapped;
+            $clean_rows[] = $clean_row;
         }
 
-        if ( empty( $rows ) ) {
+        if ( empty( $clean_rows ) ) {
             return array();
         }
 
         return array(
             'title'   => $title,
-            'columns' => array_slice( $columns, 0, self::MAX_COLUMNS ),
-            'rows'    => $rows,
+            'columns' => $clean_columns,
+            'rows'    => $clean_rows,
         );
     }
 
