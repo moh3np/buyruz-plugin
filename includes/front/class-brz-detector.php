@@ -47,4 +47,30 @@ class BRZ_Detector {
 
         return false;
     }
+
+    public static function should_load_table_styles( array $targets ) {
+        if ( is_admin() ) { return false; }
+
+        if ( empty( $targets ) ) { return false; }
+
+        $targets = array_unique( $targets );
+
+        $is_product  = ( function_exists( 'is_product' ) && is_product() ) || is_singular( 'product' );
+        $is_page     = is_page();
+        $is_category = is_category() || ( function_exists( 'is_product_category' ) && is_product_category() );
+
+        if ( $is_product && in_array( 'product', $targets, true ) ) {
+            return true;
+        }
+
+        if ( $is_page && in_array( 'page', $targets, true ) ) {
+            return true;
+        }
+
+        if ( $is_category && in_array( 'category', $targets, true ) ) {
+            return true;
+        }
+
+        return false;
+    }
 }

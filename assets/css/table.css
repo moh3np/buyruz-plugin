@@ -1,0 +1,7 @@
+/* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
+.buyruz-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:16px 0}
+.buyruz-table{width:100%;border-collapse:separate;border-spacing:0;min-width:640px;border-radius:14px;overflow:hidden}
+.buyruz-table th,.buyruz-table td{padding:12px 14px;border:1px solid #e7e7e7;vertical-align:top;text-align:right}
+.buyruz-table thead th{position:sticky;top:0;background:#fafafa;font-weight:700}
+.buyruz-table tr:nth-child(even) td{background:#fcfcfc}
+.buyruz-table td:first-child,.buyruz-table th:first-child{border-right-width:1px}

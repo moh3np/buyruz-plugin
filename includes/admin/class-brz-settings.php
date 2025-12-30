@@ -15,6 +15,11 @@ class BRZ_Settings {
                 'description' => 'کنترل رنگ برند، انیمیشن و رفتار آکاردئون FAQ برای همهٔ سایت.',
                 'footer'      => 'تغییرات این بخش فوراً روی صفحات دارای Rank Math FAQ اعمال می‌شود.',
             ),
+            'brz_tables' => array(
+                'title'       => 'استایل جداول',
+                'description' => 'اعمال استایل جمع‌وجور بایروز روی جداول محتوا به‌صورت انتخابی.',
+                'footer'      => 'می‌توانید محدودهٔ اعمال را جداگانه برای محصولات، برگه‌ها یا دسته‌بندی‌ها روشن کنید.',
+            ),
             'brz_debug'   => array(
                 'title'       => 'دیباگ و لاگ‌ها',
                 'description' => 'ثبت رخدادها برای عیب‌یابی بدون قربانی کردن سرعت.',
@@ -134,6 +139,31 @@ class BRZ_Settings {
             echo '<input type="hidden" name="'.BRZ_OPTION.'[compact_mobile]" value="0" />';
             echo '<label><input type="checkbox" name="'.BRZ_OPTION.'[compact_mobile]" value="1" '.checked( 1, $v, false ).'> فعال</label>';
         }, 'brz-settings', 'brz_main' );
+
+        add_settings_section( 'brz_tables', 'استایل جداول', '__return_false', 'brz-settings' );
+
+        add_settings_field( 'table_styles_enabled', 'فعال‌سازی استایل جداول', function() {
+            $enabled = (bool) self::get( 'table_styles_enabled', 0 );
+            echo '<input type="hidden" name="'.BRZ_OPTION.'[table_styles_enabled]" value="0" />';
+            echo '<label><input type="checkbox" name="'.BRZ_OPTION.'[table_styles_enabled]" value="1" '.checked( true, $enabled, false ).'> استایل بایروز برای جداول فعال شود</label>';
+            echo '<p class="description">برای فعال شدن نیاز است محدودهٔ اعمال را در گزینهٔ زیر انتخاب کنید.</p>';
+        }, 'brz-settings', 'brz_tables' );
+
+        add_settings_field( 'table_styles_targets', 'محدودهٔ اعمال', function() {
+            $selected = (array) self::get( 'table_styles_targets', array() );
+            $targets  = array(
+                'product'  => 'محصولات',
+                'page'     => 'برگه‌ها',
+                'category' => 'دسته‌بندی‌ها',
+            );
+            foreach ( $targets as $key => $label ) {
+                $checked = in_array( $key, $selected, true );
+                echo '<label style="display:block;margin-bottom:6px;">';
+                echo '<input type="checkbox" name="'.BRZ_OPTION.'[table_styles_targets][]" value="'.esc_attr( $key ).'" '.checked( true, $checked, false ).'> '.esc_html( $label );
+                echo '</label>';
+            }
+            echo '<p class="description">حداقل یکی از گزینه‌ها را انتخاب کنید تا استایل روی همان بخش‌ها اعمال شود.</p>';
+        }, 'brz-settings', 'brz_tables' );
 
         add_settings_section( 'brz_debug', 'دیباگ و لاگ‌ها', '__return_false', 'brz-settings' );
 
@@ -449,7 +479,7 @@ class BRZ_Settings {
                         <?php
                         settings_fields( 'brz_group' );
                         echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="general" />';
-                        self::render_section_cards( array( 'brz_main' ) );
+                        self::render_section_cards( array( 'brz_main', 'brz_tables' ) );
                         ?>
                         <div class="brz-save-bar">
                             <span class="brz-save-state" aria-live="polite">تغییرات بدون رفرش ذخیره می‌شود.</span>
@@ -946,7 +976,7 @@ class BRZ_Settings {
 
         // General settings.
         if ( 'general' === $context || isset( $input['enable_css'] ) ) {
-            $checkboxes = array( 'enable_css', 'inline_css', 'enable_js', 'single_open', 'animate', 'compact_mobile' );
+            $checkboxes = array( 'enable_css', 'inline_css', 'enable_js', 'single_open', 'animate', 'compact_mobile', 'table_styles_enabled' );
             foreach ( $checkboxes as $checkbox ) {
                 if ( isset( $input[ $checkbox ] ) ) {
                     $output[ $checkbox ] = $input[ $checkbox ] ? 1 : 0;
@@ -957,6 +987,15 @@ class BRZ_Settings {
             if ( isset( $input['brand_color'] ) ) {
                 $output['brand_color'] = sanitize_text_field( $input['brand_color'] );
                 unset( $input['brand_color'] );
+            }
+
+            if ( isset( $input['table_styles_targets'] ) ) {
+                $targets = array_map( 'sanitize_text_field', (array) $input['table_styles_targets'] );
+                $allowed = array( 'product', 'page', 'category' );
+                $output['table_styles_targets'] = array_values( array_intersect( $targets, $allowed ) );
+                unset( $input['table_styles_targets'] );
+            } elseif ( 'general' === $context ) {
+                $output['table_styles_targets'] = array();
             }
         }
 

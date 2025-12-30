@@ -8,12 +8,19 @@ class BRZ_Enqueue {
     }
 
     public static function frontend() {
-        if ( ! BRZ_Detector::should_load() ) { return; }
-
         $opts = BRZ_Settings::get();
+        $should_load_faq = BRZ_Detector::should_load();
+
+        $table_targets = array();
+        if ( isset( $opts['table_styles_targets'] ) && is_array( $opts['table_styles_targets'] ) ) {
+            $table_targets = array_values( array_intersect( $opts['table_styles_targets'], array( 'product', 'page', 'category' ) ) );
+        }
+        $should_load_tables = ! empty( $opts['table_styles_enabled'] ) && BRZ_Detector::should_load_table_styles( $table_targets );
+
+        if ( ! $should_load_faq && ! $should_load_tables ) { return; }
 
         // JS
-        if ( ! empty( $opts['enable_js'] ) ) {
+        if ( $should_load_faq && ! empty( $opts['enable_js'] ) ) {
             $data = array(
                 'singleOpen'     => ! empty($opts['single_open']),
                 'animate'        => ! empty($opts['animate']),
@@ -32,7 +39,7 @@ class BRZ_Enqueue {
         }
 
         // CSS
-        if ( ! empty( $opts['enable_css'] ) ) {
+        if ( $should_load_faq && ! empty( $opts['enable_css'] ) ) {
             $brand = isset($opts['brand_color']) ? $opts['brand_color'] : '#ff5668';
             if ( ! empty( $opts['inline_css'] ) ) {
                 $css = @file_get_contents( BRZ_PATH . 'assets/css/faq.css' );
@@ -49,6 +56,28 @@ class BRZ_Enqueue {
                 // Small inline var for brand
                 $inline = ':root{--brz-brand: '.$brand.';}';
                 wp_add_inline_style( 'brz-faq', $inline );
+            }
+        }
+
+        if ( $should_load_tables ) {
+            $handle        = 'brz-table-style';
+            $css_file      = BRZ_PATH . 'assets/css/table.css';
+            $css_url       = BRZ_URL . 'assets/css/table.css';
+            $inline_loaded = false;
+
+            if ( ! empty( $opts['inline_css'] ) ) {
+                $css = @file_get_contents( $css_file );
+                if ( $css ) {
+                    $inline_loaded = true;
+                    wp_register_style( $handle, false, array(), BRZ_VERSION );
+                    wp_enqueue_style( $handle );
+                    wp_add_inline_style( $handle, $css );
+                }
+            }
+
+            if ( ! $inline_loaded ) {
+                wp_register_style( $handle, $css_url, array(), BRZ_VERSION );
+                wp_enqueue_style( $handle );
             }
         }
     }
