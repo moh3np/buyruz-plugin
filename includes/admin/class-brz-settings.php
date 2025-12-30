@@ -11,9 +11,9 @@ class BRZ_Settings {
     private static function sections_meta() {
         $sections = array(
             'brz_main'    => array(
-                'title'       => 'نمایش و تجربه کاربری',
+                'title'       => 'استایل FAQ',
                 'description' => 'کنترل رنگ برند، انیمیشن و رفتار آکاردئون FAQ برای همهٔ سایت.',
-                'footer'      => 'تغییرات این بخش فوراً روی صفحات دارای Rank Math FAQ اعمال می‌شود.',
+                'footer'      => 'تأثیر روی صفحات دارای Rank Math FAQ.',
             ),
             'brz_tables' => array(
                 'title'       => 'استایل جداول',
@@ -40,6 +40,10 @@ class BRZ_Settings {
             array(
                 'slug'  => self::PARENT_SLUG,
                 'label' => 'پیشخوان',
+            ),
+            array(
+                'slug'  => 'buyruz-style',
+                'label' => 'استایل',
             ),
             array(
                 'slug'  => 'buyruz-general',
@@ -156,6 +160,7 @@ class BRZ_Settings {
                 'page'     => 'برگه‌ها',
                 'category' => 'دسته‌بندی‌ها',
             );
+            echo '<input type="hidden" name="'.BRZ_OPTION.'[table_styles_targets_submitted]" value="1" />';
             foreach ( $targets as $key => $label ) {
                 $checked = in_array( $key, $selected, true );
                 echo '<label style="display:block;margin-bottom:6px;">';
@@ -214,6 +219,15 @@ class BRZ_Settings {
             array( __CLASS__, 'render_page' )
         );
 
+        add_submenu_page(
+            self::PARENT_SLUG,
+            'استایل',
+            'استایل',
+            $capability,
+            'buyruz-style',
+            array( __CLASS__, 'render_page' )
+        );
+
         foreach ( self::module_nav_items() as $slug => $meta ) {
             add_submenu_page(
                 self::PARENT_SLUG,
@@ -243,6 +257,11 @@ class BRZ_Settings {
             return;
         }
 
+        if ( 'buyruz-style' === $page ) {
+            self::render_style_settings();
+            return;
+        }
+
         if ( strpos( $page, 'buyruz-module-' ) === 0 ) {
             $slug = substr( $page, strlen( 'buyruz-module-' ) );
             self::render_module_settings( $slug );
@@ -258,10 +277,11 @@ class BRZ_Settings {
         <div class="brz-admin-wrap" dir="rtl" style="--brz-brand: <?php echo $brand; ?>;">
             <div id="brz-snackbar" class="brz-snackbar" aria-live="polite"></div>
             <?php self::render_hero( $active_slug ); ?>
-            <?php self::render_top_nav( $active_slug ); ?>
-
-            <div class="brz-content">
-                <?php call_user_func( $content_cb ); ?>
+            <div class="brz-layout">
+                <?php self::render_side_nav( $active_slug ); ?>
+                <div class="brz-content">
+                    <?php call_user_func( $content_cb ); ?>
+                </div>
             </div>
         </div>
         <?php
@@ -283,7 +303,7 @@ class BRZ_Settings {
                     <h1>پنل ماژول‌ها و تنظیمات</h1>
                     <span class="brz-hero__version">نسخه <?php echo esc_html( BRZ_VERSION ); ?></span>
                 </div>
-                <p class="brz-hero__desc">چیدمان الهام‌گرفته از Rank Math با تمرکز بر سرعت، نمایش ماژول‌ها و ذخیره‌سازی بدون رفرش.</p>
+                <p class="brz-hero__desc">کنترل یکپارچه ماژول‌های بایروز با تمرکز بر سرعت و سادگی.</p>
                 <div class="brz-hero__meta">
                     <?php foreach ( $stats as $stat ) : ?>
                         <div class="brz-pill">
@@ -297,8 +317,8 @@ class BRZ_Settings {
                 </div>
             </div>
             <div class="brz-hero__aside">
-                <div class="brz-hero__badge">بدون رفرش ذخیره می‌شود</div>
-                <p>تغییرات فرم‌ها و وضعیت ماژول‌ها به‌صورت آنی اعمال می‌شوند و صفحه روی همین نما باقی می‌ماند.</p>
+                <div class="brz-hero__badge">Buyruz Suite</div>
+                <p>پنل سبک و خوانا برای مدیریت تنظیمات. همهٔ ماژول‌ها در یک جا قابل دسترس هستند.</p>
                 <a class="brz-hero__cta" href="<?php echo esc_url( $cta_href ); ?>"><?php echo esc_html( $cta_label ); ?></a>
             </div>
         </div>
@@ -325,7 +345,7 @@ class BRZ_Settings {
             array(
                 'label' => 'وضعیت ماژول‌ها',
                 'value' => $active . ' / ' . $total,
-                'hint'  => 'سوئیچ‌ها فوری و بدون رفرش عمل می‌کنند.',
+                'hint'  => 'سوئیچ‌ها در لحظه اعمال می‌شوند.',
             ),
             array(
                 'label' => 'استایل و دیباگ',
@@ -335,25 +355,22 @@ class BRZ_Settings {
         );
     }
 
-    private static function render_top_nav( $active_slug ) {
+    private static function render_side_nav( $active_slug ) {
         ?>
-        <div class="brz-top-nav">
-            <div class="brz-top-nav__intro">
-                <span class="brz-chip">ماژول‌ها و تنظیمات</span>
-                <strong>Buyruz Suite</strong>
-            </div>
-            <div class="brz-top-nav__items">
+        <aside class="brz-side-nav">
+            <div class="brz-side-nav__title">مسیرها</div>
+            <nav class="brz-side-nav__items" aria-label="ناوبری تنظیمات بایروز">
                 <?php foreach ( self::nav_items() as $item ) : ?>
                     <?php $is_active = ( $item['slug'] === $active_slug ); ?>
-                    <a class="brz-top-nav__item <?php echo $is_active ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $item['slug'] ) ); ?>">
+                    <a class="brz-side-nav__item <?php echo $is_active ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $item['slug'] ) ); ?>">
                         <span><?php echo esc_html( $item['label'] ); ?></span>
                         <?php if ( isset( $item['module'] ) ) : ?>
                             <small>ماژول</small>
                         <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
-            </div>
-        </div>
+            </nav>
+        </aside>
         <?php
     }
 
@@ -389,16 +406,12 @@ class BRZ_Settings {
             <div class="brz-section-header brz-section-header--modules">
                 <div>
                     <h2>پیشخوان ماژول‌ها</h2>
-                    <p>شبکهٔ مدرن و واکنش‌گرا برای کنترل سریع ماژول‌ها بدون رفرش صفحه.</p>
+                    <p>شبکهٔ مدرن و واکنش‌گرا برای کنترل سریع ماژول‌ها.</p>
                 </div>
                 <div class="brz-section-actions">
                     <span class="brz-status is-on">واکنش‌گرا و سریع</span>
                     <a class="brz-button brz-button--ghost" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>">تنظیمات عمومی</a>
                 </div>
-            </div>
-
-            <div class="brz-inline-alert">
-                ذخیره و تغییر وضعیت ماژول‌ها به‌صورت زنده و بدون رفرش انجام می‌شود. شبکهٔ کارت‌ها روی موبایل و دسکتاپ بهینه شده است.
             </div>
 
             <div class="brz-grid">
@@ -443,7 +456,7 @@ class BRZ_Settings {
                     <?php self::render_support_card(
                         'بهینه و تمیز',
                         array(
-                            'بدون رفرش و بدون ایجاد دادهٔ اضافی در دیتابیس ذخیره می‌شود.',
+                            'تغییر وضعیت ماژول‌ها سریع اعمال می‌شود و دادهٔ اضافی در دیتابیس باقی نمی‌گذارد.',
                             'شبکهٔ کارت‌ها روی موبایل فشرده و دو ستونه می‌شود تا دید بهتری بدهد.',
                             'اگر ماژول غیرفعال باشد، هیچ فایل یا هوکی از آن لود نمی‌شود.',
                         ),
@@ -462,67 +475,59 @@ class BRZ_Settings {
             <div class="brz-section-header">
                 <div>
                     <h2>تنظیمات عمومی</h2>
-                    <p>تنظیمات اصلی نمایش و تجربهٔ FAQ برای همهٔ ماژول‌ها.</p>
-                </div>
-                <div class="brz-section-actions">
-                    <a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>">بازگشت به پیشخوان</a>
+                    <p>کنترل قابلیت‌های عمومی افزونه.</p>
                 </div>
             </div>
 
-            <div class="brz-inline-alert brz-inline-alert--info">
-                ذخیرهٔ تنظیمات به‌صورت لحظه‌ای و بدون رفرش انجام می‌شود.
-            </div>
-
-            <div class="brz-grid">
-                <div class="brz-grid__main">
-                    <form method="post" action="options.php" class="brz-settings-form" data-context="general">
-                        <?php
-                        settings_fields( 'brz_group' );
-                        echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="general" />';
-                        self::render_section_cards( array( 'brz_main', 'brz_tables' ) );
-                        ?>
-                        <div class="brz-save-bar">
-                            <span class="brz-save-state" aria-live="polite">تغییرات بدون رفرش ذخیره می‌شود.</span>
-                            <?php submit_button( 'ذخیره تغییرات', 'primary', 'submit', false ); ?>
-                        </div>
-                    </form>
-                    <div class="brz-card">
-                        <div class="brz-card__header">
-                            <h3>پردازش شورت‌کد در توضیحات محصول</h3>
-                        </div>
-                        <div class="brz-card__body">
-                            <p>اجرای شورت‌کدها در تب توضیحات اصلی و خلاصهٔ محصولات ووکامرس. برای حفظ کارایی، به‌صورت پیش‌فرض خاموش است.</p>
-                            <form method="post" action="options.php" class="brz-settings-form" data-context="wc-product-shortcodes">
-                                <?php
-                                settings_fields( 'brz_group' );
-                                $wc_shortcodes = (bool) get_option( 'myplugin_enable_wc_product_shortcodes', 0 );
-                                ?>
-                                <input type="hidden" name="myplugin_enable_wc_product_shortcodes" value="0" />
-                                <label>
-                                    <input type="checkbox" name="myplugin_enable_wc_product_shortcodes" value="1" <?php checked( true, $wc_shortcodes ); ?> />
-                                    پردازش شورت‌کدها در توضیحات و خلاصهٔ محصولات
-                                </label>
-                                <p class="description">فقط روی فرانت‌اند و صفحات محصول اعمال می‌شود و از درخواست‌های ادمین/REST دور نگه داشته شده است.</p>
-                                <div class="brz-save-bar">
-                                    <span class="brz-save-state" aria-live="polite">حالت پیش‌فرض خاموش است.</span>
-                                    <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
-                                </div>
-                            </form>
-                        </div>
+            <div class="brz-single-column">
+                <div class="brz-card">
+                    <div class="brz-card__header">
+                        <h3>پردازش شورت‌کد در توضیحات محصول</h3>
+                    </div>
+                    <div class="brz-card__body">
+                        <p>اجرای شورت‌کدها در تب توضیحات اصلی و خلاصهٔ محصولات ووکامرس. برای حفظ کارایی، به‌صورت پیش‌فرض خاموش است.</p>
+                        <form method="post" action="options.php" class="brz-settings-form" data-context="wc-product-shortcodes">
+                            <?php
+                            settings_fields( 'brz_group' );
+                            $wc_shortcodes = (bool) get_option( 'myplugin_enable_wc_product_shortcodes', 0 );
+                            ?>
+                            <input type="hidden" name="myplugin_enable_wc_product_shortcodes" value="0" />
+                            <label>
+                                <input type="checkbox" name="myplugin_enable_wc_product_shortcodes" value="1" <?php checked( true, $wc_shortcodes ); ?> />
+                                پردازش شورت‌کدها در توضیحات و خلاصهٔ محصولات
+                            </label>
+                            <p class="description">فقط روی فرانت‌اند و صفحات محصول اعمال می‌شود و از درخواست‌های ادمین/REST دور نگه داشته شده است.</p>
+                            <div class="brz-save-bar">
+                                <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <aside class="brz-grid__aside">
-                    <?php self::render_support_card(
-                        'مسیر بهینه‌سازی',
-                        array(
-                            'CSS/JS فقط وقتی نیاز باشد لود می‌شود.',
-                            'برای صفحات شلوغ، گزینهٔ «اینلاین» درخواست اضافی را حذف می‌کند.',
-                            'غیرفعال کردن هر گزینه فوراً اعمال می‌شود و دادهٔ اضافی در دیتابیس باقی نمی‌گذارد.',
-                        ),
-                        'راهنمای سرعت'
-                    ); ?>
-                    <?php self::render_guidelines_card(); ?>
-                </aside>
+            </div>
+            <?php
+        } );
+    }
+
+    private static function render_style_settings() {
+        self::render_shell( 'buyruz-style', function() {
+            ?>
+            <div class="brz-section-header">
+                <div>
+                    <h2>استایل</h2>
+                    <p>تنظیمات نمایش و استایل‌های بایروز.</p>
+                </div>
+            </div>
+            <div class="brz-single-column">
+                <form method="post" action="options.php" class="brz-settings-form" data-context="general">
+                    <?php
+                    settings_fields( 'brz_group' );
+                    echo '<input type="hidden" name="' . BRZ_OPTION . '[brz_form_context]" value="general" />';
+                    self::render_section_cards( array( 'brz_main', 'brz_tables' ) );
+                    ?>
+                    <div class="brz-save-bar">
+                        <?php submit_button( 'ذخیره تغییرات', 'primary', 'submit', false ); ?>
+                    </div>
+                </form>
             </div>
             <?php
         } );
@@ -547,9 +552,6 @@ class BRZ_Settings {
                         <span class="brz-status <?php echo $active ? 'is-on' : 'is-off'; ?>"><?php echo $active ? 'ماژول فعال است' : 'ماژول غیرفعال است'; ?></span>
                     </div>
                 </div>
-                <div class="brz-inline-alert brz-inline-alert--warning">
-                    دیباگ فقط هنگام نیاز فعال شود؛ ذخیره‌سازی لاگ به صورت زنده و بدون رفرش فعال/غیرفعال می‌شود.
-                </div>
                 <div class="brz-grid">
                     <div class="brz-grid__main">
                         <form method="post" action="options.php" class="brz-settings-form" data-context="debug">
@@ -559,7 +561,6 @@ class BRZ_Settings {
                             self::render_section_cards( array( 'brz_debug' ) );
                             ?>
                             <div class="brz-save-bar">
-                                <span class="brz-save-state" aria-live="polite">تغییرات بدون رفرش ذخیره می‌شود.</span>
                                 <?php submit_button( 'ذخیره تنظیمات دیباگ', 'primary', 'submit', false ); ?>
                             </div>
                         </form>
@@ -978,9 +979,11 @@ class BRZ_Settings {
         if ( 'general' === $context || isset( $input['enable_css'] ) ) {
             $checkboxes = array( 'enable_css', 'inline_css', 'enable_js', 'single_open', 'animate', 'compact_mobile', 'table_styles_enabled' );
             foreach ( $checkboxes as $checkbox ) {
-                if ( isset( $input[ $checkbox ] ) ) {
+                if ( array_key_exists( $checkbox, $input ) ) {
                     $output[ $checkbox ] = $input[ $checkbox ] ? 1 : 0;
                     unset( $input[ $checkbox ] );
+                } elseif ( 'general' === $context && array_key_exists( $checkbox, $output ) ) {
+                    $output[ $checkbox ] = $output[ $checkbox ] ? 1 : 0;
                 }
             }
 
@@ -989,14 +992,17 @@ class BRZ_Settings {
                 unset( $input['brand_color'] );
             }
 
-            if ( isset( $input['table_styles_targets'] ) ) {
+            $tables_submitted = isset( $input['table_styles_targets_submitted'] );
+            if ( $tables_submitted && isset( $input['table_styles_targets'] ) ) {
                 $targets = array_map( 'sanitize_text_field', (array) $input['table_styles_targets'] );
                 $allowed = array( 'product', 'page', 'category' );
                 $output['table_styles_targets'] = array_values( array_intersect( $targets, $allowed ) );
                 unset( $input['table_styles_targets'] );
-            } elseif ( 'general' === $context ) {
+            } elseif ( $tables_submitted ) {
                 $output['table_styles_targets'] = array();
             }
+
+            unset( $input['table_styles_targets_submitted'] );
         }
 
         // Debug settings.

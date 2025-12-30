@@ -138,49 +138,4 @@
     });
   });
 
-  // Instant save for settings forms
-  var settingsForms = document.querySelectorAll('.brz-settings-form');
-  settingsForms.forEach(function (form) {
-    form.addEventListener('submit', function (event) {
-      if (!settings.saveNonce) {
-        return;
-      }
-      event.preventDefault();
-
-      var submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
-      var saveState = form.querySelector('.brz-save-state');
-
-      setBusy(submitBtn, true);
-      updateSaveState(saveState, settings.savingText || 'در حال ذخیره...', false);
-
-      var formData = new FormData(form);
-      formData.append('action', 'brz_save_settings');
-      formData.append('security', settings.saveNonce);
-
-      fetch(settings.ajaxUrl, {
-        method: 'POST',
-        credentials: 'same-origin',
-        body: formData
-      }).then(function (response) {
-        if (!response.ok) {
-          throw new Error('bad_status');
-        }
-        return response.json();
-      }).then(function (json) {
-        if (!json || !json.success) {
-          throw new Error('bad_response');
-        }
-        updateSaveState(saveState, settings.savedText || 'تنظیمات ذخیره شد', false);
-        showToast(settings.savedText || 'تنظیمات ذخیره شد');
-        if (json.data && json.data.accent) {
-          applyBrandColor(json.data.accent);
-        }
-      }).catch(function () {
-        updateSaveState(saveState, settings.saveFailText || 'ذخیره انجام نشد. دوباره تلاش کنید.', true);
-        showToast(settings.saveFailText || 'ذخیره انجام نشد. دوباره تلاش کنید.', true);
-      }).finally(function () {
-        setBusy(submitBtn, false);
-      });
-    });
-  });
 })();
