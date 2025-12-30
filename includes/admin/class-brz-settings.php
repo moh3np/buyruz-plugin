@@ -186,13 +186,13 @@ class BRZ_Settings {
         add_settings_section( 'brz_compare', 'جدول متا', '__return_false', 'brz-settings' );
 
         add_settings_field( 'compare_table_default_title', 'عنوان پیش‌فرض جدول', function() {
-            $val = esc_attr( self::get( 'compare_table_default_title', 'مقایسه با محصولات مشابه' ) );
-            echo '<input type="text" class="regular-text" name="'.BRZ_OPTION.'[compare_table_default_title]" value="'.$val.'" placeholder="مثال: مقایسه با محصولات مشابه" />';
+            $val = esc_attr( self::get( 'compare_table_default_title', '' ) );
+            echo '<input type="text" class="regular-text" name="'.BRZ_OPTION.'[compare_table_default_title]" value="'.$val.'" placeholder="مثال: جدول سایزبندی یا جدول مقایسه محصول" />';
             echo '<p class="description">در صورت خالی بودن، عنوان در فرانت نمایش داده نمی‌شود.</p>';
         }, 'brz-settings', 'brz_compare' );
 
         add_settings_field( 'compare_table_columns', 'نام ستون‌های پیش‌فرض', function() {
-            $cols = self::get( 'compare_table_columns', array( 'نام محصول مشابه', 'مخاطب (سن/نفرات)', 'تمایز کلیدی (چرا این؟)' ) );
+            $cols = self::get( 'compare_table_columns', array() );
             if ( ! is_array( $cols ) ) { $cols = array(); }
             $cols = array_slice( array_merge( $cols, array( '', '', '' ) ), 0, 3 );
             foreach ( $cols as $index => $col ) {
@@ -200,7 +200,7 @@ class BRZ_Settings {
                 echo '<p><label>' . esc_html( $label ) . '<br />';
                 echo '<input type="text" class="regular-text" name="'.BRZ_OPTION.'[compare_table_columns][]" value="'.esc_attr( $col ).'" /></label></p>';
             }
-            echo '<p class="description">این نام‌ها هنگام ایجاد جدول متا به‌صورت پیش‌فرض استفاده می‌شوند.</p>';
+            echo '<p class="description">نام‌های پیشنهادی اختیاری هستند و جدول بدون مقدار پیش‌فرض ساخته می‌شود.</p>';
         }, 'brz-settings', 'brz_compare' );
 
         add_settings_section( 'brz_debug', 'دیباگ و لاگ‌ها', '__return_false', 'brz-settings' );

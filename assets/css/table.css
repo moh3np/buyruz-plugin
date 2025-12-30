@@ -1,9 +1,9 @@
 /* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
-.buyruz-table-wrap{margin:18px 0;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;overflow-x:auto;background:linear-gradient(145deg,#ffffff,rgba(248,250,252,0.9));box-shadow:0 16px 36px rgba(15,23,42,0.08);-webkit-overflow-scrolling:touch}
-.buyruz-table-title{margin:0;padding:14px 16px 6px;font-size:18px;font-weight:800;color:#0f172a}
+.buyruz-table-wrap{margin:18px 0;border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;overflow-x:auto;background:#ffffff;box-shadow:0 14px 28px rgba(15,23,42,0.08);-webkit-overflow-scrolling:touch;padding:6px 8px}
+.buyruz-table-title{margin:0;padding:14px 14px 10px;font-size:18px;font-weight:800;color:#0f172a;border-bottom:1px solid #e5e7eb}
 .buyruz-table{width:100%;border-collapse:separate;border-spacing:0;min-width:420px;color:#0f172a}
 .buyruz-table th,.buyruz-table td{padding:12px 14px;border-bottom:1px solid #e2e8f0;vertical-align:top;text-align:right;background:#fff}
-.buyruz-table thead th{position:sticky;top:0;background:#f8fafc;font-weight:800;z-index:1}
+.buyruz-table thead th{background:#f8fafc;font-weight:800;z-index:1}
 .buyruz-table tr:nth-child(even) td{background:#fbfdff}
 .buyruz-table tr:last-child td{border-bottom:0}
 .buyruz-table td:first-child,.buyruz-table th:first-child{border-right:1px solid #e2e8f0}

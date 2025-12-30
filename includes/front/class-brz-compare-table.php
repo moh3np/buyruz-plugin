@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 class BRZ_Compare_Table {
     const META_KEY = '_buyruz_compare_table';
-    const MIN_COLUMNS = 3;
+    const MIN_COLUMNS = 1;
     const MAX_COLUMNS = 6;
     private static $cache = array();
     private static $rendered = array();
@@ -57,22 +57,22 @@ class BRZ_Compare_Table {
             return self::$cache[ $post_id ];
         }
 
-        $defaults = self::default_columns();
         $columns = array();
         if ( isset( $decoded['columns'] ) && is_array( $decoded['columns'] ) ) {
             foreach ( $decoded['columns'] as $col ) {
                 $columns[] = is_string( $col ) ? $col : '';
             }
         }
-        $columns = array_slice( $columns, 0, self::MAX_COLUMNS );
-        for ( $i = 0; $i < self::MIN_COLUMNS; $i++ ) {
-            if ( ! isset( $columns[ $i ] ) || '' === $columns[ $i ] ) {
-                $columns[ $i ] = isset( $defaults[ $i ] ) ? $defaults[ $i ] : '';
-            }
-        }
-        $columns      = array_slice( $columns, 0, self::MAX_COLUMNS );
-        $columns      = array_values( $columns );
+        $columns      = array_values( array_slice( $columns, 0, self::MAX_COLUMNS ) );
         $column_count = min( max( count( $columns ), self::MIN_COLUMNS ), self::MAX_COLUMNS );
+        $first_row    = reset( $rows_raw );
+        $row_width    = is_array( $first_row ) ? count( $first_row ) : 0;
+        if ( $row_width > $column_count ) {
+            $column_count = min( $row_width, self::MAX_COLUMNS );
+        }
+        if ( $column_count > count( $columns ) ) {
+            $columns = array_pad( $columns, $column_count, '' );
+        }
 
         $rows = array();
         foreach ( $rows_raw as $row ) {
@@ -96,7 +96,7 @@ class BRZ_Compare_Table {
 
         $title = isset( $decoded['title'] ) ? $decoded['title'] : '';
         if ( empty( $title ) && class_exists( 'BRZ_Settings' ) ) {
-            $fallback_title = BRZ_Settings::get( 'compare_table_default_title', 'مقایسه با محصولات مشابه' );
+            $fallback_title = BRZ_Settings::get( 'compare_table_default_title', '' );
             if ( ! empty( $fallback_title ) ) {
                 $title = $fallback_title;
             }
@@ -182,24 +182,6 @@ class BRZ_Compare_Table {
         </div>
         <?php
         return ob_get_clean();
-    }
-
-    private static function default_columns() {
-        $defaults = class_exists( 'BRZ_Settings' ) ? BRZ_Settings::get( 'compare_table_columns', array() ) : array();
-        if ( ! is_array( $defaults ) ) {
-            $defaults = array();
-        }
-        $defaults = array_filter( $defaults, 'strlen' );
-        $fallback = array( 'نام محصول مشابه', 'مخاطب (سن/نفرات)', 'تمایز کلیدی (چرا این؟)' );
-        $defaults = array_slice( array_merge( $defaults, $fallback ), 0, self::MAX_COLUMNS );
-
-        for ( $i = 0; $i < self::MIN_COLUMNS; $i++ ) {
-            if ( ! isset( $defaults[ $i ] ) || '' === $defaults[ $i ] ) {
-                $defaults[ $i ] = isset( $fallback[ $i ] ) ? $fallback[ $i ] : '';
-            }
-        }
-
-        return array_values( $defaults );
     }
 
     public static function render_after_summary() {
