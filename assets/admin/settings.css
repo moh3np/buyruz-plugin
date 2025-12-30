@@ -1140,17 +1140,20 @@
 
 .brz-compare-grid {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .brz-compare-row {
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto repeat(var(--cols, 1), minmax(0, 1fr));
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
 }
 .brz-compare-row--header {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
   justify-items: center;
   padding: 6px 0 12px;
 }
