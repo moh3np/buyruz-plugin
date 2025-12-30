@@ -1143,18 +1143,20 @@
 }
 .brz-compare-row {
   position: relative;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), 1fr);
   gap: 10px;
-  padding: 10px 8px;
+  padding: 10px 8px 10px 56px;
 }
 .brz-compare-row--header {
-  justify-content: center;
   padding-left: 0;
   margin-bottom: 6px;
 }
 .brz-compare-row .brz-compare-btn {
-  flex-shrink: 0;
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 32px;
   height: 32px;
   box-shadow: 0 10px 18px rgba(255, 0, 92, 0.16);
@@ -1180,5 +1182,8 @@
   }
   .brz-compare-sheet__actions {
     align-items: flex-start;
+  }
+  .brz-compare-row {
+    grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
   }
 }

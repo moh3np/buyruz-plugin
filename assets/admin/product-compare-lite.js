@@ -8,6 +8,8 @@
   var body = grid;
   var addRowBtn = box.querySelector('[data-add-row]');
   var removeRowBtn = box.querySelector('[data-remove-row]');
+  var addColBtn = box.querySelector('[data-add-col]');
+  var removeColBtn = box.querySelector('[data-remove-col]');
 
   var maxColumns = parseInt(box.dataset.maxCols || '6', 10);
   var defaultColumns = 2;
@@ -55,6 +57,50 @@
     });
   }
 
+  function addColumn(value) {
+    if (!headerRow || !body) { return; }
+    var count = columnCount();
+    if (count >= maxColumns) { return; }
+    var cell = document.createElement('div');
+    cell.className = 'brz-compare-cell';
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.name = 'brz_compare_columns[]';
+    input.placeholder = 'هدر ' + (count + 1);
+    if (value) { input.value = value; }
+    cell.appendChild(input);
+    headerRow.appendChild(cell);
+
+    var dataRows = body.querySelectorAll('.brz-compare-row:not(.brz-compare-row--header)');
+    Array.prototype.slice.call(dataRows).forEach(function(row) {
+      var td = document.createElement('div');
+      td.className = 'brz-compare-cell';
+      var cellInput = document.createElement('input');
+      cellInput.type = 'text';
+      cellInput.name = 'brz_compare_rows[0][' + count + ']';
+      td.appendChild(cellInput);
+      row.appendChild(td);
+    });
+    renumberRowInputs();
+  }
+
+  function removeColumn() {
+    if (!headerRow || !body) { return; }
+    var count = columnCount();
+    if (count <= 1) { return; }
+    var cellList = headerRow.querySelectorAll('.brz-compare-cell');
+    var lastCell = cellList[cellList.length - 1];
+    if (lastCell) { lastCell.remove(); }
+    var dataRows = body.querySelectorAll('.brz-compare-row:not(.brz-compare-row--header)');
+    Array.prototype.slice.call(dataRows).forEach(function(row) {
+      var cells = row.querySelectorAll('.brz-compare-cell');
+      if (cells.length > 0) {
+        cells[cells.length - 1].remove();
+      }
+    });
+    renumberRowInputs();
+  }
+
   function addRow(values) {
     if (!body || !headerRow) { return; }
     var row = document.createElement('div');
@@ -66,14 +112,24 @@
     removeBtn.textContent = '−';
     row.appendChild(removeBtn);
 
-    var td = document.createElement('div');
-    td.className = 'brz-compare-cell';
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.name = 'brz_compare_rows[0][0]';
-    input.value = values && values[0] ? values[0] : '';
-    td.appendChild(input);
-    row.appendChild(td);
+    var count = columnCount() || defaultColumns;
+    if (columnCount() === 0) {
+      for (var x = 0; x < defaultColumns; x++) {
+        addColumn('');
+      }
+      count = columnCount();
+    }
+
+    for (var i = 0; i < count; i++) {
+      var td = document.createElement('div');
+      td.className = 'brz-compare-cell';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.name = 'brz_compare_rows[0][' + i + ']';
+      input.value = values && values[i] ? values[i] : '';
+      td.appendChild(input);
+      row.appendChild(td);
+    }
 
     body.appendChild(row);
     renumberRowInputs();
@@ -99,6 +155,12 @@
       if (last) { removeRow(last.querySelector('.brz-compare-remove-row')); }
     });
   }
+  if (addColBtn) {
+    addColBtn.addEventListener('click', function() { addColumn(''); });
+  }
+  if (removeColBtn) {
+    removeColBtn.addEventListener('click', function() { removeColumn(); });
+  }
   if (grid) {
     grid.addEventListener('click', function(e) {
       if (e.target && e.target.classList.contains('brz-compare-remove-row')) {
@@ -109,16 +171,8 @@
   }
 
   // هم‌سان‌سازی اولیه
-  // اطمینان از وجود هدر
   if (headerRow && columnCount() === 0) {
-    var cell = document.createElement('div');
-    cell.className = 'brz-compare-cell';
-    var input = document.createElement('input');
-    input.type = 'text';
-    input.name = 'brz_compare_columns[]';
-    input.placeholder = 'هدر';
-    cell.appendChild(input);
-    headerRow.appendChild(cell);
+    addColumn('');
   }
   ensureAtLeastOneRow();
   renumberRowInputs();

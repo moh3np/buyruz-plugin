@@ -63,10 +63,15 @@ class BRZ_Compare_Table {
                 $columns[] = is_string( $col ) ? $col : '';
             }
         }
-        $columns      = array_values( array_slice( $columns, 0, 1 ) );
-        $column_count = 1;
-        if ( empty( $columns ) ) {
-            $columns = array( '' );
+        $columns      = array_values( array_slice( $columns, 0, self::MAX_COLUMNS ) );
+        $column_count = min( max( count( $columns ), self::MIN_COLUMNS ), self::MAX_COLUMNS );
+        $first_row    = reset( $rows_raw );
+        $row_width    = is_array( $first_row ) ? count( $first_row ) : 0;
+        if ( $row_width > $column_count ) {
+            $column_count = min( $row_width, self::MAX_COLUMNS );
+        }
+        if ( $column_count > count( $columns ) ) {
+            $columns = array_pad( $columns, $column_count, '' );
         }
 
         $rows = array();
@@ -75,8 +80,10 @@ class BRZ_Compare_Table {
                 continue;
             }
             $clean = array();
-            $cell = isset( $row[0] ) ? $row[0] : '';
-            $clean[] = is_string( $cell ) ? $cell : '';
+            for ( $i = 0; $i < $column_count; $i++ ) {
+                $cell = isset( $row[ $i ] ) ? $row[ $i ] : '';
+                $clean[] = is_string( $cell ) ? $cell : '';
+            }
             if ( array_filter( $clean, 'strlen' ) ) {
                 $rows[] = $clean;
             }
