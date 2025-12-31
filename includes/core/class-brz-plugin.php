@@ -25,7 +25,7 @@ class BRZ_Plugin {
      * @return string[]
      */
     private static function modules() {
-        $modules = array( 'BRZ_Settings', 'BRZ_Tag_Sync_Guard', 'BRZ_Compare_Table_Admin', 'BRZ_Compare_Table', 'BRZ_Rest' );
+        $modules = array( 'BRZ_Settings', 'BRZ_Tag_Sync_Guard', 'BRZ_Compare_Table_Admin', 'BRZ_Compare_Table', 'BRZ_FAQ_Renderer', 'BRZ_Rest' );
 
         $active = BRZ_Modules::active_classes();
         if ( ! empty( $active ) ) {

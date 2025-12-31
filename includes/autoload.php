@@ -21,6 +21,7 @@ spl_autoload_register( function( $class ) {
         'BRZ_Detector'               => 'front/class-brz-detector.php',
         'BRZ_Enqueue'                => 'front/class-brz-enqueue.php',
         'BRZ_Compare_Table'          => 'front/class-brz-compare-table.php',
+        'BRZ_FAQ_Renderer'           => 'front/class-brz-faq-renderer.php',
         'BRZ_Tag_Sync_Guard'         => 'core/class-brz-tag-sync-guard.php',
         'BRZ_Rest'                   => 'integration/class-brz-rest.php',
     );

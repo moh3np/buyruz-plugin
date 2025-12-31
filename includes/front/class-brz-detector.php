@@ -33,6 +33,14 @@ class BRZ_Detector {
         if ( strpos( $content, 'rank_math_rich_snippet' ) !== false ) {
             return true;
         }
+        // بررسی شورت‌کد با پترن s- (FAQ های ایجاد شده توسط Google Apps Script)
+        if ( preg_match( '/\[rank_math_rich_snippet\s+id=["\']?s-/', $content ) ) {
+            return true;
+        }
+        // بررسی کلاس brz-faq-rendered که توسط BRZ_FAQ_Renderer اضافه می‌شود
+        if ( strpos( $content, 'brz-faq-rendered' ) !== false ) {
+            return true;
+        }
 
         if ( class_exists( '\RankMath\Schema\DB' ) ) {
             $schemas = \RankMath\Schema\DB::get_schemas( $post->ID );
