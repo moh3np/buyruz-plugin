@@ -166,12 +166,14 @@ class BRZ_Compare_Table {
         }
 
         $title = isset( $decoded['title'] ) ? self::normalize_cell( $decoded['title'] ) : '';
+        /*
         if ( empty( $title ) && class_exists( 'BRZ_Settings' ) ) {
             $fallback_title = BRZ_Settings::get( 'compare_table_default_title', '' );
             if ( ! empty( $fallback_title ) ) {
                 $title = $fallback_title;
             }
         }
+        */
 
         self::$cache[ $post_id ] = array(
             'id'      => $table_id,
