@@ -10,8 +10,10 @@ class BRZ_Enqueue {
     public static function frontend() {
         $opts = BRZ_Settings::get();
         $should_load_faq = BRZ_Detector::should_load();
-
-        if ( ! $should_load_faq ) { return; }
+        // Fallback: اگر رنک‌مث فعال است و روی صفحه تکی هستیم، استایل/JS FAQ را لود کن تا شورت‌کدهای خارج از محتوای اصلی هم پوشش داده شوند.
+        if ( ! $should_load_faq && class_exists( '\RankMath' ) && is_singular() ) {
+            $should_load_faq = true;
+        }
 
         // JS
         if ( $should_load_faq && ! empty( $opts['enable_js'] ) ) {
