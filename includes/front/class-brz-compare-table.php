@@ -280,13 +280,18 @@ class BRZ_Compare_Table {
             return '';
         }
 
+        $title          = isset( $data['title'] ) ? $data['title'] : '';
+        $table_label    = ! empty( $title ) ? $title : 'جدول مقایسه';
+        $caption_id_raw = ! empty( $title ) ? ( ! empty( $data['id'] ) ? $data['id'] : uniqid( 'brz-ct-' ) ) : '';
+        $caption_id     = $caption_id_raw ? 'brz-ct-caption-' . sanitize_title( $caption_id_raw ) : '';
+
         ob_start();
         ?>
         <div class="buyruz-table-container">
             <div class="buyruz-table-wrap">
-                <table class="buyruz-table">
+                <table class="buyruz-table" aria-label="<?php echo esc_attr( $table_label ); ?>"<?php echo $caption_id ? ' aria-describedby="' . esc_attr( $caption_id ) . '"' : ''; ?>>
                     <?php if ( ! empty( $data['title'] ) ) : ?>
-                        <caption class="buyruz-table-title"><?php echo esc_html( $data['title'] ); ?></caption>
+                        <caption id="<?php echo esc_attr( $caption_id ); ?>" class="buyruz-table-title"><?php echo esc_html( $data['title'] ); ?></caption>
                     <?php endif; ?>
                     <thead>
                         <tr>
