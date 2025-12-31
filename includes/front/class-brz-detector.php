@@ -30,6 +30,9 @@ class BRZ_Detector {
         if ( strpos( $content, 'rank-math-rich-snippet' ) !== false ) {
             return true;
         }
+        if ( strpos( $content, 'rank_math_rich_snippet' ) !== false ) {
+            return true;
+        }
 
         if ( class_exists( '\RankMath\Schema\DB' ) ) {
             $schemas = \RankMath\Schema\DB::get_schemas( $post->ID );

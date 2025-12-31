@@ -19,13 +19,14 @@
 .rank-math-faq-item,
 .rank-math-list .rank-math-list-item,
 #rank-math-faq .rank-math-list-item {
-  border: 1px solid var(--brz-border);
-  border-radius: var(--brz-radius);
-  margin-bottom: 12px;
-  background: var(--brz-bg);
-  overflow: hidden;
-  transition: all 0.25s ease;
-  position: relative;
+  border: 1px solid var(--brz-border) !important;
+  border-radius: var(--brz-radius) !important;
+  margin-bottom: 12px !important;
+  background: var(--brz-bg) !important;
+  overflow: hidden !important;
+  transition: all 0.25s ease !important;
+  position: relative !important;
+  box-shadow: none; /* Reset potential theme shadows first */
 }
 
 /* Hover Effect */
@@ -33,8 +34,8 @@
 .rank-math-faq-item:hover,
 .rank-math-list .rank-math-list-item:hover,
 #rank-math-faq .rank-math-list-item:hover {
-  border-color: var(--brz-brand);
-  box-shadow: var(--brz-shadow);
+  border-color: var(--brz-brand) !important;
+  box-shadow: var(--brz-shadow) !important;
   transform: translateY(-1px);
 }
 
@@ -43,29 +44,29 @@
 .rank-math-faq-item.brz-active,
 .rank-math-list .rank-math-list-item.brz-active,
 #rank-math-faq .rank-math-list-item.brz-active {
-  border-color: var(--brz-brand);
-  background: #fff;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  border-color: var(--brz-brand) !important;
+  background: #fff !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05) !important;
 }
 
 /* Question Header */
 .rank-math-question {
-  padding: 18px 24px;
+  padding: 18px 24px !important;
   margin: 0 !important;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 16px !important;
+  font-weight: 700 !important;
   color: var(--brz-text);
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: transparent;
-  border: none;
-  outline: none;
-  text-align: right;
-  line-height: 1.5;
-  user-select: none;
-  transition: color 0.2s;
+  cursor: pointer !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  text-align: right !important;
+  line-height: 1.5 !important;
+  user-select: none !important;
+  transition: color 0.2s !important;
 }
 
 .rank-math-list-item.brz-active .rank-math-question,
@@ -77,72 +78,80 @@
 
 /* Icon */
 .rank-math-question::after {
-  content: '+';
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  font-size: 24px;
-  font-weight: 300;
-  color: var(--brz-brand);
-  margin-right: 16px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0;
-  line-height: 1;
+  content: '+' !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 24px !important;
+  font-weight: 300 !important;
+  color: var(--brz-brand) !important;
+  margin-right: 16px !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+  background: none !important;
 }
 
 .rank-math-list-item.brz-active .rank-math-question::after,
 .rank-math-faq-item.brz-active .rank-math-question::after,
 .rank-math-list .rank-math-list-item.brz-active .rank-math-question::after,
 #rank-math-faq .rank-math-list-item.brz-active .rank-math-question::after {
-  transform: rotate(45deg);
+  transform: rotate(45deg) !important;
 }
 
 /* Answer Body */
 .rank-math-answer {
-  max-height: 0;
-  overflow: hidden;
-  padding: 0 24px;
-  color: var(--brz-text-muted);
-  font-size: 15px;
-  line-height: 1.8;
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: #fff;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 24px !important;
+  color: var(--brz-text-muted) !important;
+  font-size: 15px !important;
+  line-height: 1.8 !important;
+  opacity: 0 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  background: #fff !important;
+  margin: 0 !important;
+  border: none !important;
 }
 
 .rank-math-list-item.brz-active .rank-math-answer,
-.rank-math-faq-item.brz-active .rank-math-answer {
-  padding-bottom: 24px;
-  opacity: 1;
+.rank-math-faq-item.brz-active .rank-math-answer,
+.rank-math-list .rank-math-list-item.brz-active .rank-math-answer,
+#rank-math-faq .rank-math-list-item.brz-active .rank-math-answer {
+  padding-bottom: 24px !important;
+  opacity: 1 !important;
+  max-height: 1000px !important; /* Fallback if JS fails to set height */
 }
 
 /* Mobile Optimization */
 @media (max-width: 768px) {
   .rank-math-list-item,
   .rank-math-faq-item {
-    border-radius: 10px;
-    margin-bottom: 10px;
+    border-radius: 10px !important;
+    margin-bottom: 10px !important;
   }
 
   .rank-math-question {
-    padding: 14px 16px;
-    font-size: 15px;
+    padding: 14px 16px !important;
+    font-size: 15px !important;
   }
 
   .rank-math-question::after {
-    font-size: 20px;
-    margin-right: 12px;
+    font-size: 20px !important;
+    margin-right: 12px !important;
   }
 
   .rank-math-answer {
-    padding: 0 16px;
-    font-size: 14px;
+    padding: 0 16px !important;
+    font-size: 14px !important;
   }
 
   .rank-math-list-item.brz-active .rank-math-answer,
-  .rank-math-faq-item.brz-active .rank-math-answer {
-    padding-bottom: 16px;
+  .rank-math-faq-item.brz-active .rank-math-answer,
+  .rank-math-list .rank-math-list-item.brz-active .rank-math-answer,
+  #rank-math-faq .rank-math-list-item.brz-active .rank-math-answer {
+    padding-bottom: 16px !important;
   }
 }
