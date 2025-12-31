@@ -24,7 +24,7 @@
 }
 
 /* Title */
-.buyruz-table-title {
+.buyruz-table-wrap .buyruz-table-title {
   background: #f8fafc;
   color: #0f172a;
   font-size: 1.15rem;
@@ -37,18 +37,19 @@
 }
 
 /* Table Reset */
-.buyruz-table {
+.buyruz-table-wrap .buyruz-table {
   width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
   font-size: 0.95rem;
   line-height: 1.7;
   color: #334155;
+  margin: 0;
 }
 
 /* Cells */
-.buyruz-table th,
-.buyruz-table td {
+.buyruz-table-wrap .buyruz-table th,
+.buyruz-table-wrap .buyruz-table td {
   padding: 16px 20px;
   text-align: right;
   border-bottom: 1px solid #f1f5f9;
@@ -56,7 +57,7 @@
 }
 
 /* Header Cells */
-.buyruz-table th {
+.buyruz-table-wrap .buyruz-table th {
   background-color: #f8fafc;
   color: #0f172a;
   font-weight: 800;
@@ -65,11 +66,11 @@
 }
 
 /* Row Styling */
-.buyruz-table tr:last-child td {
+.buyruz-table-wrap .buyruz-table tr:last-child td {
   border-bottom: none;
 }
 
-.buyruz-table tr:hover td {
+.buyruz-table-wrap .buyruz-table tr:hover td {
   background-color: #f8fafc;
   transition: background-color 0.2s ease;
 }
@@ -85,27 +86,27 @@
     box-shadow: 0 8px 20px -6px rgba(15, 23, 42, 0.06);
   }
 
-  .buyruz-table thead {
+  .buyruz-table-wrap .buyruz-table thead {
     display: none;
   }
 
-  .buyruz-table, 
-  .buyruz-table tbody, 
-  .buyruz-table tr, 
-  .buyruz-table td {
+  .buyruz-table-wrap .buyruz-table, 
+  .buyruz-table-wrap .buyruz-table tbody, 
+  .buyruz-table-wrap .buyruz-table tr, 
+  .buyruz-table-wrap .buyruz-table td {
     display: block;
     width: 100%;
   }
 
-  .buyruz-table tr {
+  .buyruz-table-wrap .buyruz-table tr {
     border-bottom: 1px solid #e2e8f0;
   }
   
-  .buyruz-table tr:last-child {
+  .buyruz-table-wrap .buyruz-table tr:last-child {
     border-bottom: none;
   }
 
-  .buyruz-table td {
+  .buyruz-table-wrap .buyruz-table td {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -115,11 +116,11 @@
     font-size: 0.9rem;
   }
 
-  .buyruz-table td:last-child {
+  .buyruz-table-wrap .buyruz-table td:last-child {
     border-bottom: none;
   }
 
-  .buyruz-table td::before {
+  .buyruz-table-wrap .buyruz-table td::before {
     content: attr(data-label);
     font-weight: 800;
     color: #64748b;

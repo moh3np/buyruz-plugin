@@ -17,10 +17,15 @@ class BRZ_Enqueue {
         }
         $should_load_tables = ! empty( $opts['table_styles_enabled'] ) && BRZ_Detector::should_load_table_styles( $table_targets );
 
-        // بارگذاری استایل جدول در صورت وجود جدول مقایسه حتی اگر گزینهٔ عمومی خاموش باشد
-        $post_id = is_singular( 'product' ) ? get_the_ID() : 0;
-        if ( $post_id && class_exists( 'BRZ_Compare_Table' ) && BRZ_Compare_Table::has_table( $post_id ) ) {
+        // Force load on single products to ensure visibility
+        if ( is_singular( 'product' ) ) {
             $should_load_tables = true;
+        } else {
+            // Check for other post types if they have the table
+            $post_id = get_the_ID();
+            if ( $post_id && class_exists( 'BRZ_Compare_Table' ) && BRZ_Compare_Table::has_table( $post_id ) ) {
+                $should_load_tables = true;
+            }
         }
 
         if ( ! $should_load_faq && ! $should_load_tables ) { return; }
