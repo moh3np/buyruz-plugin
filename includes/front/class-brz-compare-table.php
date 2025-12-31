@@ -16,6 +16,57 @@ class BRZ_Compare_Table {
         add_action( 'woocommerce_after_single_product_summary', array( __CLASS__, 'render_after_summary' ), 25 );
         add_shortcode( 'buyruz_compare_table', array( __CLASS__, 'shortcode' ) );
         add_shortcode( 'brz_compare_table', array( __CLASS__, 'shortcode' ) );
+        add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+    }
+
+    public static function enqueue_assets() {
+        if ( ! class_exists( 'BRZ_Settings' ) || ! class_exists( 'BRZ_Detector' ) ) {
+            return;
+        }
+
+        $opts = BRZ_Settings::get();
+        
+        $table_targets = array();
+        if ( isset( $opts['table_styles_targets'] ) && is_array( $opts['table_styles_targets'] ) ) {
+            $table_targets = array_values( array_intersect( $opts['table_styles_targets'], array( 'product', 'page', 'category' ) ) );
+        }
+        
+        $should_load = ! empty( $opts['table_styles_enabled'] ) && BRZ_Detector::should_load_table_styles( $table_targets );
+
+        // Force load on single products to ensure visibility
+        if ( is_singular( 'product' ) ) {
+            $should_load = true;
+        } else {
+            // Check for other post types if they have the table
+            $post_id = get_the_ID();
+            if ( $post_id && self::has_table( $post_id ) ) {
+                $should_load = true;
+            }
+        }
+
+        if ( ! $should_load ) {
+            return;
+        }
+
+        $handle        = 'brz-table-style';
+        $css_file      = BRZ_PATH . 'assets/css/table.css';
+        $css_url       = BRZ_URL . 'assets/css/table.css';
+        $inline_loaded = false;
+
+        if ( ! empty( $opts['inline_css'] ) ) {
+            $css = @file_get_contents( $css_file );
+            if ( $css ) {
+                $inline_loaded = true;
+                wp_register_style( $handle, false, array(), BRZ_VERSION );
+                wp_enqueue_style( $handle );
+                wp_add_inline_style( $handle, $css );
+            }
+        }
+
+        if ( ! $inline_loaded ) {
+            wp_register_style( $handle, $css_url, array(), BRZ_VERSION );
+            wp_enqueue_style( $handle );
+        }
     }
 
     public static function has_table( $post_id ) {
