@@ -542,7 +542,7 @@ class BRZ_Compare_Table_Admin {
 
             <div class="brz-compare-sheet">
                 <div class="brz-compare-sheet__actions brz-compare-sheet__actions--stacked">
-                    <div class="brz-compare-sheet__hint">برای افزودن/حذف ستون از دکمه‌های بالای سطر هدر و برای مدیریت سطرها از کنترل سمت چپ هر سطر استفاده کنید. سطر اول هدر است و حذف نمی‌شود.</div>
+                    <div class="brz-compare-sheet__hint">برای افزودن/حذف ستون از دکمه‌های بالای سطر هدر و برای مدیریت سطرها از کنترل سمت چپ هر سطر استفاده کنید.</div>
                     <div class="brz-compare-id">
                         <div class="brz-compare-id__label">شناسه جدول</div>
                         <div class="brz-compare-id__value" data-compare-id><?php echo esc_html( $data['table_id'] ); ?></div>
@@ -551,37 +551,45 @@ class BRZ_Compare_Table_Admin {
                     </div>
                 </div>
 
-                <div class="brz-compare-table-card brz-compare-table-card--modern">
-                    <div class="brz-compare-grid brz-compare-grid--inline" id="brz-compare-grid" data-max="<?php echo esc_attr( $max_columns ); ?>">
-                        <div class="brz-compare-row brz-compare-row--header" data-row="header">
-                            <div class="brz-compare-row-actions">
-                                <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row="header" aria-label="افزودن ردیف بعد از هدر">+</button>
-                            </div>
-                            <?php foreach ( $data['columns'] as $col_index => $col_value ) : ?>
-                                <div class="brz-compare-cell brz-compare-cell--header" data-col="<?php echo esc_attr( $col_index ); ?>">
-                                    <div class="brz-compare-col-actions">
-                                        <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-col="<?php echo esc_attr( $col_index ); ?>" aria-label="افزودن ستون بعد از ستون <?php echo esc_attr( $col_index + 1 ); ?>">+</button>
-                                        <button type="button" class="brz-compare-btn brz-compare-btn--danger" data-remove-col="<?php echo esc_attr( $col_index ); ?>" aria-label="حذف ستون <?php echo esc_attr( $col_index + 1 ); ?>">−</button>
-                                    </div>
-                                    <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $col_value ); ?>" placeholder="هدر <?php echo esc_attr( $col_index + 1 ); ?>" />
-                                </div>
+                <div class="brz-compare-table-wrapper">
+                    <table class="brz-compare-table" id="brz-compare-table">
+                        <thead>
+                            <tr class="brz-compare-row--header" data-row="header">
+                                <th class="brz-compare-actions-head">
+                                    <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row="header" aria-label="افزودن ردیف">+</button>
+                                </th>
+                                <?php foreach ( $data['columns'] as $col_index => $col_value ) : ?>
+                                    <th class="brz-compare-th" data-col="<?php echo esc_attr( $col_index ); ?>">
+                                        <div class="brz-compare-th-content">
+                                            <div class="brz-compare-col-actions">
+                                                <button type="button" class="brz-compare-mini-btn" data-add-col="<?php echo esc_attr( $col_index ); ?>" aria-label="افزودن ستون">+</button>
+                                                <button type="button" class="brz-compare-mini-btn brz-compare-danger" data-remove-col="<?php echo esc_attr( $col_index ); ?>" aria-label="حذف ستون">&times;</button>
+                                            </div>
+                                            <input type="text" name="brz_compare_columns[]" value="<?php echo esc_attr( $col_value ); ?>" placeholder="هدر <?php echo esc_attr( $col_index + 1 ); ?>" />
+                                        </div>
+                                    </th>
+                                <?php endforeach; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
+                                <tr class="brz-compare-row" data-row="<?php echo esc_attr( $r_index ); ?>">
+                                    <td class="brz-compare-row-actions-cell">
+                                        <div class="brz-compare-row-actions">
+                                            <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row="<?php echo esc_attr( $r_index ); ?>" aria-label="افزودن ردیف">+</button>
+                                            <button type="button" class="brz-compare-btn brz-compare-btn--danger" data-remove-row="<?php echo esc_attr( $r_index ); ?>" aria-label="حذف ردیف">&minus;</button>
+                                        </div>
+                                    </td>
+                                    <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
+                                        <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
+                                        <td class="brz-compare-td">
+                                            <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" />
+                                        </td>
+                                    <?php endfor; ?>
+                                </tr>
                             <?php endforeach; ?>
-                        </div>
-                        <?php foreach ( $data['rows'] as $r_index => $row ) : ?>
-                            <div class="brz-compare-row" data-row="<?php echo esc_attr( $r_index ); ?>">
-                                <div class="brz-compare-row-actions">
-                                    <button type="button" class="brz-compare-btn brz-compare-btn--success" data-add-row="<?php echo esc_attr( $r_index ); ?>" aria-label="افزودن ردیف بعد از ردیف <?php echo esc_attr( $r_index + 1 ); ?>">+</button>
-                                    <button type="button" class="brz-compare-btn brz-compare-btn--danger brz-compare-remove-row" data-remove-row="<?php echo esc_attr( $r_index ); ?>" aria-label="حذف ردیف <?php echo esc_attr( $r_index + 1 ); ?>">−</button>
-                                </div>
-                                <?php for ( $c = 0; $c < $columns_count; $c++ ) : ?>
-                                    <?php $cell = isset( $row[ $c ] ) ? $row[ $c ] : ''; ?>
-                                    <div class="brz-compare-cell">
-                                        <input type="text" name="brz_compare_rows[<?php echo esc_attr( $r_index ); ?>][<?php echo esc_attr( $c ); ?>]" value="<?php echo esc_attr( $cell ); ?>" placeholder="—" />
-                                    </div>
-                                <?php endfor; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

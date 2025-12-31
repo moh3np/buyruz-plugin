@@ -1,21 +1,50 @@
 /* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
 (function() {
+  // Fix for duplicate metaboxes: if we have the tab panel, remove other instances (like fallback metabox)
+  var boxes = document.querySelectorAll('.brz-compare-box');
+  if (boxes.length > 1) {
+    var tabBox = document.querySelector('#brz_compare_table_panel .brz-compare-box');
+    if (tabBox) {
+      boxes.forEach(function(b) {
+        if (b !== tabBox) {
+          b.remove();
+        }
+      });
+    }
+  }
+
   var box = document.querySelector('.brz-compare-box');
   if (!box) { return; }
 
-  var grid = box.querySelector('#brz-compare-grid');
-  if (!grid) { return; }
+  var table = box.querySelector('#brz-compare-table');
+  if (!table) { return; }
 
-  var headerRow = grid.querySelector('.brz-compare-row--header');
+  var thead = table.querySelector('thead');
+  var tbody = table.querySelector('tbody');
   var maxColumns = parseInt(box.dataset.maxCols || '6', 10);
   var defaultColumns = 2;
 
+  if (!thead) {
+    thead = document.createElement('thead');
+    table.appendChild(thead);
+  }
+  if (!tbody) {
+    tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+  }
+
+  function headerRow() {
+    return thead.querySelector('tr');
+  }
+
   function headerCells() {
-    return headerRow ? headerRow.querySelectorAll('.brz-compare-cell--header') : [];
+    var row = headerRow();
+    // Exclude the first cell which is for row actions
+    return row ? Array.prototype.slice.call(row.querySelectorAll('th.brz-compare-th')) : [];
   }
 
   function dataRows() {
-    return grid.querySelectorAll('.brz-compare-row:not(.brz-compare-row--header)');
+    return tbody.querySelectorAll('tr');
   }
 
   function columnCount() {
@@ -23,99 +52,110 @@
   }
 
   function ensureHeaderRow() {
-    if (headerRow) { return; }
-    headerRow = document.createElement('div');
-    headerRow.className = 'brz-compare-row brz-compare-row--header';
-    headerRow.setAttribute('data-row', 'header');
-    var actions = document.createElement('div');
-    actions.className = 'brz-compare-row-actions';
+    var row = headerRow();
+    if (row) { return; }
+    row = document.createElement('tr');
+    row.className = 'brz-compare-row--header';
+    row.setAttribute('data-row', 'header');
+
+    var actionTh = document.createElement('th');
+    actionTh.className = 'brz-compare-actions-head';
     var addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.className = 'brz-compare-btn brz-compare-btn--success';
     addBtn.textContent = '+';
     addBtn.setAttribute('data-add-row', 'header');
-    addBtn.setAttribute('aria-label', 'افزودن ردیف بعد از هدر');
-    actions.appendChild(addBtn);
-    headerRow.appendChild(actions);
-    grid.insertBefore(headerRow, grid.firstChild || null);
-  }
+    addBtn.setAttribute('aria-label', 'افزودن ردیف');
+    actionTh.appendChild(addBtn);
+    row.appendChild(actionTh);
 
-  function setColsVar() {
-    grid.style.setProperty('--cols', Math.max(columnCount(), 1));
+    thead.appendChild(row);
   }
 
   function buildHeaderCell(value) {
-    var cell = document.createElement('div');
-    cell.className = 'brz-compare-cell brz-compare-cell--header';
+    var th = document.createElement('th');
+    th.className = 'brz-compare-th';
+
+    var content = document.createElement('div');
+    content.className = 'brz-compare-th-content';
 
     var actions = document.createElement('div');
     actions.className = 'brz-compare-col-actions';
 
     var addBtn = document.createElement('button');
     addBtn.type = 'button';
-    addBtn.className = 'brz-compare-btn brz-compare-btn--success';
+    addBtn.className = 'brz-compare-mini-btn';
     addBtn.textContent = '+';
     addBtn.setAttribute('data-add-col', '0');
     addBtn.setAttribute('aria-label', 'افزودن ستون');
 
     var removeBtn = document.createElement('button');
     removeBtn.type = 'button';
-    removeBtn.className = 'brz-compare-btn brz-compare-btn--danger';
-    removeBtn.textContent = '−';
+    removeBtn.className = 'brz-compare-mini-btn brz-compare-danger';
+    removeBtn.innerHTML = '&times;';
     removeBtn.setAttribute('data-remove-col', '0');
     removeBtn.setAttribute('aria-label', 'حذف ستون');
 
     actions.appendChild(addBtn);
     actions.appendChild(removeBtn);
-    cell.appendChild(actions);
+    content.appendChild(actions);
 
     var input = document.createElement('input');
     input.type = 'text';
     input.name = 'brz_compare_columns[]';
-    input.placeholder = 'هدر ' + (columnCount() + 1);
+    input.placeholder = 'هدر';
     input.value = value || '';
-    cell.appendChild(input);
-    return cell;
+    content.appendChild(input);
+
+    th.appendChild(content);
+    return th;
   }
 
   function buildDataCell(value) {
-    var cell = document.createElement('div');
-    cell.className = 'brz-compare-cell';
+    var td = document.createElement('td');
+    td.className = 'brz-compare-td';
     var input = document.createElement('input');
     input.type = 'text';
     input.name = 'brz_compare_rows[0][0]';
     input.value = value || '';
-    cell.appendChild(input);
-    return cell;
+    td.appendChild(input);
+    return td;
   }
 
   function buildRow(values) {
     ensureHeaderRow();
-    var row = document.createElement('div');
+    var row = document.createElement('tr');
     row.className = 'brz-compare-row';
 
+    var actionTd = document.createElement('td');
+    actionTd.className = 'brz-compare-row-actions-cell';
     var actions = document.createElement('div');
     actions.className = 'brz-compare-row-actions';
+
     var addBtn = document.createElement('button');
     addBtn.type = 'button';
     addBtn.className = 'brz-compare-btn brz-compare-btn--success';
     addBtn.textContent = '+';
     addBtn.setAttribute('data-add-row', '0');
-    addBtn.setAttribute('aria-label', 'افزودن ردیف بعد از این ردیف');
+    addBtn.setAttribute('aria-label', 'افزودن ردیف');
+
     var removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'brz-compare-btn brz-compare-btn--danger';
-    removeBtn.textContent = '−';
+    removeBtn.innerHTML = '&minus;';
     removeBtn.setAttribute('data-remove-row', '0');
-    removeBtn.setAttribute('aria-label', 'حذف این ردیف');
+    removeBtn.setAttribute('aria-label', 'حذف ردیف');
+
     actions.appendChild(addBtn);
     actions.appendChild(removeBtn);
-    row.appendChild(actions);
+    actionTd.appendChild(actions);
+    row.appendChild(actionTd);
 
     var cols = columnCount() || defaultColumns;
     if (columnCount() === 0) {
+      var hRow = headerRow();
       for (var x = 0; x < defaultColumns; x++) {
-        headerRow.appendChild(buildHeaderCell(''));
+        hRow.appendChild(buildHeaderCell(''));
       }
       cols = columnCount();
     }
@@ -135,20 +175,20 @@
 
     if (afterKey === 'header') {
       if (rows.length > 0) {
-        grid.insertBefore(row, rows[0]);
+        tbody.insertBefore(row, rows[0]);
       } else {
-        grid.appendChild(row);
+        tbody.appendChild(row);
       }
     } else {
       var index = parseInt(afterKey, 10);
       if (isNaN(index) || index < 0 || index >= rows.length) {
-        grid.appendChild(row);
+        tbody.appendChild(row);
       } else {
         var anchor = rows[index];
         if (anchor && anchor.nextSibling) {
-          grid.insertBefore(row, anchor.nextSibling);
+          tbody.insertBefore(row, anchor.nextSibling);
         } else {
-          grid.appendChild(row);
+          tbody.appendChild(row);
         }
       }
     }
@@ -178,15 +218,18 @@
     var headerCell = buildHeaderCell('');
     var headers = headerCells();
     var target = headers[idx];
+    var hRow = headerRow();
+    
     if (target && target.nextSibling) {
-      headerRow.insertBefore(headerCell, target.nextSibling);
+      hRow.insertBefore(headerCell, target.nextSibling);
     } else {
-      headerRow.appendChild(headerCell);
+      hRow.appendChild(headerCell);
     }
 
     Array.prototype.slice.call(dataRows()).forEach(function(row) {
       var dataCell = buildDataCell('');
-      var cells = row.querySelectorAll('.brz-compare-cell');
+      // Skip first td (actions)
+      var cells = Array.prototype.slice.call(row.querySelectorAll('td.brz-compare-td'));
       var anchor = cells[idx];
       if (anchor && anchor.nextSibling) {
         row.insertBefore(dataCell, anchor.nextSibling);
@@ -210,7 +253,7 @@
     if (headers[idx]) { headers[idx].remove(); }
 
     Array.prototype.slice.call(dataRows()).forEach(function(row) {
-      var cells = row.querySelectorAll('.brz-compare-cell');
+      var cells = row.querySelectorAll('td.brz-compare-td');
       if (cells[idx]) {
         cells[idx].remove();
       }
@@ -226,10 +269,12 @@
 
   function renumber() {
     ensureHeaderRow();
-    var headerAdd = headerRow.querySelector('.brz-compare-row-actions [data-add-row]');
+    var hRow = headerRow();
+    var headerAdd = hRow.querySelector('[data-add-row]');
     if (headerAdd) {
       headerAdd.setAttribute('data-add-row', 'header');
     }
+    
     var headers = headerCells();
     Array.prototype.slice.call(headers).forEach(function(cell, idx) {
       cell.setAttribute('data-col', idx);
@@ -252,8 +297,6 @@
       }
     });
 
-    setColsVar();
-
     var rows = Array.prototype.slice.call(dataRows());
     Array.prototype.forEach.call(rows, function(row, rIndex) {
       row.setAttribute('data-row', rIndex);
@@ -267,27 +310,27 @@
         removeBtn.disabled = rows.length <= 1;
       }
 
-      var inputs = row.querySelectorAll('.brz-compare-cell input');
+      var inputs = row.querySelectorAll('td.brz-compare-td input');
       for (var c = 0; c < inputs.length; c++) {
         inputs[c].name = 'brz_compare_rows[' + rIndex + '][' + c + ']';
       }
 
-      while (inputs.length < columnCount()) {
+      // Ensure row has correct number of cells
+      var cells = row.querySelectorAll('td.brz-compare-td');
+      while (cells.length < columnCount()) {
         var filler = buildDataCell('');
         row.appendChild(filler);
-        inputs = row.querySelectorAll('.brz-compare-cell input');
+        cells = row.querySelectorAll('td.brz-compare-td');
       }
-      while (inputs.length > columnCount() && inputs.length > 0) {
-        var last = inputs[inputs.length - 1];
-        if (last && last.parentElement) {
-          last.parentElement.remove();
-        }
-        inputs = row.querySelectorAll('.brz-compare-cell input');
+      while (cells.length > columnCount() && cells.length > 0) {
+        var last = cells[cells.length - 1];
+        if (last) { last.remove(); }
+        cells = row.querySelectorAll('td.brz-compare-td');
       }
     });
   }
 
-  grid.addEventListener('click', function(e) {
+  table.addEventListener('click', function(e) {
     var addColBtn = e.target.closest('[data-add-col]');
     if (addColBtn) {
       e.preventDefault();
@@ -318,12 +361,13 @@
 
   ensureHeaderRow();
   if (columnCount() === 0) {
+    var hRow = headerRow();
     for (var i = 0; i < defaultColumns; i++) {
-      headerRow.appendChild(buildHeaderCell(''));
+      hRow.appendChild(buildHeaderCell(''));
     }
   }
   ensureAtLeastOneRow();
   renumber();
 
-  grid.classList.add('brz-compare-grid--hydrated');
+  table.classList.add('brz-compare-table--hydrated');
 })();
