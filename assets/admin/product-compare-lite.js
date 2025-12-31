@@ -1,16 +1,14 @@
 /* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
 (function() {
-  // Fix for duplicate metaboxes: if we have the tab panel, remove other instances (like fallback metabox)
-  var boxes = document.querySelectorAll('.brz-compare-box');
-  if (boxes.length > 1) {
-    var tabBox = document.querySelector('#brz_compare_table_panel .brz-compare-box');
-    if (tabBox) {
-      boxes.forEach(function(b) {
-        if (b !== tabBox) {
-          b.remove();
-        }
-      });
-    }
+  // Fix for duplicate metaboxes:
+  // If the Tab panel exists (even if hidden), we should prioritize it and remove the Fallback metabox
+  // to prevent duplicate inputs which break saving.
+  var tabPanel = document.getElementById('brz_compare_table_panel');
+  var fallbackMetabox = document.getElementById('brz-compare-table-fallback');
+
+  if (tabPanel && fallbackMetabox) {
+    // Remove the entire fallback metabox container
+    fallbackMetabox.remove();
   }
 
   var box = document.querySelector('.brz-compare-box');
