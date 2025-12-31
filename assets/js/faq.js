@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   const config = window.BRZ || {};
-  const items = document.querySelectorAll('.rank-math-list-item, .rank-math-faq-item');
+  // Broaden selector to catch nested items in shortcode output
+  const items = document.querySelectorAll('.rank-math-list-item, .rank-math-faq-item, .rank-math-list .rank-math-list-item');
 
   if (!items.length) return;
 
