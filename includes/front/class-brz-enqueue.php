@@ -42,6 +42,11 @@ class BRZ_Enqueue {
                     wp_register_style( 'brz-faq', false, array(), BRZ_VERSION );
                     wp_enqueue_style( 'brz-faq' );
                     wp_add_inline_style( 'brz-faq', $css_vars . $css );
+                } else {
+                    // Fallback if file read fails
+                    wp_register_style( 'brz-faq', BRZ_URL . 'assets/css/faq.css', array(), BRZ_VERSION );
+                    wp_enqueue_style( 'brz-faq' );
+                    wp_add_inline_style( 'brz-faq', $css_vars );
                 }
             } else {
                 wp_register_style( 'brz-faq', BRZ_URL . 'assets/css/faq.css', array(), BRZ_VERSION );

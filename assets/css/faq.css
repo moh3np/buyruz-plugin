@@ -17,7 +17,8 @@
 /* Item Card Style */
 .rank-math-list-item,
 .rank-math-faq-item,
-.rank-math-list .rank-math-list-item {
+.rank-math-list .rank-math-list-item,
+#rank-math-faq .rank-math-list-item {
   border: 1px solid var(--brz-border);
   border-radius: var(--brz-radius);
   margin-bottom: 12px;
@@ -30,7 +31,8 @@
 /* Hover Effect */
 .rank-math-list-item:hover,
 .rank-math-faq-item:hover,
-.rank-math-list .rank-math-list-item:hover {
+.rank-math-list .rank-math-list-item:hover,
+#rank-math-faq .rank-math-list-item:hover {
   border-color: var(--brz-brand);
   box-shadow: var(--brz-shadow);
   transform: translateY(-1px);
@@ -39,7 +41,8 @@
 /* Active State */
 .rank-math-list-item.brz-active,
 .rank-math-faq-item.brz-active,
-.rank-math-list .rank-math-list-item.brz-active {
+.rank-math-list .rank-math-list-item.brz-active,
+#rank-math-faq .rank-math-list-item.brz-active {
   border-color: var(--brz-brand);
   background: #fff;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
@@ -67,7 +70,8 @@
 
 .rank-math-list-item.brz-active .rank-math-question,
 .rank-math-faq-item.brz-active .rank-math-question,
-.rank-math-list .rank-math-list-item.brz-active .rank-math-question {
+.rank-math-list .rank-math-list-item.brz-active .rank-math-question,
+#rank-math-faq .rank-math-list-item.brz-active .rank-math-question {
   color: var(--brz-brand);
 }
 
@@ -90,7 +94,8 @@
 
 .rank-math-list-item.brz-active .rank-math-question::after,
 .rank-math-faq-item.brz-active .rank-math-question::after,
-.rank-math-list .rank-math-list-item.brz-active .rank-math-question::after {
+.rank-math-list .rank-math-list-item.brz-active .rank-math-question::after,
+#rank-math-faq .rank-math-list-item.brz-active .rank-math-question::after {
   transform: rotate(45deg);
 }
 
