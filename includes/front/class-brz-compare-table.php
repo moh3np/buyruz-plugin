@@ -11,9 +11,9 @@ class BRZ_Compare_Table {
     private static $rendered = array();
 
     public static function init() {
-        add_filter( 'the_content', array( __CLASS__, 'inject_into_content' ), 25 );
-        add_filter( 'woocommerce_product_get_description', array( __CLASS__, 'inject_into_wc_description' ), 25, 2 );
-        add_action( 'woocommerce_after_single_product_summary', array( __CLASS__, 'render_after_summary' ), 25 );
+        // add_filter( 'the_content', array( __CLASS__, 'inject_into_content' ), 25 );
+        // add_filter( 'woocommerce_product_get_description', array( __CLASS__, 'inject_into_wc_description' ), 25, 2 );
+        // add_action( 'woocommerce_after_single_product_summary', array( __CLASS__, 'render_after_summary' ), 25 );
         add_shortcode( 'buyruz_compare_table', array( __CLASS__, 'shortcode' ) );
         add_shortcode( 'brz_compare_table', array( __CLASS__, 'shortcode' ) );
         add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );

@@ -53,7 +53,7 @@
 .buyruz-table-wrap .buyruz-table th,
 .buyruz-table-wrap .buyruz-table td {
   padding: 16px 20px;
-  text-align: right;
+  text-align: center;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
 }
@@ -96,6 +96,12 @@
     box-shadow: 0 8px 20px -6px rgba(15, 23, 42, 0.06);
   }
 
+  .buyruz-table-wrap .buyruz-table-title {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .buyruz-table-wrap .buyruz-table thead {
     display: none;
   }
@@ -122,7 +128,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    text-align: left; /* Value aligns left */
+    /* text-align: left; Removed to preserve RTL text alignment */
     padding: 14px 18px;
     border-bottom: 1px dashed #f1f5f9;
     font-size: 0.9rem;
