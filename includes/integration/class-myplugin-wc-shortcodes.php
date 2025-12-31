@@ -29,7 +29,8 @@ class MyPlugin_WC_Product_Shortcodes {
             return self::$enabled_cache;
         }
 
-        self::$enabled_cache = (bool) get_option( 'myplugin_enable_wc_product_shortcodes', 0 );
+        // Default to true (1) to ensure shortcodes work out of the box
+        self::$enabled_cache = (bool) get_option( 'myplugin_enable_wc_product_shortcodes', 1 );
         return self::$enabled_cache;
     }
 
