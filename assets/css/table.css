@@ -1,12 +1,131 @@
 /* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
-.buyruz-table-wrap{margin:18px 0;border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;overflow-x:auto;background:#ffffff;box-shadow:0 14px 28px rgba(15,23,42,0.08);-webkit-overflow-scrolling:touch;padding:6px 8px}
-.buyruz-table-title{margin:0;padding:14px 14px 10px;font-size:18px;font-weight:800;color:#0f172a;border-bottom:1px solid #e5e7eb}
-.buyruz-table{width:100%;border-collapse:separate;border-spacing:0;min-width:420px;color:#0f172a}
-.buyruz-table th,.buyruz-table td{padding:12px 14px;border-bottom:1px solid #e2e8f0;vertical-align:top;text-align:right;background:#fff}
-.buyruz-table thead th{background:#f8fafc;font-weight:800;z-index:1}
-.buyruz-table tr:nth-child(even) td{background:#fbfdff}
-.buyruz-table tr:last-child td{border-bottom:0}
-.buyruz-table td:first-child,.buyruz-table th:first-child{border-right:1px solid #e2e8f0}
-.buyruz-table--preview{border-spacing:0}
-@media (max-width:900px){.buyruz-table-wrap{overflow-x:auto}}
-@media (max-width:720px){.buyruz-table{min-width:100%;border-spacing:0}.buyruz-table thead{display:none}.buyruz-table tr{display:block;border-bottom:1px solid #e2e8f0}.buyruz-table td{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;position:relative}.buyruz-table td:before{content:attr(data-label);font-weight:800;color:#475569;min-width:40%;text-align:right}.buyruz-table td:last-child{border-bottom:0}}
+
+/* Container for centering */
+.buyruz-table-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 32px 0;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
+/* Main Card Wrapper */
+.buyruz-table-wrap {
+  width: 100%;
+  max-width: 850px; /* Optimal reading width */
+  background: #ffffff;
+  border-radius: 20px; /* Modern rounded corners */
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08); /* Soft, modern shadow */
+  overflow: hidden;
+  font-family: inherit;
+  direction: rtl;
+}
+
+/* Title */
+.buyruz-table-title {
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 1.15rem;
+  font-weight: 800;
+  padding: 18px 24px;
+  margin: 0;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Table Reset */
+.buyruz-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #334155;
+}
+
+/* Cells */
+.buyruz-table th,
+.buyruz-table td {
+  padding: 16px 20px;
+  text-align: right;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+/* Header Cells */
+.buyruz-table th {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-weight: 800;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+/* Row Styling */
+.buyruz-table tr:last-child td {
+  border-bottom: none;
+}
+
+.buyruz-table tr:hover td {
+  background-color: #f8fafc;
+  transition: background-color 0.2s ease;
+}
+
+/* Mobile Responsive (Mobile First Approach) */
+@media (max-width: 768px) {
+  .buyruz-table-container {
+    margin: 20px 0;
+  }
+  
+  .buyruz-table-wrap {
+    border-radius: 16px;
+    box-shadow: 0 8px 20px -6px rgba(15, 23, 42, 0.06);
+  }
+
+  .buyruz-table thead {
+    display: none;
+  }
+
+  .buyruz-table, 
+  .buyruz-table tbody, 
+  .buyruz-table tr, 
+  .buyruz-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .buyruz-table tr {
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .buyruz-table tr:last-child {
+    border-bottom: none;
+  }
+
+  .buyruz-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left; /* Value aligns left */
+    padding: 14px 18px;
+    border-bottom: 1px dashed #f1f5f9;
+    font-size: 0.9rem;
+  }
+
+  .buyruz-table td:last-child {
+    border-bottom: none;
+  }
+
+  .buyruz-table td::before {
+    content: attr(data-label);
+    font-weight: 800;
+    color: #64748b;
+    margin-left: 16px;
+    text-align: right;
+    flex-shrink: 0;
+    max-width: 45%;
+  }
+}

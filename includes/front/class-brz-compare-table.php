@@ -229,28 +229,30 @@ class BRZ_Compare_Table {
 
         ob_start();
         ?>
-        <div class="buyruz-table-wrap">
-            <?php if ( ! empty( $data['title'] ) ) : ?>
-                <h3 class="buyruz-table-title"><?php echo esc_html( $data['title'] ); ?></h3>
-            <?php endif; ?>
-            <table class="buyruz-table">
-                <thead>
-                    <tr>
-                        <?php foreach ( $data['columns'] as $col ) : ?>
-                            <th><?php echo esc_html( $col ); ?></th>
-                        <?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ( $data['rows'] as $row ) : ?>
+        <div class="buyruz-table-container">
+            <div class="buyruz-table-wrap">
+                <?php if ( ! empty( $data['title'] ) ) : ?>
+                    <h3 class="buyruz-table-title"><?php echo esc_html( $data['title'] ); ?></h3>
+                <?php endif; ?>
+                <table class="buyruz-table">
+                    <thead>
                         <tr>
-                            <?php foreach ( $data['columns'] as $index => $col ) : ?>
-                                <td data-label="<?php echo esc_attr( $data['columns'][ $index ] ); ?>"><?php echo esc_html( isset( $row[ $index ] ) ? $row[ $index ] : '' ); ?></td>
+                            <?php foreach ( $data['columns'] as $col ) : ?>
+                                <th><?php echo esc_html( $col ); ?></th>
                             <?php endforeach; ?>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ( $data['rows'] as $row ) : ?>
+                            <tr>
+                                <?php foreach ( $data['columns'] as $index => $col ) : ?>
+                                    <td data-label="<?php echo esc_attr( $data['columns'][ $index ] ); ?>"><?php echo esc_html( isset( $row[ $index ] ) ? $row[ $index ] : '' ); ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
         <?php
         return ob_get_clean();
