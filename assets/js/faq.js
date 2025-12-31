@@ -1,59 +1,79 @@
-(function(){
-  // هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
-  // Config from localized window.BRZ (fallback به window.RFA برای سازگاری)
-  var cfg = (window.BRZ||window.RFA||{});
-  var selector = cfg.selector || '.rank-math-faq';
+document.addEventListener('DOMContentLoaded', function() {
+  const config = window.BRZ || {};
+  const items = document.querySelectorAll('.rank-math-list-item, .rank-math-faq-item');
 
-  function onReady(fn){ if(document.readyState!=='loading'){fn();} else {document.addEventListener('DOMContentLoaded',fn);} }
+  if (!items.length) return;
 
-  function init(){
-    var wraps = Array.prototype.slice.call(document.querySelectorAll(selector));
-    if(!wraps.length){ return; }
+  items.forEach(item => {
+    const question = item.querySelector('.rank-math-question');
+    const answer = item.querySelector('.rank-math-answer');
+    if (!question || !answer) return;
 
-    wraps.forEach(function(wrap){
-      // Add init flag to enable CSS only when JS is present
-      wrap.classList.add('accordion-init');
+    // Accessibility Setup
+    question.setAttribute('role', 'button');
+    question.setAttribute('aria-expanded', 'false');
+    question.setAttribute('tabindex', '0');
+    
+    // Ensure answer is hidden initially
+    answer.style.maxHeight = '0';
 
-      var items = Array.prototype.slice.call(wrap.querySelectorAll('.rank-math-faq-item'));
-      items.forEach(function(item){
-        var q = item.querySelector('.rank-math-question');
-        var a = item.querySelector('.rank-math-answer');
-        if(!q || !a) return;
-
-        q.setAttribute('role','button');
-        q.setAttribute('tabindex','0');
-        q.setAttribute('aria-expanded','false');
-
-        // start closed
-        item.classList.remove('active');
-
-        var toggle = function(){
-          var willOpen = !item.classList.contains('active');
-          if(cfg.singleOpen){
-            items.forEach(function(it){
-              it.classList.remove('active');
-              var qq = it.querySelector('.rank-math-question');
-              if(qq) qq.setAttribute('aria-expanded','false');
-            });
-          }
-          if(willOpen){
-            item.classList.add('active');
-            q.setAttribute('aria-expanded','true');
-          } else {
-            item.classList.remove('active');
-            q.setAttribute('aria-expanded','false');
-          }
-        };
-
-        q.addEventListener('click', toggle);
-        q.addEventListener('keydown', function(e){
-          if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggle(); }
-          if(e.key==='ArrowDown'){ e.preventDefault(); (item.nextElementSibling && item.nextElementSibling.querySelector('.rank-math-question') || q).focus(); }
-          if(e.key==='ArrowUp'){ e.preventDefault(); (item.previousElementSibling && item.previousElementSibling.querySelector('.rank-math-question') || q).focus(); }
-        });
-      });
+    // Click Handler
+    question.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleItem(item, question, answer);
     });
+
+    // Keyboard Handler
+    question.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggleItem(item, question, answer);
+      }
+    });
+  });
+
+  function toggleItem(item, question, answer) {
+    const isOpen = item.classList.contains('brz-active');
+
+    // Single Open Logic
+    if (config.singleOpen && !isOpen) {
+      items.forEach(otherItem => {
+        if (otherItem !== item && otherItem.classList.contains('brz-active')) {
+          closeItem(otherItem);
+        }
+      });
+    }
+
+    if (isOpen) {
+      closeItem(item);
+    } else {
+      openItem(item, question, answer);
+    }
   }
 
-  onReady(init);
-})();
+  function openItem(item, question, answer) {
+    item.classList.add('brz-active');
+    question.setAttribute('aria-expanded', 'true');
+    
+    if (config.animate) {
+      // Calculate height dynamically
+      answer.style.maxHeight = answer.scrollHeight + 'px';
+      
+      // Reset max-height after transition to allow content resizing if needed
+      // But for accordion, fixed height is safer for transition back.
+      // We can listen to transitionend if we want to set it to auto, 
+      // but that complicates closing. Keeping it pixel-based is fine for text.
+    } else {
+      answer.style.maxHeight = 'none';
+    }
+  }
+
+  function closeItem(item) {
+    item.classList.remove('brz-active');
+    const question = item.querySelector('.rank-math-question');
+    const answer = item.querySelector('.rank-math-answer');
+    
+    if(question) question.setAttribute('aria-expanded', 'false');
+    if(answer) answer.style.maxHeight = '0';
+  }
+});

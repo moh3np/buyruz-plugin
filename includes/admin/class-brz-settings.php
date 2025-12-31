@@ -153,12 +153,6 @@ class BRZ_Settings {
             echo '<label><input type="checkbox" name="'.BRZ_OPTION.'[animate]" value="1" '.checked( 1, $v, false ).'> فعال</label>';
         }, 'brz-settings', 'brz_main' );
 
-        add_settings_field( 'compact_mobile', 'نسخه موبایل فشرده', function(){
-            $v = self::get( 'compact_mobile', 1 );
-            echo '<input type="hidden" name="'.BRZ_OPTION.'[compact_mobile]" value="0" />';
-            echo '<label><input type="checkbox" name="'.BRZ_OPTION.'[compact_mobile]" value="1" '.checked( 1, $v, false ).'> فعال</label>';
-        }, 'brz-settings', 'brz_main' );
-
         add_settings_section( 'brz_tables', 'استایل جداول', '__return_false', 'brz-settings' );
 
         add_settings_field( 'table_styles_enabled', 'فعال‌سازی استایل جداول', function() {
@@ -1167,7 +1161,7 @@ class BRZ_Settings {
 
         // General settings.
         if ( 'general' === $context || isset( $input['enable_css'] ) ) {
-            $checkboxes = array( 'enable_css', 'inline_css', 'enable_js', 'single_open', 'animate', 'compact_mobile', 'table_styles_enabled' );
+            $checkboxes = array( 'enable_css', 'inline_css', 'enable_js', 'single_open', 'animate', 'table_styles_enabled' );
             foreach ( $checkboxes as $checkbox ) {
                 if ( array_key_exists( $checkbox, $input ) ) {
                     $output[ $checkbox ] = $input[ $checkbox ] ? 1 : 0;

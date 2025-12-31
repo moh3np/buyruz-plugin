@@ -18,7 +18,6 @@ class BRZ_Enqueue {
             $data = array(
                 'singleOpen'     => ! empty($opts['single_open']),
                 'animate'        => ! empty($opts['animate']),
-                'compactMobile'  => ! empty($opts['compact_mobile']),
                 'selector'       => '.rank-math-faq',
             );
             wp_register_script(
@@ -35,21 +34,19 @@ class BRZ_Enqueue {
         // CSS
         if ( $should_load_faq && ! empty( $opts['enable_css'] ) ) {
             $brand = isset($opts['brand_color']) ? $opts['brand_color'] : '#ff5668';
+            $css_vars = ':root{--brz-brand: '.$brand.';}';
+
             if ( ! empty( $opts['inline_css'] ) ) {
                 $css = @file_get_contents( BRZ_PATH . 'assets/css/faq.css' );
                 if ( $css ) {
-                    // Inject brand color
-                    $css = str_replace( '#BRZ_BRAND#', esc_html( $brand ), $css );
                     wp_register_style( 'brz-faq', false, array(), BRZ_VERSION );
                     wp_enqueue_style( 'brz-faq' );
-                    wp_add_inline_style( 'brz-faq', $css );
+                    wp_add_inline_style( 'brz-faq', $css_vars . $css );
                 }
             } else {
                 wp_register_style( 'brz-faq', BRZ_URL . 'assets/css/faq.css', array(), BRZ_VERSION );
                 wp_enqueue_style( 'brz-faq' );
-                // Small inline var for brand
-                $inline = ':root{--brz-brand: '.$brand.';}';
-                wp_add_inline_style( 'brz-faq', $inline );
+                wp_add_inline_style( 'brz-faq', $css_vars );
             }
         }
     }
