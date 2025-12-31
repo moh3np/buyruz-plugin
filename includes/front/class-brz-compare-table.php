@@ -284,14 +284,14 @@ class BRZ_Compare_Table {
         ?>
         <div class="buyruz-table-container">
             <div class="buyruz-table-wrap">
-                <?php if ( ! empty( $data['title'] ) ) : ?>
-                    <h3 class="buyruz-table-title"><?php echo esc_html( $data['title'] ); ?></h3>
-                <?php endif; ?>
                 <table class="buyruz-table">
+                    <?php if ( ! empty( $data['title'] ) ) : ?>
+                        <caption class="buyruz-table-title"><?php echo esc_html( $data['title'] ); ?></caption>
+                    <?php endif; ?>
                     <thead>
                         <tr>
                             <?php foreach ( $data['columns'] as $col ) : ?>
-                                <th><?php echo esc_html( $col ); ?></th>
+                                <th scope="col"><?php echo esc_html( $col ); ?></th>
                             <?php endforeach; ?>
                         </tr>
                     </thead>
@@ -299,7 +299,13 @@ class BRZ_Compare_Table {
                         <?php foreach ( $data['rows'] as $row ) : ?>
                             <tr>
                                 <?php foreach ( $data['columns'] as $index => $col ) : ?>
-                                    <td data-label="<?php echo esc_attr( $data['columns'][ $index ] ); ?>"><?php echo esc_html( isset( $row[ $index ] ) ? $row[ $index ] : '' ); ?></td>
+                                    <?php 
+                                    $cell_content = isset( $row[ $index ] ) ? $row[ $index ] : '';
+                                    if ( $index === 0 ) : ?>
+                                        <th scope="row" data-label="<?php echo esc_attr( $data['columns'][ $index ] ); ?>"><?php echo esc_html( $cell_content ); ?></th>
+                                    <?php else : ?>
+                                        <td data-label="<?php echo esc_attr( $data['columns'][ $index ] ); ?>"><?php echo esc_html( $cell_content ); ?></td>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </tr>
                         <?php endforeach; ?>

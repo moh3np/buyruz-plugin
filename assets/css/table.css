@@ -25,6 +25,8 @@
 
 /* Title */
 .buyruz-table-wrap .buyruz-table-title {
+  caption-side: top;
+  display: table-caption;
   background: #f8fafc;
   color: #0f172a;
   font-size: 1.15rem;
@@ -57,7 +59,7 @@
 }
 
 /* Header Cells */
-.buyruz-table-wrap .buyruz-table th {
+.buyruz-table-wrap .buyruz-table thead th {
   background-color: #f8fafc;
   color: #0f172a;
   font-weight: 800;
@@ -65,12 +67,20 @@
   font-size: 0.9rem;
 }
 
+/* Row Header Cells (First Column) */
+.buyruz-table-wrap .buyruz-table tbody th {
+  font-weight: normal; /* Reset bold for body th unless needed */
+  color: #334155;
+}
+
 /* Row Styling */
-.buyruz-table-wrap .buyruz-table tr:last-child td {
+.buyruz-table-wrap .buyruz-table tr:last-child td,
+.buyruz-table-wrap .buyruz-table tr:last-child th {
   border-bottom: none;
 }
 
-.buyruz-table-wrap .buyruz-table tr:hover td {
+.buyruz-table-wrap .buyruz-table tr:hover td,
+.buyruz-table-wrap .buyruz-table tr:hover th {
   background-color: #f8fafc;
   transition: background-color 0.2s ease;
 }
@@ -93,7 +103,8 @@
   .buyruz-table-wrap .buyruz-table, 
   .buyruz-table-wrap .buyruz-table tbody, 
   .buyruz-table-wrap .buyruz-table tr, 
-  .buyruz-table-wrap .buyruz-table td {
+  .buyruz-table-wrap .buyruz-table td,
+  .buyruz-table-wrap .buyruz-table th {
     display: block;
     width: 100%;
   }
@@ -106,7 +117,8 @@
     border-bottom: none;
   }
 
-  .buyruz-table-wrap .buyruz-table td {
+  .buyruz-table-wrap .buyruz-table td,
+  .buyruz-table-wrap .buyruz-table th {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -114,13 +126,16 @@
     padding: 14px 18px;
     border-bottom: 1px dashed #f1f5f9;
     font-size: 0.9rem;
+    font-weight: normal;
   }
 
-  .buyruz-table-wrap .buyruz-table td:last-child {
+  .buyruz-table-wrap .buyruz-table td:last-child,
+  .buyruz-table-wrap .buyruz-table th:last-child {
     border-bottom: none;
   }
 
-  .buyruz-table-wrap .buyruz-table td::before {
+  .buyruz-table-wrap .buyruz-table td::before,
+  .buyruz-table-wrap .buyruz-table th::before {
     content: attr(data-label);
     font-weight: 800;
     color: #64748b;

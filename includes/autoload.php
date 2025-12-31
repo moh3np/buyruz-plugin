@@ -22,6 +22,7 @@ spl_autoload_register( function( $class ) {
         'BRZ_Enqueue'                => 'front/class-brz-enqueue.php',
         'BRZ_Compare_Table'          => 'front/class-brz-compare-table.php',
         'BRZ_Tag_Sync_Guard'         => 'core/class-brz-tag-sync-guard.php',
+        'BRZ_Rest'                   => 'integration/class-brz-rest.php',
     );
 
     $map = apply_filters( 'brz/autoload_map', $map );
