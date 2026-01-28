@@ -136,6 +136,10 @@ class BRZ_Smart_Linker {
 
         self::render_notices();
         ?>
+        <style>
+        /* جلوگیری از تکرار هدر در این تب در صورت دوبار رندر شدن hero */
+        .brz-admin-wrap .brz-hero + .brz-hero { display: none; }
+        </style>
         <div class="brz-section-header">
             <div>
                 <h2>Smart Internal Linking</h2>
