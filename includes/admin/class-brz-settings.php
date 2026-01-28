@@ -620,6 +620,13 @@ class BRZ_Settings {
                 return;
             }
 
+            if ( 'smart_linker' === $module_slug ) {
+                self::render_shell( 'buyruz-module-' . $module_slug, function() {
+                    BRZ_Smart_Linker::render_module_content();
+                } );
+                return;
+            }
+
             $label = isset( $modules[ $module_slug ]['label'] ) ? $modules[ $module_slug ]['label'] : $module_slug;
             self::render_generic_module_card( $label, $active );
         } );

@@ -24,6 +24,9 @@ spl_autoload_register( function( $class ) {
         'BRZ_FAQ_Renderer'           => 'front/class-brz-faq-renderer.php',
         'BRZ_Tag_Sync_Guard'         => 'core/class-brz-tag-sync-guard.php',
         'BRZ_Rest'                   => 'integration/class-brz-rest.php',
+        'BRZ_Smart_Linker'           => 'modules/smart-linker/class-brz-smart-linker.php',
+        'BRZ_Smart_Linker_DB'        => 'modules/smart-linker/class-brz-smart-linker-db.php',
+        'BRZ_Smart_Linker_Link_Injector' => 'modules/smart-linker/class-brz-smart-linker-link-injector.php',
     );
 
     $map = apply_filters( 'brz/autoload_map', $map );

@@ -20,6 +20,11 @@ class BRZ_Modules {
                 'description' => 'جدول مقایسهٔ محصول را مدیریت و در فرانت نمایش می‌دهد.',
                 'class'       => 'BRZ_Compare_Table',
             ),
+            'smart_linker' => array(
+                'label'       => 'لینک‌ساز هوشمند',
+                'description' => 'سینک دوطرفه پیشنهاد لینک، تایید و تزریق خودکار با Google Sheet.',
+                'class'       => 'BRZ_Smart_Linker',
+            ),
         );
     }
 
