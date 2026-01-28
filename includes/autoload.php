@@ -27,6 +27,7 @@ spl_autoload_register( function( $class ) {
         'BRZ_Smart_Linker'           => 'modules/smart-linker/class-brz-smart-linker.php',
         'BRZ_Smart_Linker_DB'        => 'modules/smart-linker/class-brz-smart-linker-db.php',
         'BRZ_Smart_Linker_Link_Injector' => 'modules/smart-linker/class-brz-smart-linker-link-injector.php',
+        'BRZ_GSheet'                 => 'integration/class-brz-gsheet.php',
     );
 
     $map = apply_filters( 'brz/autoload_map', $map );

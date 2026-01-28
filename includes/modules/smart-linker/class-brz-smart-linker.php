@@ -130,7 +130,7 @@ class BRZ_Smart_Linker {
 
         $settings = self::get_settings();
         $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( ! in_array( $active_tab, array( 'general', 'strategy', 'exclusions', 'maintenance' ), true ) ) {
+        if ( ! in_array( $active_tab, array( 'general', 'strategy', 'exclusions', 'workbench', 'maintenance' ), true ) ) {
             $active_tab = 'general';
         }
 
@@ -843,7 +843,9 @@ class BRZ_Smart_Linker {
             'rows'   => $rows,
         );
 
-        self::remote_post( $settings['sheet_web_app'], $payload );
+        if ( class_exists( 'BRZ_GSheet' ) ) {
+            BRZ_GSheet::send_route( 'add_suggestions', $payload, $settings );
+        }
     }
 
     /**
