@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  */
 class BRZ_Smart_Linker_DB {
     const TABLE_SUFFIX = 'smart_links_log';
+    const CACHE_SUFFIX = 'buyruz_remote_cache';
 
     /**
      * Return fully-qualified table name with WordPress prefix.
@@ -47,6 +48,23 @@ class BRZ_Smart_Linker_DB {
         ) {$charset_collate};";
 
         dbDelta( $sql );
+
+        // Remote cache table for peer-to-peer sync
+        $cache = self::cache_table();
+        $sql_cache = "CREATE TABLE {$cache} (
+            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+            remote_id bigint(20) unsigned NOT NULL,
+            type varchar(20) NOT NULL,
+            title varchar(255) NOT NULL,
+            url text NOT NULL,
+            categories text NULL,
+            stock_status varchar(40) NULL,
+            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY type (type),
+            UNIQUE KEY remote_unique (remote_id,type)
+        ) {$charset_collate};";
+        dbDelta( $sql_cache );
     }
 
     /**
@@ -200,6 +218,64 @@ class BRZ_Smart_Linker_DB {
      */
     public static function active_for_post( $post_id ) {
         return self::get_for_post( $post_id, array( 'active' ) );
+    }
+
+    /**
+     * Cache table name with prefix.
+     */
+    public static function cache_table() {
+        global $wpdb;
+        return $wpdb->prefix . self::CACHE_SUFFIX;
+    }
+
+    /**
+     * Replace cache rows for a type in bulk.
+     *
+     * @param string $type product|post
+     * @param array  $items
+     */
+    public static function replace_cache( $type, array $items ) {
+        global $wpdb;
+        $table = self::cache_table();
+        $type  = sanitize_key( $type );
+
+        $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE type = %s", $type ) );
+
+        foreach ( $items as $item ) {
+            $wpdb->insert(
+                $table,
+                array(
+                    'remote_id'    => isset( $item['remote_id'] ) ? (int) $item['remote_id'] : 0,
+                    'type'         => $type,
+                    'title'        => sanitize_text_field( isset( $item['title'] ) ? $item['title'] : '' ),
+                    'url'          => esc_url_raw( isset( $item['url'] ) ? $item['url'] : '' ),
+                    'categories'   => isset( $item['categories'] ) ? maybe_serialize( $item['categories'] ) : '',
+                    'stock_status' => sanitize_text_field( isset( $item['stock_status'] ) ? $item['stock_status'] : '' ),
+                    'updated_at'   => current_time( 'mysql' ),
+                ),
+                array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
+            );
+        }
+    }
+
+    /**
+     * Fetch cache rows with optional keyword filter.
+     */
+    public static function search_cache( $type, $keyword = '', $limit = 20 ) {
+        global $wpdb;
+        $table = self::cache_table();
+        $type  = sanitize_key( $type );
+        $limit = (int) $limit;
+        if ( $limit < 1 ) { $limit = 20; }
+
+        if ( $keyword ) {
+            $like = '%' . $wpdb->esc_like( $keyword ) . '%';
+            $sql  = $wpdb->prepare( "SELECT * FROM {$table} WHERE type = %s AND title LIKE %s ORDER BY updated_at DESC LIMIT %d", $type, $like, $limit );
+        } else {
+            $sql  = $wpdb->prepare( "SELECT * FROM {$table} WHERE type = %s ORDER BY updated_at DESC LIMIT %d", $type, $limit );
+        }
+
+        return $wpdb->get_results( $sql, ARRAY_A );
     }
 
     /**

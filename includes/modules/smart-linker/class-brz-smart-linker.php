@@ -47,12 +47,18 @@ class BRZ_Smart_Linker {
         add_action( 'wp_ajax_brz_smart_linker_save', array( __CLASS__, 'handle_save_settings_ajax' ) );
         add_action( 'admin_post_brz_smart_linker_clear_logs', array( __CLASS__, 'handle_clear_logs' ) );
         add_action( 'admin_post_brz_smart_linker_purge_pending', array( __CLASS__, 'handle_purge_pending' ) );
+        add_action( 'wp_ajax_brz_smart_linker_sync_cache', array( __CLASS__, 'ajax_sync_cache' ) );
+        add_action( 'wp_ajax_brz_smart_linker_analyze', array( __CLASS__, 'ajax_analyze' ) );
+        add_action( 'wp_ajax_brz_smart_linker_apply', array( __CLASS__, 'ajax_apply' ) );
 
         // Cron / background
         add_action( 'init', array( __CLASS__, 'maybe_migrate_table' ), 1 );
         add_action( 'init', array( __CLASS__, 'ensure_cron_events' ) );
         add_action( self::CRON_PROCESS_HOOK, array( __CLASS__, 'process_queue' ) );
         add_action( self::CRON_APPROVAL_HOOK, array( __CLASS__, 'poll_approvals' ) );
+
+        // REST provider endpoint
+        add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
     }
 
     /**
@@ -98,6 +104,9 @@ class BRZ_Smart_Linker {
             'open_new_tab'   => 1,
             'nofollow'       => 1,
             'prevent_self'   => 1,
+            'site_role'      => 'shop', // shop|blog
+            'remote_endpoint'=> '',
+            'remote_api_key' => '',
             'exclude_post_types' => array( 'post', 'product' ),
             'exclude_categories' => '',
             'exclude_html_tags'  => 'h1,h2,h3',
@@ -139,6 +148,7 @@ class BRZ_Smart_Linker {
                 <a class="nav-tab <?php echo ( 'general' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">General</a>
                 <a class="nav-tab <?php echo ( 'strategy' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">Strategy</a>
                 <a class="nav-tab <?php echo ( 'exclusions' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">Exclusions</a>
+                <a class="nav-tab <?php echo ( 'workbench' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
                 <a class="nav-tab <?php echo ( 'maintenance' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">Maintenance</a>
             </h2>
 
@@ -150,6 +160,8 @@ class BRZ_Smart_Linker {
                     self::render_strategy_tab( $settings );
                 } elseif ( 'exclusions' === $active_tab ) {
                     self::render_exclusions_tab( $settings );
+                } elseif ( 'workbench' === $active_tab ) {
+                    self::render_workbench_tab( $settings );
                 } else {
                     self::render_maintenance_tab( $settings );
                 }
@@ -168,6 +180,16 @@ class BRZ_Smart_Linker {
             <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>" />
             <table class="form-table" role="presentation">
                 <tbody>
+                    <tr>
+                        <th scope="row"><label for="brz-sl-role">نقش سایت</label></th>
+                        <td>
+                            <select id="brz-sl-role" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[site_role]">
+                                <option value="shop" <?php selected( $settings['site_role'], 'shop' ); ?>>Shop (WooCommerce)</option>
+                                <option value="blog" <?php selected( $settings['site_role'], 'blog' ); ?>>Blog (WordPress)</option>
+                            </select>
+                            <p class="description">بر اساس نقش، endpoint دادهٔ متناسب برمی‌گرداند.</p>
+                        </td>
+                    </tr>
                     <tr>
                         <th scope="row"><label for="brz-sl-mode">حالت کار</label></th>
                         <td>
@@ -201,9 +223,27 @@ class BRZ_Smart_Linker {
                             <p class="description">آدرس Web App منتشر شده از Google Apps Script.</p>
                         </td>
                     </tr>
+                    <tr>
+                        <th scope="row"><label for="brz-sl-remote-endpoint">Remote API Endpoint</label></th>
+                        <td>
+                            <input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" />
+                            <p class="description">مثال: https://blog.example.com/wp-json/buyruz/v1/inventory</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="brz-sl-remote-key">Remote API Key</label></th>
+                        <td>
+                            <input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" />
+                            <p class="description">برای احراز هویت درخواست Sync استفاده می‌شود.</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
-            <?php submit_button( 'ذخیره تنظیمات' ); ?>
+            <div class="brz-save-bar" style="display:flex;gap:8px;align-items:center;">
+                <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
+                <button type="button" class="button" id="brz-sl-sync-btn">Sync Data</button>
+                <span id="brz-sl-sync-status" class="description"></span>
+            </div>
         </form>
         <?php
     }
@@ -318,6 +358,45 @@ class BRZ_Smart_Linker {
                     <?php submit_button( 'Purge Pending Links', 'delete', 'submit', false, array( 'onclick' => "return confirm('تمامی رکوردهای pending حذف شوند؟');" ) ); ?>
                     <p class="description">فقط رکوردهای در وضعیت pending پاک می‌شوند تا صف صفر شود.</p>
                 </form>
+            </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Workbench UI for manual flow.
+     */
+    private static function render_workbench_tab( $settings ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+        ?>
+        <div class="brz-card brz-card--sub">
+            <div class="brz-card__header">
+                <h3>میز کار لینک‌سازی</h3>
+                <p>سه گام دستی: انتخاب محتوا، ساخت پرامپت، اعمال پاسخ.</p>
+            </div>
+            <div class="brz-card__body">
+                <ol class="brz-checklist">
+                    <li><strong>گام ۱: انتخاب محتوا</strong></li>
+                </ol>
+                <div style="margin-bottom:16px;">
+                    <select id="brz-sl-workbench-post" style="width:100%;" aria-label="انتخاب پست/محصول">
+                        <option value="">-- انتخاب پست یا محصول --</option>
+                    </select>
+                    <button type="button" class="button button-primary" id="brz-sl-analyze-btn" style="margin-top:8px;">Analyze &amp; Prepare Prompt</button>
+                    <span class="description" id="brz-sl-analyze-status"></span>
+                </div>
+
+                <ol class="brz-checklist" start="2">
+                    <li><strong>گام ۲: پرامپت</strong></li>
+                </ol>
+                <textarea id="brz-sl-prompt" class="large-text code" rows="8" readonly></textarea>
+                <button type="button" class="button" id="brz-sl-copy-prompt" style="margin-top:6px;">Copy to Clipboard</button>
+
+                <ol class="brz-checklist" start="3">
+                    <li><strong>گام ۳: پاسخ مدل</strong></li>
+                </ol>
+                <textarea id="brz-sl-response" class="large-text code" rows="8" placeholder='Paste JSON response here'></textarea>
+                <button type="button" class="button button-primary" id="brz-sl-apply-btn" style="margin-top:6px;">Process &amp; Apply</button>
+                <span class="description" id="brz-sl-apply-status"></span>
             </div>
         </div>
         <?php
@@ -458,6 +537,150 @@ class BRZ_Smart_Linker {
     }
 
     /**
+     * Sync remote cache via AJAX.
+     */
+    public static function ajax_sync_cache() {
+        check_ajax_referer( 'brz_smart_linker_save' );
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ), 403 );
+        }
+        $settings = self::get_settings();
+        if ( empty( $settings['remote_endpoint'] ) || empty( $settings['remote_api_key'] ) ) {
+            wp_send_json_error( array( 'message' => 'Remote endpoint/API key تنظیم نشده است.' ) );
+        }
+
+        $type_to_store = ( 'shop' === $settings['site_role'] ) ? 'post' : 'product';
+
+        $response = wp_remote_get( add_query_arg( 'api_key', rawurlencode( $settings['remote_api_key'] ), $settings['remote_endpoint'] ), array( 'timeout' => 20 ) );
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( array( 'message' => 'خطا در درخواست: ' . $response->get_error_message() ) );
+        }
+        $body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $body, true );
+        if ( json_last_error() !== JSON_ERROR_NONE || empty( $data ) ) {
+            wp_send_json_error( array( 'message' => 'پاسخ نامعتبر از ریموت' ) );
+        }
+
+        $items = array();
+        foreach ( $data as $row ) {
+            $items[] = array(
+                'remote_id'    => isset( $row['id'] ) ? (int) $row['id'] : 0,
+                'title'        => isset( $row['title'] ) ? $row['title'] : '',
+                'url'          => isset( $row['permalink'] ) ? $row['permalink'] : '',
+                'categories'   => isset( $row['categories'] ) ? $row['categories'] : array(),
+                'stock_status' => isset( $row['stock_status'] ) ? $row['stock_status'] : '',
+            );
+        }
+
+        BRZ_Smart_Linker_DB::replace_cache( $type_to_store, $items );
+
+        wp_send_json_success( array( 'message' => 'Sync انجام شد (' . count( $items ) . ' آیتم).' ) );
+    }
+
+    /**
+     * Analyze selected post/product and build prompt.
+     */
+    public static function ajax_analyze() {
+        check_ajax_referer( 'brz_smart_linker_save' );
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ), 403 );
+        }
+
+        $post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        if ( ! $post_id ) {
+            wp_send_json_error( array( 'message' => 'پست انتخاب نشده است.' ) );
+        }
+
+        $post = get_post( $post_id );
+        if ( ! $post ) {
+            wp_send_json_error( array( 'message' => 'پست یافت نشد.' ) );
+        }
+
+        $settings   = self::get_settings();
+        $source_type = $post->post_type === 'product' ? 'product' : 'post';
+        // Determine which cache type to pull based on site role
+        $target_type = ( 'blog' === $settings['site_role'] ) ? 'product' : 'post';
+
+        $title_kw = wp_trim_words( $post->post_title, 8, '' );
+        $cache_rows = BRZ_Smart_Linker_DB::search_cache( $target_type, $title_kw, 20 );
+        if ( empty( $cache_rows ) ) {
+            $cache_rows = BRZ_Smart_Linker_DB::search_cache( $target_type, '', 20 );
+        }
+
+        $content = wp_strip_all_tags( $post->post_content );
+        $links   = array();
+        foreach ( $cache_rows as $row ) {
+            $links[] = array(
+                'title' => $row['title'],
+                'url'   => $row['url'],
+                'type'  => $row['type'],
+            );
+        }
+
+        $prompt = "I have this content:\n" . mb_substr( $content, 0, 2000, 'UTF-8' ) . "\n\nLink these keywords to these URLs:\n";
+        foreach ( $links as $l ) {
+            $prompt .= "- " . $l['title'] . " => " . $l['url'] . "\n";
+        }
+        $prompt .= "\nReturn JSON array: [{\"post_id\": " . $post_id . ", \"keyword\": \"...\", \"target_url\": \"...\", \"target_type\": \"" . $target_type . "\"}]";
+
+        wp_send_json_success( array(
+            'prompt' => $prompt,
+            'post'   => array( 'id' => $post_id, 'title' => $post->post_title, 'type' => $source_type ),
+            'links'  => $links,
+        ) );
+    }
+
+    /**
+     * Apply pasted JSON directly to a post.
+     */
+    public static function ajax_apply() {
+        check_ajax_referer( 'brz_smart_linker_save' );
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ), 403 );
+        }
+
+        $raw = isset( $_POST['payload'] ) ? wp_unslash( $_POST['payload'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+        $data = json_decode( $raw, true );
+        if ( json_last_error() !== JSON_ERROR_NONE || ! is_array( $data ) ) {
+            wp_send_json_error( array( 'message' => 'JSON نامعتبر است.' ) );
+        }
+
+        $by_post = array();
+        foreach ( $data as $row ) {
+            $pid = isset( $row['post_id'] ) ? absint( $row['post_id'] ) : 0;
+            if ( ! $pid ) { continue; }
+            $by_post[ $pid ][] = $row;
+        }
+
+        $summary = array( 'products' => 0, 'posts' => 0 );
+
+        foreach ( $by_post as $post_id => $rows ) {
+            $post = get_post( $post_id );
+            if ( ! $post ) { continue; }
+            $content = $post->post_content;
+            $injector = new BRZ_Smart_Linker_Link_Injector( $post_id, $content, $post->post_type );
+            $result   = $injector->inject( $rows );
+            if ( $result['changed'] ) {
+                wp_update_post( array(
+                    'ID'           => $post_id,
+                    'post_content' => $result['content'],
+                ) );
+                foreach ( $rows as $r ) {
+                    if ( isset( $r['target_type'] ) && 'product' === $r['target_type'] ) {
+                        $summary['products']++;
+                    } else {
+                        $summary['posts']++;
+                    }
+                }
+            }
+        }
+
+        wp_send_json_success( array(
+            'message' => sprintf( '%d Links applied (%d Products, %d Posts).', $summary['products'] + $summary['posts'], $summary['products'], $summary['posts'] ),
+        ) );
+    }
+
+    /**
      * Compose unique hash.
      *
      * @param int    $post_id
@@ -556,7 +779,7 @@ class BRZ_Smart_Linker {
                 continue;
             }
 
-            $injector = new BRZ_Smart_Linker_Link_Injector( $post_id, $content );
+            $injector = new BRZ_Smart_Linker_Link_Injector( $post_id, $content, $post->post_type );
             $result   = $injector->inject( $to_inject );
 
             if ( $result['changed'] ) {
@@ -676,6 +899,9 @@ class BRZ_Smart_Linker {
         $cleaned['api_key']       = sanitize_text_field( isset( $input['api_key'] ) ? $input['api_key'] : '' );
         $cleaned['sheet_id']      = sanitize_text_field( isset( $input['sheet_id'] ) ? $input['sheet_id'] : '' );
         $cleaned['sheet_web_app'] = esc_url_raw( isset( $input['sheet_web_app'] ) ? $input['sheet_web_app'] : '' );
+        $cleaned['site_role']     = ( isset( $input['site_role'] ) && 'blog' === $input['site_role'] ) ? 'blog' : 'shop';
+        $cleaned['remote_endpoint']= esc_url_raw( isset( $input['remote_endpoint'] ) ? $input['remote_endpoint'] : '' );
+        $cleaned['remote_api_key'] = sanitize_text_field( isset( $input['remote_api_key'] ) ? $input['remote_api_key'] : '' );
         $cleaned['link_density']  = max( 0, min( 15, (int) ( isset( $input['link_density'] ) ? $input['link_density'] : self::DEFAULT_DENSITY ) ) );
         $cleaned['open_new_tab']  = empty( $input['open_new_tab'] ) ? 0 : 1;
         $cleaned['nofollow']      = empty( $input['nofollow'] ) ? 0 : 1;
@@ -804,8 +1030,163 @@ class BRZ_Smart_Linker {
                     hidden.value = density.value;
                 });
             }
+
+            // Sync button
+            var syncBtn = document.getElementById('brz-sl-sync-btn');
+            if (syncBtn) {
+                var syncStatus = document.getElementById('brz-sl-sync-status');
+                syncBtn.addEventListener('click', function(){
+                    if (!window.ajaxurl) { return; }
+                    syncBtn.disabled = true;
+                    if (syncStatus) { syncStatus.textContent = 'Sync in progress...'; }
+                    var data = new FormData();
+                    data.append('action','brz_smart_linker_sync_cache');
+                    data.append('_wpnonce','<?php echo esc_js( $nonce ); ?>');
+                    fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:data})
+                        .then(function(res){ if(!res.ok){throw new Error('bad');} return res.json(); })
+                        .then(function(json){
+                            var msg = (json && json.data && json.data.message) ? json.data.message : 'Sync completed.';
+                            if (syncStatus) { syncStatus.textContent = msg; }
+                        })
+                        .catch(function(){ if (syncStatus) { syncStatus.textContent = 'Sync failed.'; } })
+                        .finally(function(){ syncBtn.disabled = false; });
+                });
+            }
+
+            // Workbench select with Select2 if available
+            var wbSelect = jQuery && jQuery('#brz-sl-workbench-post');
+            if (wbSelect && wbSelect.select2) {
+                wbSelect.select2({
+                    ajax: {
+                        url: ajaxurl,
+                        dataType: 'json',
+                        delay: 250,
+                        data: function (params) {
+                            return {
+                                action: 'brz_smart_linker_generate',
+                                _wpnonce: '<?php echo wp_create_nonce( 'brz_smart_linker_generate' ); ?>',
+                                s: params.term || ''
+                            };
+                        },
+                        processResults: function (data) {
+                            var items = (data && data.data) ? data.data : [];
+                            return { results: items.map(function(item){ return {id:item.post_id, text:item.post_title}; }) };
+                        }
+                    },
+                    minimumInputLength: 2,
+                    placeholder: 'جستجوی پست یا محصول'
+                });
+            }
+
+            // Analyze button
+            var analyzeBtn = document.getElementById('brz-sl-analyze-btn');
+            if (analyzeBtn) {
+                analyzeBtn.addEventListener('click', function(){
+                    var select = document.getElementById('brz-sl-workbench-post');
+                    if (!select || !select.value) { alert('یک پست/محصول انتخاب کنید'); return; }
+                    var statusEl = document.getElementById('brz-sl-analyze-status');
+                    if (statusEl) statusEl.textContent = 'در حال تحلیل...';
+                    var data = new FormData();
+                    data.append('action','brz_smart_linker_analyze');
+                    data.append('_wpnonce','<?php echo esc_js( $nonce ); ?>');
+                    data.append('post_id', select.value);
+                    fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:data})
+                        .then(res=>{ if(!res.ok) throw new Error('bad'); return res.json(); })
+                        .then(json=>{
+                            if (!json || !json.success) { throw new Error('bad'); }
+                            document.getElementById('brz-sl-prompt').value = json.data.prompt || '';
+                            if (statusEl) statusEl.textContent = 'پرامپت آماده شد.';
+                        })
+                        .catch(()=>{ if (statusEl) statusEl.textContent = 'خطا در تحلیل.'; });
+                });
+            }
+
+            // Copy prompt
+            var copyBtn = document.getElementById('brz-sl-copy-prompt');
+            if (copyBtn) {
+                copyBtn.addEventListener('click', function(){
+                    var ta = document.getElementById('brz-sl-prompt');
+                    if (!ta) return;
+                    ta.select();
+                    document.execCommand('copy');
+                });
+            }
+
+            // Apply response
+            var applyBtn = document.getElementById('brz-sl-apply-btn');
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function(){
+                    var ta = document.getElementById('brz-sl-response');
+                    var statusEl = document.getElementById('brz-sl-apply-status');
+                    if (!ta || !ta.value) { alert('ابتدا JSON را وارد کنید'); return; }
+                    if (statusEl) statusEl.textContent = 'در حال اعمال...';
+                    var data = new FormData();
+                    data.append('action','brz_smart_linker_apply');
+                    data.append('_wpnonce','<?php echo esc_js( $nonce ); ?>');
+                    data.append('payload', ta.value);
+                    fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:data})
+                        .then(res=>{ if(!res.ok) throw new Error('bad'); return res.json(); })
+                        .then(json=>{
+                            if (!json || !json.success) { throw new Error('bad'); }
+                            if (statusEl) statusEl.textContent = json.data.message || 'انجام شد';
+                        })
+                        .catch(()=>{ if (statusEl) statusEl.textContent = 'خطا در اعمال لینک‌ها'; });
+                });
+            }
         })();
         </script>
         <?php
+    }
+
+    /**
+     * Register REST endpoints for inventory provider.
+     */
+    public static function register_rest_routes() {
+        register_rest_route( 'buyruz/v1', '/inventory', array(
+            'methods'  => WP_REST_Server::READABLE,
+            'callback' => array( __CLASS__, 'rest_inventory' ),
+            'permission_callback' => '__return_true',
+        ) );
+    }
+
+    /**
+     * REST callback to expose inventory/posts based on site_role.
+     */
+    public static function rest_inventory( WP_REST_Request $request ) {
+        $settings = self::get_settings();
+        $api_key  = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+        $incoming = $request->get_param( 'api_key' );
+        if ( empty( $api_key ) || $incoming !== $api_key ) {
+            return new WP_REST_Response( array( 'message' => 'Forbidden' ), 403 );
+        }
+
+        $is_shop = ( 'shop' === $settings['site_role'] );
+        if ( $is_shop ) {
+            $posts = get_posts( array(
+                'post_type'      => 'product',
+                'post_status'    => 'publish',
+                'posts_per_page' => 200,
+            ) );
+        } else {
+            $posts = get_posts( array(
+                'post_type'      => 'post',
+                'post_status'    => 'publish',
+                'posts_per_page' => 200,
+            ) );
+        }
+
+        $payload = array();
+        foreach ( $posts as $p ) {
+            $cats = wp_get_post_terms( $p->ID, $is_shop ? 'product_cat' : 'category', array( 'fields' => 'names' ) );
+            $payload[] = array(
+                'id'          => $p->ID,
+                'title'       => get_the_title( $p ),
+                'permalink'   => get_permalink( $p ),
+                'categories'  => $cats,
+                'stock_status'=> $is_shop ? get_post_meta( $p->ID, '_stock_status', true ) : '',
+            );
+        }
+
+        return rest_ensure_response( $payload );
     }
 }

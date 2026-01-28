@@ -14,9 +14,10 @@ class BRZ_Smart_Linker_Link_Injector {
      * @param int    $post_id
      * @param string $html
      */
-    public function __construct( $post_id, $html ) {
+    public function __construct( $post_id, $html, $source_type = 'post' ) {
         $this->post_id       = (int) $post_id;
         $this->original_html = $html;
+        $this->source_type   = $source_type;
         $this->dom           = new DOMDocument();
         libxml_use_internal_errors( true );
         $this->dom->loadHTML( '<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
@@ -29,6 +30,9 @@ class BRZ_Smart_Linker_Link_Injector {
      * @return array {changed: bool, content: string}
      */
     public function inject( array $links ) {
+        // Priority sorting based on rules
+        $links = $this->sort_by_priority( $links );
+
         $inserted_any = false;
 
         foreach ( $links as $link ) {
@@ -44,7 +48,8 @@ class BRZ_Smart_Linker_Link_Injector {
                 continue;
             }
 
-            $injected = $this->inject_single( $keyword, $target_url );
+            $target_type = isset( $link['target_type'] ) ? sanitize_key( $link['target_type'] ) : '';
+            $injected = $this->inject_single( $keyword, $target_url, $target_type );
             $inserted_any = $inserted_any || $injected;
         }
 
@@ -102,13 +107,25 @@ class BRZ_Smart_Linker_Link_Injector {
     /**
      * Inject anchor into first text node containing the keyword.
      */
-    private function inject_single( $keyword, $target_url ) {
+    private function inject_single( $keyword, $target_url, $target_type ) {
         $xpath = new DOMXPath( $this->dom );
         $text_nodes = $xpath->query( '//text()[normalize-space() != ""]' );
         if ( ! $text_nodes ) {
             return false;
         }
 
+        $content_text = $this->dom->textContent;
+        $total_len = strlen( $content_text );
+        $min_offset = 0;
+        $only_bottom = false;
+
+        // Rule: product page linking to blog post -> only bottom 30%
+        if ( 'product' === $this->source_type && 'post' === $target_type ) {
+            $only_bottom = true;
+            $min_offset  = (int) ( $total_len * 0.7 );
+        }
+
+        $offset_so_far = 0;
         foreach ( $text_nodes as $text_node ) {
             if ( $this->inside_anchor( $text_node ) ) {
                 continue;
@@ -116,6 +133,13 @@ class BRZ_Smart_Linker_Link_Injector {
 
             $pos = stripos( $text_node->nodeValue, $keyword );
             if ( false === $pos ) {
+                $offset_so_far += strlen( $text_node->nodeValue );
+                continue;
+            }
+
+            $absolute_pos = $offset_so_far + $pos;
+            if ( $only_bottom && $absolute_pos < $min_offset ) {
+                $offset_so_far += strlen( $text_node->nodeValue );
                 continue;
             }
 
@@ -142,6 +166,8 @@ class BRZ_Smart_Linker_Link_Injector {
 
             $parent->removeChild( $text_node );
             return true;
+
+            $offset_so_far += strlen( $full );
         }
 
         return false;
@@ -161,5 +187,35 @@ class BRZ_Smart_Linker_Link_Injector {
             $node = $node->parentNode;
         }
         return false;
+    }
+
+    /**
+     * Sort links by priority per rules.
+     */
+    private function sort_by_priority( array $links ) {
+        $is_product = ( 'product' === $this->source_type );
+        usort( $links, function( $a, $b ) use ( $is_product ) {
+            $ta = isset( $a['target_type'] ) ? $a['target_type'] : '';
+            $tb = isset( $b['target_type'] ) ? $b['target_type'] : '';
+
+            $pa = $this->priority_score( $ta, $is_product );
+            $pb = $this->priority_score( $tb, $is_product );
+
+            if ( $pa === $pb ) { return 0; }
+            return ( $pa < $pb ) ? 1 : -1; // higher first
+        });
+        return $links;
+    }
+
+    private function priority_score( $target_type, $is_product_source ) {
+        if ( $is_product_source ) {
+            if ( 'product' === $target_type ) { return 3; }
+            if ( 'post' === $target_type ) { return 2; } // caution
+            return 1;
+        } else {
+            if ( 'product' === $target_type ) { return 3; } // high for blog->product
+            if ( 'post' === $target_type ) { return 2; }
+            return 1;
+        }
     }
 }
