@@ -136,7 +136,7 @@ class BRZ_Smart_Linker {
 
         $settings = self::get_settings();
         $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( ! in_array( $active_tab, array( 'general', 'strategy', 'exclusions', 'connections', 'workbench', 'maintenance' ), true ) ) {
+        if ( ! in_array( $active_tab, array( 'general', 'strategy', 'exclusions', 'workbench', 'maintenance' ), true ) ) {
             $active_tab = 'general';
         }
 
@@ -158,7 +158,6 @@ class BRZ_Smart_Linker {
             <h2 class="nav-tab-wrapper">
                 <a class="nav-tab <?php echo ( 'general' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">عمومی</a>
                 <a class="nav-tab <?php echo ( 'strategy' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">استراتژی</a>
-                <a class="nav-tab <?php echo ( 'connections' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=connections' ) ); ?>">اتصالات</a>
                 <a class="nav-tab <?php echo ( 'exclusions' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">مستثنیات</a>
                 <a class="nav-tab <?php echo ( 'workbench' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
                 <a class="nav-tab <?php echo ( 'maintenance' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">نگهداری</a>
@@ -170,8 +169,6 @@ class BRZ_Smart_Linker {
                     self::render_general_tab( $settings );
                 } elseif ( 'strategy' === $active_tab ) {
                     self::render_strategy_tab( $settings );
-                } elseif ( 'connections' === $active_tab ) {
-                    self::render_connections_tab( $settings );
                 } elseif ( 'exclusions' === $active_tab ) {
                     self::render_exclusions_tab( $settings );
                 } elseif ( 'workbench' === $active_tab ) {
@@ -316,13 +313,6 @@ class BRZ_Smart_Linker {
             <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
         </form>
         <?php
-    }
-
-    private static function render_connections_tab( $settings ) {
-        $partial = BRZ_PATH . 'includes/modules/smart-linker/partials-connections.php';
-        if ( file_exists( $partial ) ) {
-            include $partial;
-        }
     }
 
     private static function render_maintenance_tab( $settings ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable

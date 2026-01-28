@@ -103,6 +103,10 @@ class BRZ_Settings {
         add_action( 'wp_ajax_brz_save_settings', array( __CLASS__, 'handle_save_settings_ajax' ) );
         add_action( 'admin_post_brz_delete_compare_table', array( __CLASS__, 'handle_delete_compare_table' ) );
         add_action( 'admin_post_brz_create_compare_table', array( __CLASS__, 'handle_create_compare_table' ) );
+
+        if ( class_exists( 'BRZ_Connections' ) ) {
+            BRZ_Connections::init();
+        }
     }
 
     public static function register() {
