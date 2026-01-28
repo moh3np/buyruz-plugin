@@ -25,8 +25,22 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
                 <span class="description" id="brz-sl-gsheet-status"></span>
                 </td>
             </tr>
-        </tbody>
-    </table>
+            <tr>
+                <th scope="row"><label for="brz-sl-client-id">Google Client ID <span class="dashicons dashicons-editor-help" title="Client ID اپ OAuth که از Google Cloud Console گرفته‌اید."></span></label></th>
+                <td>
+                    <input type="text" id="brz-sl-client-id" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_client_id]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['google_client_id'] ); ?>" />
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="brz-sl-client-secret">Google Client Secret <span class="dashicons dashicons-editor-help" title="Client Secret مربوط به همان OAuth Client. در دیتابیس به صورت امن ذخیره می‌شود."></span></label></th>
+                <td>
+                    <input type="password" id="brz-sl-client-secret" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_client_secret]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['google_client_secret'] ); ?>" />
+                    <p class="description">Redirect URL: <?php echo esc_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_cb' ) ); ?></p>
+                    <a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_start' ), 'brz_gsheet_oauth' ) ); ?>">اتصال به گوگل</a>
+                </td>
+            </tr>
+    </tbody>
+</table>
 
 <h3>Peer-to-Peer (Shop ↔ Blog)</h3>
 <table class="form-table" role="presentation">

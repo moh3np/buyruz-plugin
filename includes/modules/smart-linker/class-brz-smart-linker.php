@@ -52,6 +52,8 @@ class BRZ_Smart_Linker {
         add_action( 'wp_ajax_brz_smart_linker_apply', array( __CLASS__, 'ajax_apply' ) );
         add_action( 'wp_ajax_brz_smart_linker_test_gsheet', array( __CLASS__, 'ajax_test_gsheet' ) );
         add_action( 'wp_ajax_brz_smart_linker_test_peer', array( __CLASS__, 'ajax_test_peer' ) );
+        add_action( 'admin_post_brz_gsheet_oauth_start', array( 'BRZ_GSheet', 'handle_oauth_start' ) );
+        add_action( 'admin_post_brz_gsheet_oauth_cb', array( 'BRZ_GSheet', 'handle_oauth_callback' ) );
 
         // Cron / background
         add_action( 'init', array( __CLASS__, 'maybe_migrate_table' ), 1 );
@@ -102,6 +104,8 @@ class BRZ_Smart_Linker {
             'api_key'        => '',
             'sheet_id'       => '',
             'sheet_web_app'  => '',
+            'google_client_id' => '',
+            'google_client_secret' => '',
             'link_density'   => self::DEFAULT_DENSITY,
             'open_new_tab'   => 1,
             'nofollow'       => 1,
@@ -677,11 +681,11 @@ class BRZ_Smart_Linker {
         }
         $settings = self::get_settings();
         if ( class_exists( 'BRZ_GSheet' ) ) {
-            $resp = BRZ_GSheet::send_route( 'ping', array( 'ping' => 'pong' ), $settings );
+            $resp = BRZ_GSheet::test_connection( $settings );
             if ( is_wp_error( $resp ) ) {
                 wp_send_json_error( array( 'message' => $resp->get_error_message() ) );
             }
-            wp_send_json_success( array( 'message' => 'ارتباط با وب‌اپ برقرار است.' ) );
+            wp_send_json_success( array( 'message' => 'ارتباط با Google Sheet برقرار است.' ) );
         }
         wp_send_json_error( array( 'message' => 'ماژول GSheet در دسترس نیست.' ) );
     }
@@ -930,6 +934,8 @@ class BRZ_Smart_Linker {
         $cleaned['api_key']       = sanitize_text_field( isset( $input['api_key'] ) ? $input['api_key'] : '' );
         $cleaned['sheet_id']      = sanitize_text_field( isset( $input['sheet_id'] ) ? $input['sheet_id'] : '' );
         $cleaned['sheet_web_app'] = esc_url_raw( isset( $input['sheet_web_app'] ) ? $input['sheet_web_app'] : '' );
+        $cleaned['google_client_id']     = sanitize_text_field( isset( $input['google_client_id'] ) ? $input['google_client_id'] : '' );
+        $cleaned['google_client_secret'] = sanitize_text_field( isset( $input['google_client_secret'] ) ? $input['google_client_secret'] : '' );
         $cleaned['site_role']     = ( isset( $input['site_role'] ) && 'blog' === $input['site_role'] ) ? 'blog' : 'shop';
         $cleaned['remote_endpoint']= esc_url_raw( isset( $input['remote_endpoint'] ) ? $input['remote_endpoint'] : '' );
         $cleaned['remote_api_key'] = sanitize_text_field( isset( $input['remote_api_key'] ) ? $input['remote_api_key'] : '' );
