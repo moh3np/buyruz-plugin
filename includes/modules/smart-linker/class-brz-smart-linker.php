@@ -50,6 +50,8 @@ class BRZ_Smart_Linker {
         add_action( 'wp_ajax_brz_smart_linker_sync_cache', array( __CLASS__, 'ajax_sync_cache' ) );
         add_action( 'wp_ajax_brz_smart_linker_analyze', array( __CLASS__, 'ajax_analyze' ) );
         add_action( 'wp_ajax_brz_smart_linker_apply', array( __CLASS__, 'ajax_apply' ) );
+        add_action( 'wp_ajax_brz_smart_linker_test_gsheet', array( __CLASS__, 'ajax_test_gsheet' ) );
+        add_action( 'wp_ajax_brz_smart_linker_test_peer', array( __CLASS__, 'ajax_test_peer' ) );
 
         // Cron / background
         add_action( 'init', array( __CLASS__, 'maybe_migrate_table' ), 1 );
@@ -130,7 +132,7 @@ class BRZ_Smart_Linker {
 
         $settings = self::get_settings();
         $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( ! in_array( $active_tab, array( 'general', 'strategy', 'exclusions', 'workbench', 'maintenance' ), true ) ) {
+        if ( ! in_array( $active_tab, array( 'general', 'strategy', 'exclusions', 'connections', 'workbench', 'maintenance' ), true ) ) {
             $active_tab = 'general';
         }
 
@@ -151,6 +153,7 @@ class BRZ_Smart_Linker {
             <h2 class="nav-tab-wrapper">
                 <a class="nav-tab <?php echo ( 'general' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">General</a>
                 <a class="nav-tab <?php echo ( 'strategy' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">Strategy</a>
+                <a class="nav-tab <?php echo ( 'connections' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=connections' ) ); ?>">Connections</a>
                 <a class="nav-tab <?php echo ( 'exclusions' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">Exclusions</a>
                 <a class="nav-tab <?php echo ( 'workbench' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
                 <a class="nav-tab <?php echo ( 'maintenance' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">Maintenance</a>
@@ -162,6 +165,8 @@ class BRZ_Smart_Linker {
                     self::render_general_tab( $settings );
                 } elseif ( 'strategy' === $active_tab ) {
                     self::render_strategy_tab( $settings );
+                } elseif ( 'connections' === $active_tab ) {
+                    self::render_connections_tab( $settings );
                 } elseif ( 'exclusions' === $active_tab ) {
                     self::render_exclusions_tab( $settings );
                 } elseif ( 'workbench' === $active_tab ) {
@@ -213,40 +218,10 @@ class BRZ_Smart_Linker {
                             <p class="description">برای آینده؛ در حال حاضر اختیاری است.</p>
                         </td>
                     </tr>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-sheet-id">Google Sheet ID</label></th>
-                        <td>
-                            <input type="text" id="brz-sl-sheet-id" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[sheet_id]" class="regular-text" value="<?php echo esc_attr( $settings['sheet_id'] ); ?>" />
-                            <p class="description" dir="ltr">مثال: 1Abc...xyz</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-sheet-url">Web App URL</label></th>
-                        <td>
-                            <input type="url" id="brz-sl-sheet-url" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[sheet_web_app]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['sheet_web_app'] ); ?>" />
-                            <p class="description">آدرس Web App منتشر شده از Google Apps Script.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-remote-endpoint">Remote API Endpoint</label></th>
-                        <td>
-                            <input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" />
-                            <p class="description">مثال: https://blog.example.com/wp-json/buyruz/v1/inventory</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-remote-key">Remote API Key</label></th>
-                        <td>
-                            <input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" />
-                            <p class="description">برای احراز هویت درخواست Sync استفاده می‌شود.</p>
-                        </td>
-                    </tr>
                 </tbody>
             </table>
             <div class="brz-save-bar" style="display:flex;gap:8px;align-items:center;">
                 <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
-                <button type="button" class="button" id="brz-sl-sync-btn">Sync Data</button>
-                <span id="brz-sl-sync-status" class="description"></span>
             </div>
         </form>
         <?php
@@ -336,6 +311,13 @@ class BRZ_Smart_Linker {
             <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
         </form>
         <?php
+    }
+
+    private static function render_connections_tab( $settings ) {
+        $partial = BRZ_PATH . 'includes/modules/smart-linker/partials-connections.php';
+        if ( file_exists( $partial ) ) {
+            include $partial;
+        }
     }
 
     private static function render_maintenance_tab( $settings ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
@@ -682,6 +664,48 @@ class BRZ_Smart_Linker {
         wp_send_json_success( array(
             'message' => sprintf( '%d Links applied (%d Products, %d Posts).', $summary['products'] + $summary['posts'], $summary['products'], $summary['posts'] ),
         ) );
+    }
+
+    /**
+     * Test connectivity to Google Sheet Web App.
+     */
+    public static function ajax_test_gsheet() {
+        check_ajax_referer( 'brz_smart_linker_save' );
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ), 403 );
+        }
+        $settings = self::get_settings();
+        if ( class_exists( 'BRZ_GSheet' ) ) {
+            $resp = BRZ_GSheet::send_route( 'ping', array( 'ping' => 'pong' ), $settings );
+            if ( is_wp_error( $resp ) ) {
+                wp_send_json_error( array( 'message' => $resp->get_error_message() ) );
+            }
+            wp_send_json_success( array( 'message' => 'ارتباط با وب‌اپ برقرار است.' ) );
+        }
+        wp_send_json_error( array( 'message' => 'ماژول GSheet در دسترس نیست.' ) );
+    }
+
+    /**
+     * Test remote peer connectivity.
+     */
+    public static function ajax_test_peer() {
+        check_ajax_referer( 'brz_smart_linker_save' );
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ), 403 );
+        }
+        $settings = self::get_settings();
+        if ( empty( $settings['remote_endpoint'] ) ) {
+            wp_send_json_error( array( 'message' => 'Remote endpoint تنظیم نشده است.' ) );
+        }
+        $response = wp_remote_get( add_query_arg( 'api_key', rawurlencode( $settings['remote_api_key'] ), $settings['remote_endpoint'] ), array( 'timeout' => 15 ) );
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( array( 'message' => $response->get_error_message() ) );
+        }
+        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+        if ( json_last_error() !== JSON_ERROR_NONE ) {
+            wp_send_json_error( array( 'message' => 'پاسخ نامعتبر از ریموت' ) );
+        }
+        wp_send_json_success( array( 'message' => 'ارتباط موفق. آیتم‌ها: ' . count( (array) $data ) ) );
     }
 
     /**
@@ -1056,6 +1080,32 @@ class BRZ_Smart_Linker {
                         })
                         .catch(function(){ if (syncStatus) { syncStatus.textContent = 'Sync failed.'; } })
                         .finally(function(){ syncBtn.disabled = false; });
+                });
+            }
+
+            // Test GSheet
+            var testG = document.getElementById('brz-sl-test-gsheet');
+            if (testG) {
+                var statusG = document.getElementById('brz-sl-gsheet-status');
+                testG.addEventListener('click', function(){
+                    if (statusG) statusG.textContent = 'Testing...';
+                    fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:(function(){var d=new FormData();d.append('action','brz_smart_linker_test_gsheet');d.append('_wpnonce','<?php echo esc_js( $nonce ); ?>');return d;})()})
+                        .then(res=>{if(!res.ok)throw new Error('bad');return res.json();})
+                        .then(json=>{ if(statusG) statusG.textContent = (json && json.data && json.data.message) ? json.data.message : 'OK'; })
+                        .catch(()=>{ if(statusG) statusG.textContent = 'خطا در تست'; });
+                });
+            }
+
+            // Test Peer
+            var testP = document.getElementById('brz-sl-test-peer');
+            if (testP) {
+                var statusP = document.getElementById('brz-sl-peer-status');
+                testP.addEventListener('click', function(){
+                    if (statusP) statusP.textContent = 'Testing...';
+                    fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:(function(){var d=new FormData();d.append('action','brz_smart_linker_test_peer');d.append('_wpnonce','<?php echo esc_js( $nonce ); ?>');return d;})()})
+                        .then(res=>{if(!res.ok)throw new Error('bad');return res.json();})
+                        .then(json=>{ if(statusP) statusP.textContent = (json && json.data && json.data.message) ? json.data.message : 'OK'; })
+                        .catch(()=>{ if(statusP) statusP.textContent = 'خطا در تست'; });
                 });
             }
 
