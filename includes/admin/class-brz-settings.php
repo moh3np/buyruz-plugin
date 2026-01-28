@@ -50,6 +50,10 @@ class BRZ_Settings {
                 'label' => 'تنظیمات عمومی',
             ),
             array(
+                'slug'  => 'buyruz-connections',
+                'label' => 'اتصالات داده',
+            ),
+            array(
                 'slug'  => 'buyruz-style',
                 'label' => 'استایل',
             ),
@@ -268,6 +272,13 @@ class BRZ_Settings {
 
         if ( 'buyruz-style' === $page ) {
             self::render_style_settings();
+            return;
+        }
+
+        if ( 'buyruz-connections' === $page ) {
+            $_GET['page'] = 'buyruz-module-smart_linker'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            $_GET['tab']  = 'connections'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            self::render_module_settings( 'smart_linker' );
             return;
         }
 

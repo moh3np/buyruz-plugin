@@ -139,24 +139,25 @@ class BRZ_Smart_Linker {
         self::render_notices();
         ?>
         <style>
-        /* جلوگیری از تکرار هدر در این تب در صورت دوبار رندر شدن hero */
-        .brz-admin-wrap .brz-hero + .brz-hero { display: none; }
+        /* جلوگیری از تکرار هدر و مسیرها در صفحه لینک‌ساز هوشمند */
+        .brz-admin-wrap .brz-hero:not(:first-of-type) { display: none; }
+        .brz-admin-wrap .brz-side-nav:not(:first-of-type) { display: none; }
         </style>
         <div class="brz-section-header">
             <div>
-                <h2>Smart Internal Linking</h2>
-                <p>لینک‌سازی داخلی با سینک دوطرفه بین وردپرس و Google Sheet.</p>
+                <h2>لینک‌ساز هوشمند</h2>
+                <p>لینک‌سازی داخلی با سینک دوطرفه بین سایت‌ها و Google Sheet.</p>
             </div>
         </div>
 
         <div class="brz-card">
             <h2 class="nav-tab-wrapper">
-                <a class="nav-tab <?php echo ( 'general' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">General</a>
-                <a class="nav-tab <?php echo ( 'strategy' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">Strategy</a>
-                <a class="nav-tab <?php echo ( 'connections' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=connections' ) ); ?>">Connections</a>
-                <a class="nav-tab <?php echo ( 'exclusions' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">Exclusions</a>
+                <a class="nav-tab <?php echo ( 'general' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">عمومی</a>
+                <a class="nav-tab <?php echo ( 'strategy' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">استراتژی</a>
+                <a class="nav-tab <?php echo ( 'connections' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=connections' ) ); ?>">اتصالات</a>
+                <a class="nav-tab <?php echo ( 'exclusions' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">مستثنیات</a>
                 <a class="nav-tab <?php echo ( 'workbench' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
-                <a class="nav-tab <?php echo ( 'maintenance' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">Maintenance</a>
+                <a class="nav-tab <?php echo ( 'maintenance' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">نگهداری</a>
             </h2>
 
             <div class="brz-card__body">
