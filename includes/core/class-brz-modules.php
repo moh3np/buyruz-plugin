@@ -26,7 +26,7 @@ class BRZ_Modules {
                 'class'       => 'BRZ_Smart_Linker',
             ),
             'bi_exporter' => array(
-                'label'       => 'هوش تجاری',
+                'label'       => 'تحلیل سایت',
                 'description' => 'خروجی JSON هوش تجاری و سئو برای اتصال به LLM.',
                 'class'       => 'BRZ_BI_Exporter',
             ),

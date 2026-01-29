@@ -44,7 +44,7 @@ class BRZ_Connections {
                     <a class="nav-tab nav-tab-active" data-brz-tab="gsheet">گوگل شیت</a>
                     <a class="nav-tab" data-brz-tab="peer">فروشگاه / بلاگ</a>
                     <a class="nav-tab" data-brz-tab="ai">API هوش مصنوعی</a>
-                    <a class="nav-tab" data-brz-tab="bi">گزارش BI</a>
+                    <a class="nav-tab" data-brz-tab="bi">تحلیل سایت</a>
                 </h2>
                 <div class="brz-card__body">
                     <div class="brz-tab-pane" data-pane="gsheet">
@@ -163,7 +163,7 @@ class BRZ_Connections {
         $download_url = wp_nonce_url( admin_url( 'admin-post.php?action=brz_bi_exporter_download' ), 'brz_bi_exporter_download' );
         ?>
         <div class="brz-card brz-card--sub">
-            <div class="brz-card__header"><h3>گزارش هوش تجاری (BI Dump)</h3></div>
+            <div class="brz-card__header"><h3>تحلیل سایت (BI Dump)</h3></div>
             <div class="brz-card__body">
                 <p class="description">گزارش JSON فشرده از تمام محصولات/پست‌ها برای ممیزی سئو و فروش. پردازش در پس‌زمینه انجام می‌شود.</p>
                 <?php if ( ! $enabled ) : ?>

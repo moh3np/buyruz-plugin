@@ -51,7 +51,7 @@ class BRZ_Settings {
             ),
             array(
                 'slug'  => 'buyruz-connections',
-                'label' => 'اتصالات داده',
+                'label' => 'ارتباطات',
             ),
             array(
                 'slug'  => 'buyruz-style',
