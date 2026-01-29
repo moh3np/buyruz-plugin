@@ -319,9 +319,6 @@ class BRZ_Settings {
                     <span class="brz-hero__version">نسخه <?php echo esc_html( BRZ_VERSION ); ?></span>
                 </div>
             </div>
-            <div class="brz-hero__aside">
-                <div class="brz-hero__badge">نسخه افزونه</div>
-            </div>
         </div>
         <?php
     }
