@@ -301,9 +301,8 @@ class BRZ_Settings {
         <div class="brz-admin-wrap" dir="rtl" style="--brz-brand: <?php echo $brand; ?>;">
             <div id="brz-snackbar" class="brz-snackbar" aria-live="polite"></div>
             <?php self::render_hero( $active_slug ); ?>
-            <div class="brz-layout">
-                <?php self::render_side_nav( $active_slug ); ?>
-                <div class="brz-content">
+            <div class="brz-layout brz-layout--single" style="display:block;">
+                <div class="brz-content" style="margin-right:0;">
                     <?php call_user_func( $content_cb ); ?>
                 </div>
             </div>
@@ -324,22 +323,6 @@ class BRZ_Settings {
                 <div class="brz-hero__badge">نسخه افزونه</div>
             </div>
         </div>
-        <?php
-    }
-
-    private static function render_side_nav( $active_slug ) {
-        ?>
-        <aside class="brz-side-nav">
-            <div class="brz-side-nav__title">مسیرها</div>
-            <nav class="brz-side-nav__items" aria-label="ناوبری تنظیمات بایروز">
-                <?php foreach ( self::nav_items() as $item ) : ?>
-                    <?php $is_active = ( $item['slug'] === $active_slug ); ?>
-                    <a class="brz-side-nav__item <?php echo $is_active ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $item['slug'] ) ); ?>">
-                        <span><?php echo esc_html( $item['label'] ); ?></span>
-                    </a>
-                <?php endforeach; ?>
-            </nav>
-        </aside>
         <?php
     }
 
