@@ -35,7 +35,7 @@ class BRZ_Enqueue {
 
         // CSS
         if ( $should_load_faq && ! empty( $opts['enable_css'] ) ) {
-            $brand = isset($opts['brand_color']) ? $opts['brand_color'] : '#ff5668';
+            $brand = isset($opts['brand_color']) ? $opts['brand_color'] : '#1a73e8';
             $css_vars = ':root{--brz-brand: '.$brand.';}';
 
             if ( ! empty( $opts['inline_css'] ) ) {

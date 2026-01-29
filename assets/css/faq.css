@@ -1,32 +1,39 @@
+/* ==========================================================================
+   Buyruz FAQ Accordion - Material Design Style
+   ========================================================================== */
+
 :root {
-  --brz-brand: #BRZ_BRAND#;
+  --brz-brand: #1a73e8;
   --brz-bg: #ffffff;
-  --brz-border: #e2e8f0;
-  --brz-text: #1e293b;
-  --brz-text-muted: #64748b;
-  --brz-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  --brz-border: #dadce0;
+  --brz-text: #202124;
+  --brz-text-muted: #5f6368;
+  --brz-shadow-sm: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+  --brz-shadow-md: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
   --brz-radius: 12px;
 }
 
 /* Container Reset */
-.rank-math-block, .rank-math-list, #rank-math-faq {
-  margin: 2rem 0;
+.rank-math-block,
+.rank-math-list,
+#rank-math-faq {
+  margin: 1.5rem 0;
   font-family: inherit;
 }
 
-/* Item Card Style */
+/* FAQ Item Card */
 .rank-math-list-item,
 .rank-math-faq-item,
 .rank-math-list .rank-math-list-item,
 #rank-math-faq .rank-math-list-item {
   border: 1px solid var(--brz-border) !important;
   border-radius: var(--brz-radius) !important;
-  margin-bottom: 12px !important;
+  margin-bottom: 10px !important;
   background: var(--brz-bg) !important;
   overflow: hidden !important;
-  transition: all 0.25s ease !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
   position: relative !important;
-  box-shadow: none; /* Reset potential theme shadows first */
+  box-shadow: none !important;
 }
 
 /* Hover Effect */
@@ -35,8 +42,7 @@
 .rank-math-list .rank-math-list-item:hover,
 #rank-math-faq .rank-math-list-item:hover {
   border-color: var(--brz-brand) !important;
-  box-shadow: var(--brz-shadow) !important;
-  transform: translateY(-1px);
+  box-shadow: var(--brz-shadow-sm) !important;
 }
 
 /* Active State */
@@ -46,16 +52,16 @@
 #rank-math-faq .rank-math-list-item.brz-active {
   border-color: var(--brz-brand) !important;
   background: #fff !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: var(--brz-shadow-md) !important;
 }
 
 /* Question Header */
 .rank-math-question {
-  padding: 18px 24px !important;
+  padding: 16px 20px !important;
   margin: 0 !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  color: var(--brz-text);
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--brz-text) !important;
   cursor: pointer !important;
   display: flex !important;
   justify-content: space-between !important;
@@ -73,42 +79,42 @@
 .rank-math-faq-item.brz-active .rank-math-question,
 .rank-math-list .rank-math-list-item.brz-active .rank-math-question,
 #rank-math-faq .rank-math-list-item.brz-active .rank-math-question {
-  color: var(--brz-brand);
+  color: var(--brz-brand) !important;
 }
 
-/* Icon */
+/* Expand Icon (Material Design style) */
 .rank-math-question::after {
-  content: '+' !important;
+  content: '' !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 24px !important;
   height: 24px !important;
-  font-size: 24px !important;
-  font-weight: 300 !important;
-  color: var(--brz-brand) !important;
-  margin-right: 16px !important;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin-right: 12px !important;
   flex-shrink: 0 !important;
-  line-height: 1 !important;
-  background: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%235f6368' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .rank-math-list-item.brz-active .rank-math-question::after,
 .rank-math-faq-item.brz-active .rank-math-question::after,
 .rank-math-list .rank-math-list-item.brz-active .rank-math-question::after,
 #rank-math-faq .rank-math-list-item.brz-active .rank-math-question::after {
-  transform: rotate(45deg) !important;
+  transform: rotate(180deg) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
 }
 
 /* Answer Body */
 .rank-math-answer {
   max-height: 0 !important;
   overflow: hidden !important;
-  padding: 0 24px !important;
+  padding: 0 20px !important;
   color: var(--brz-text-muted) !important;
-  font-size: 15px !important;
-  line-height: 1.8 !important;
+  font-size: 14px !important;
+  line-height: 1.75 !important;
   opacity: 0 !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   background: #fff !important;
@@ -120,32 +126,34 @@
 .rank-math-faq-item.brz-active .rank-math-answer,
 .rank-math-list .rank-math-list-item.brz-active .rank-math-answer,
 #rank-math-faq .rank-math-list-item.brz-active .rank-math-answer {
-  padding-bottom: 24px !important;
+  padding-bottom: 20px !important;
   opacity: 1 !important;
-  max-height: 1000px !important; /* Fallback if JS fails to set height */
+  max-height: 1000px !important;
 }
 
 /* Mobile Optimization */
 @media (max-width: 768px) {
+
   .rank-math-list-item,
   .rank-math-faq-item {
-    border-radius: 10px !important;
-    margin-bottom: 10px !important;
+    border-radius: 8px !important;
+    margin-bottom: 8px !important;
   }
 
   .rank-math-question {
     padding: 14px 16px !important;
-    font-size: 15px !important;
+    font-size: 14px !important;
   }
 
   .rank-math-question::after {
-    font-size: 20px !important;
-    margin-right: 12px !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin-right: 10px !important;
   }
 
   .rank-math-answer {
     padding: 0 16px !important;
-    font-size: 14px !important;
+    font-size: 13px !important;
   }
 
   .rank-math-list-item.brz-active .rank-math-answer,

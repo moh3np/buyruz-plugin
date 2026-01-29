@@ -1,23 +1,26 @@
-/* هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید. */
+/* ==========================================================================
+   Buyruz Comparison Table - Material Design Style
+   هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید
+   ========================================================================== */
 
 /* Container for centering */
 .buyruz-table-container {
   display: flex;
   justify-content: center;
   width: 100%;
-  margin: 32px 0;
-  padding: 0 4px;
+  margin: 24px 0;
+  padding: 0 8px;
   box-sizing: border-box;
 }
 
 /* Main Card Wrapper */
 .buyruz-table-wrap {
   width: 100%;
-  max-width: 850px; /* Optimal reading width */
+  max-width: 800px;
   background: #ffffff;
-  border-radius: 20px; /* Modern rounded corners */
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08); /* Soft, modern shadow */
+  border-radius: 12px;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
   overflow: hidden;
   font-family: inherit;
   direction: rtl;
@@ -27,13 +30,13 @@
 .buyruz-table-wrap .buyruz-table-title {
   caption-side: top;
   display: table-caption;
-  background: #f8fafc;
-  color: #0f172a;
-  font-size: 1.15rem;
-  font-weight: 800;
-  padding: 18px 24px;
+  background: #f8f9fa;
+  color: #202124;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 20px;
   margin: 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #dadce0;
   text-align: center;
   line-height: 1.4;
 }
@@ -43,34 +46,37 @@
   width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: #334155;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: #3c4043;
   margin: 0;
 }
 
 /* Cells */
 .buyruz-table-wrap .buyruz-table th,
 .buyruz-table-wrap .buyruz-table td {
-  padding: 16px 20px;
+  padding: 12px 16px;
   text-align: center;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #e8eaed;
   vertical-align: middle;
 }
 
 /* Header Cells */
 .buyruz-table-wrap .buyruz-table thead th {
-  background-color: #f8fafc;
-  color: #0f172a;
-  font-weight: 800;
+  background-color: #f8f9fa;
+  color: #202124;
+  font-weight: 600;
   white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 /* Row Header Cells (First Column) */
 .buyruz-table-wrap .buyruz-table tbody th {
-  font-weight: normal; /* Reset bold for body th unless needed */
-  color: #334155;
+  font-weight: 500;
+  color: #3c4043;
+  background: #fafbfc;
 }
 
 /* Row Styling */
@@ -81,34 +87,37 @@
 
 .buyruz-table-wrap .buyruz-table tr:hover td,
 .buyruz-table-wrap .buyruz-table tr:hover th {
-  background-color: #f8fafc;
-  transition: background-color 0.2s ease;
+  background-color: #f1f3f4;
+  transition: background-color 0.15s ease;
 }
 
-/* Mobile Responsive (Mobile First Approach) */
+/* Mobile Responsive */
 @media (max-width: 768px) {
   .buyruz-table-container {
-    margin: 20px 0;
+    margin: 16px 0;
+    padding: 0 4px;
   }
-  
+
   .buyruz-table-wrap {
-    border-radius: 16px;
-    box-shadow: 0 8px 20px -6px rgba(15, 23, 42, 0.06);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
   }
 
   .buyruz-table-wrap .buyruz-table-title {
     display: block;
     width: 100%;
     box-sizing: border-box;
+    font-size: 0.9375rem;
+    padding: 12px 16px;
   }
 
   .buyruz-table-wrap .buyruz-table thead {
     display: none;
   }
 
-  .buyruz-table-wrap .buyruz-table, 
-  .buyruz-table-wrap .buyruz-table tbody, 
-  .buyruz-table-wrap .buyruz-table tr, 
+  .buyruz-table-wrap .buyruz-table,
+  .buyruz-table-wrap .buyruz-table tbody,
+  .buyruz-table-wrap .buyruz-table tr,
   .buyruz-table-wrap .buyruz-table td,
   .buyruz-table-wrap .buyruz-table th {
     display: block;
@@ -116,9 +125,10 @@
   }
 
   .buyruz-table-wrap .buyruz-table tr {
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e8eaed;
+    padding: 8px 0;
   }
-  
+
   .buyruz-table-wrap .buyruz-table tr:last-child {
     border-bottom: none;
   }
@@ -128,11 +138,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* text-align: left; Removed to preserve RTL text alignment */
-    padding: 14px 18px;
-    border-bottom: 1px dashed #f1f5f9;
-    font-size: 0.9rem;
-    font-weight: normal;
+    padding: 10px 16px;
+    border-bottom: 1px dashed #e8eaed;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    background: transparent;
   }
 
   .buyruz-table-wrap .buyruz-table td:last-child,
@@ -143,9 +153,9 @@
   .buyruz-table-wrap .buyruz-table td::before,
   .buyruz-table-wrap .buyruz-table th::before {
     content: attr(data-label);
-    font-weight: 800;
-    color: #64748b;
-    margin-left: 16px;
+    font-weight: 600;
+    color: #5f6368;
+    margin-left: 12px;
     text-align: right;
     flex-shrink: 0;
     max-width: 45%;

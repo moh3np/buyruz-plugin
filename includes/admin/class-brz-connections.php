@@ -23,7 +23,7 @@ class BRZ_Connections {
             return;
         }
         $settings = BRZ_Smart_Linker::get_settings();
-        $brand = esc_attr( BRZ_Settings::get( 'brand_color', '#ff5668' ) );
+        $brand = esc_attr( BRZ_Settings::get( 'brand_color', '#1a73e8' ) );
         ?>
         <div class="brz-admin-wrap" dir="rtl" style="--brz-brand: <?php echo $brand; ?>;">
             <div class="brz-hero">

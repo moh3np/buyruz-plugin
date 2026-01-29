@@ -138,9 +138,9 @@ class BRZ_Settings {
         }, 'brz-settings', 'brz_main' );
 
         add_settings_field( 'brand_color', 'رنگ برند', function(){
-            $v = esc_attr( self::get( 'brand_color', '#ff5668' ) );
+            $v = esc_attr( self::get( 'brand_color', '#1a73e8' ) );
             echo '<input type="text" class="regular-text" name="'.BRZ_OPTION.'[brand_color]" value="'.$v.'" />';
-            echo '<p class="description">مثال: #ff5668</p>';
+            echo '<p class="description">مثال: #1a73e8</p>';
         }, 'brz-settings', 'brz_main' );
 
         add_settings_field( 'enable_js', 'فعال‌سازی JS', function(){
@@ -296,7 +296,7 @@ class BRZ_Settings {
     }
 
     private static function render_shell( $active_slug, callable $content_cb ) {
-        $brand = esc_attr( self::get( 'brand_color', '#ff5668' ) );
+        $brand = esc_attr( self::get( 'brand_color', '#1a73e8' ) );
         ?>
         <div class="brz-admin-wrap" dir="rtl" style="--brz-brand: <?php echo $brand; ?>;">
             <div id="brz-snackbar" class="brz-snackbar" aria-live="polite"></div>
@@ -1000,7 +1000,7 @@ class BRZ_Settings {
         wp_send_json_success(
             array(
                 'message' => 'تنظیمات ذخیره شد.',
-                'accent'  => isset( $sanitized['brand_color'] ) ? $sanitized['brand_color'] : self::get( 'brand_color', '#ff5668' ),
+                'accent'  => isset( $sanitized['brand_color'] ) ? $sanitized['brand_color'] : self::get( 'brand_color', '#1a73e8' ),
                 'options' => $extra_saved,
             )
         );
