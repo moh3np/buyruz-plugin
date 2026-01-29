@@ -794,7 +794,6 @@ class BRZ_BI_Exporter {
         $state        = self::current_state();
         $regen_nonce  = wp_create_nonce( 'brz_bi_exporter_regen' );
         $status_nonce = wp_create_nonce( 'brz_bi_exporter_status' );
-        $save_nonce   = wp_create_nonce( 'brz_bi_exporter_save' );
         $download_url = wp_nonce_url( admin_url( 'admin-post.php?action=brz_bi_exporter_download' ), 'brz_bi_exporter_download' );
 
         $status_text  = 'منتظر اولین اجرا';
@@ -809,7 +808,7 @@ class BRZ_BI_Exporter {
         <div class="brz-section-header">
             <div>
                 <h2>تحلیل سایت</h2>
-                <p>خروجی JSON فشرده از فروشگاه/بلاگ برای ممیزی سئو و داده.</p>
+                <p>اجرای پس‌زمینه و دریافت فایل JSON فشرده برای ممیزی سئو و داده.</p>
             </div>
             <div class="brz-section-actions">
                 <span class="brz-status <?php echo ( ! empty( $state['status'] ) && 'finished' === $state['status'] ) ? 'is-on' : 'is-off'; ?>"><?php echo esc_html( $status_text ); ?></span>
@@ -817,57 +816,6 @@ class BRZ_BI_Exporter {
         </div>
 
         <div class="brz-single-column">
-            <div class="brz-card">
-                <div class="brz-card__header">
-                    <h3>تنظیمات ارتباط</h3>
-                    <p>کلید API و آدرس ریموت برای ادغام دو سایت.</p>
-                </div>
-                <div class="brz-card__body">
-                    <form id="brz-bi-settings-form" class="brz-settings-form">
-                        <input type="hidden" name="_wpnonce" value="<?php echo esc_attr( $save_nonce ); ?>" />
-                        <table class="form-table" role="presentation">
-                            <tbody>
-                                <tr>
-                                    <th scope="row"><label for="brz-bi-api-key">کلید API (محافظت از endpoint)</label></th>
-                                    <td>
-                                        <input type="text" id="brz-bi-api-key" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[api_key]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['api_key'] ); ?>" autocomplete="off" />
-                                        <p class="description">برای درخواست به /wp-json/buyruz/v1/full-dump باید همین کلید را در query یا هدر X-Buyruz-Key ارسال کنید.</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><label for="brz-bi-remote-endpoint">Remote Endpoint</label></th>
-                                    <td>
-                                        <input type="url" id="brz-bi-remote-endpoint" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" placeholder="https://peer-site.com/wp-json/buyruz/v1/full-dump" />
-                                        <p class="description">آدرس سرور مقابل (Shop ↔ Blog). درخواست با scope=local ارسال می‌شود تا از لوپ جلوگیری شود.</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><label for="brz-bi-remote-key">Remote API Key</label></th>
-                                    <td>
-                                        <input type="text" id="brz-bi-remote-key" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[remote_api_key]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" />
-                                        <p class="description">همان کلیدی که روی سایت مقابل برای full-dump تنظیم شده است.</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"><label for="brz-bi-role">نقش این سایت</label></th>
-                                    <td>
-                                        <select id="brz-bi-role" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[site_role]">
-                                            <option value="shop" <?php selected( $settings['site_role'], 'shop' ); ?>>Shop (WooCommerce)</option>
-                                            <option value="blog" <?php selected( $settings['site_role'], 'blog' ); ?>>Blog (WordPress)</option>
-                                        </select>
-                                        <p class="description">برای ساخت master JSON، گره shop/blog تشخیص داده می‌شود.</p>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div class="brz-save-bar" style="display:flex;gap:8px;align-items:center;">
-                            <button type="submit" class="button button-primary">ذخیره تنظیمات</button>
-                            <span id="brz-bi-save-status" class="description"></span>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
             <div class="brz-card">
                 <div class="brz-card__header">
                     <h3>اجرای پس‌زمینه</h3>

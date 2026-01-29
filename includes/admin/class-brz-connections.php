@@ -52,6 +52,9 @@ class BRZ_Connections {
                     <div class="brz-tab-pane" data-pane="ai" style="display:none;">
                         <?php self::render_ai(); ?>
                     </div>
+                    <div class="brz-tab-pane" data-pane="bi" style="display:none;">
+                        <?php self::render_bi_settings(); ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -140,6 +143,61 @@ class BRZ_Connections {
         <?php
     }
 
+    private static function render_bi_settings() {
+        if ( ! class_exists( 'BRZ_BI_Exporter' ) ) {
+            echo '<p class="description">ماژول تحلیل سایت فعال نیست.</p>';
+            return;
+        }
+        $settings = BRZ_BI_Exporter::get_settings();
+        $save_nonce = wp_create_nonce( 'brz_bi_exporter_save' );
+        ?>
+        <div class="brz-card brz-card--sub">
+            <div class="brz-card__header"><h3>تنظیمات ارتباط تحلیل سایت</h3></div>
+            <div class="brz-card__body">
+                <form id="brz-bi-settings-form" class="brz-settings-form">
+                    <input type="hidden" name="_wpnonce" value="<?php echo esc_attr( $save_nonce ); ?>" />
+                    <table class="form-table" role="presentation">
+                        <tbody>
+                            <tr>
+                                <th scope="row"><label for="brz-bi-api-key">کلید API <span class="dashicons dashicons-editor-help" data-tip="کلید محافظت از endpoint full-dump؛ در query یا هدر X-Buyruz-Key استفاده می‌شود."></span></label></th>
+                                <td>
+                                    <input type="text" id="brz-bi-api-key" name="<?php echo esc_attr( BRZ_BI_Exporter::OPTION_KEY ); ?>[api_key]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['api_key'] ); ?>" autocomplete="off" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="brz-bi-remote-endpoint">Remote Endpoint <span class="dashicons dashicons-editor-help" data-tip="آدرس کامل endpoint سایت مقابل، مثلا https://peer-site.com/wp-json/buyruz/v1/full-dump"></span></label></th>
+                                <td>
+                                    <input type="url" id="brz-bi-remote-endpoint" name="<?php echo esc_attr( BRZ_BI_Exporter::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" placeholder="https://peer-site.com/wp-json/buyruz/v1/full-dump" />
+                                    <p class="description">درخواست با scope=local ارسال می‌شود تا از لوپ Shop ↔ Blog جلوگیری شود.</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="brz-bi-remote-key">Remote API Key <span class="dashicons dashicons-editor-help" data-tip="همان کلیدی که روی سایت مقابل برای full-dump تنظیم شده است."></span></label></th>
+                                <td>
+                                    <input type="text" id="brz-bi-remote-key" name="<?php echo esc_attr( BRZ_BI_Exporter::OPTION_KEY ); ?>[remote_api_key]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row"><label for="brz-bi-role">نقش این سایت <span class="dashicons dashicons-editor-help" data-tip="Shop برای ووکامرس، Blog برای وردپرس معمولی؛ در ساخت master JSON گره shop/blog تعیین می‌شود."></span></label></th>
+                                <td>
+                                    <select id="brz-bi-role" name="<?php echo esc_attr( BRZ_BI_Exporter::OPTION_KEY ); ?>[site_role]">
+                                        <option value="shop" <?php selected( $settings['site_role'], 'shop' ); ?>>Shop (WooCommerce)</option>
+                                        <option value="blog" <?php selected( $settings['site_role'], 'blog' ); ?>>Blog (WordPress)</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="brz-save-bar" style="display:flex;gap:8px;align-items:center;">
+                        <button type="submit" class="button button-primary">ذخیره تنظیمات</button>
+                        <span id="brz-bi-save-status" class="description"></span>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php
+    }
+
     private static function inline_js() {
         $nonce = wp_create_nonce( 'brz_smart_linker_save' );
         ?>
@@ -169,6 +227,35 @@ class BRZ_Connections {
                             alert(json && json.success ? 'ذخیره شد' : 'خطا در ذخیره');
                         }).catch(()=>alert('خطا در ذخیره'));
                 });
+            });
+
+            // BI settings ajax save
+            const biForm = document.getElementById('brz-bi-settings-form');
+            const biStatus = document.getElementById('brz-bi-save-status');
+            if(biForm){
+                biForm.addEventListener('submit', function(e){
+                    e.preventDefault();
+                    const fd=new FormData(biForm);
+                    fd.append('action','brz_bi_exporter_save');
+                    fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:fd})
+                        .then(r=>r.json())
+                        .then(j=>{
+                            if(j?.success){ biStatus.textContent='ذخیره شد'; }
+                            else { biStatus.textContent='خطا در ذخیره'; biStatus.style.color='#b91c1c'; }
+                        })
+                        .catch(()=>{ biStatus.textContent='خطا در ذخیره'; biStatus.style.color='#b91c1c'; });
+                });
+            }
+
+            // Help tooltips on click
+            document.querySelectorAll('.dashicons-editor-help').forEach(icon=>{
+                const tip = icon.dataset.tip || icon.getAttribute('title');
+                if(tip){
+                    icon.setAttribute('role','button');
+                    icon.setAttribute('tabindex','0');
+                    icon.addEventListener('click', ()=>alert(tip));
+                    icon.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); icon.click(); }});
+                }
             });
 
             const syncBtn=document.getElementById('brz-sl-sync-btn');
