@@ -181,22 +181,12 @@ class BRZ_Connections {
             <table class="form-table" role="presentation">
                 <tbody>
                     <tr>
-                        <th scope="row"><label for="brz-sl-remote-endpoint">آدرس API سایت مقابل</label></th>
-                        <td>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <span class="brz-help-tip" data-tip="آدرس endpoint سایت مقابل برای دریافت داده.">؟</span>
-                                <input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" style="flex:1;" />
-                            </div>
-                        </td>
+                        <th scope="row"><label for="brz-sl-remote-endpoint">آدرس API سایت مقابل <span class="brz-help-tip" data-tip="آدرس endpoint سایت مقابل برای دریافت داده.">؟</span></label></th>
+                        <td><input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-remote-key">کلید API سایت مقابل</label></th>
-                        <td>
-                            <div style="display: flex; gap: 8px; align-items: center;">
-                                <span class="brz-help-tip" data-tip="کلید API که از سایت مقابل کپی کردید.">؟</span>
-                                <input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" style="flex:1;" />
-                            </div>
-                        </td>
+                        <th scope="row"><label for="brz-sl-remote-key">کلید API سایت مقابل <span class="brz-help-tip" data-tip="کلید API که از سایت مقابل کپی کردید.">؟</span></label></th>
+                        <td><input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" /></td>
                     </tr>
                     <tr>
                         <th scope="row"><label>تست اتصال</label></th>
