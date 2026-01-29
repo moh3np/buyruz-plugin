@@ -405,7 +405,7 @@
 .brz-module-grid {
   display: grid;
   gap: var(--md-space-lg);
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
 .brz-module-card {
@@ -654,7 +654,7 @@
   padding: 0;
 }
 
-.brz-card .form-table tr + tr {
+.brz-card .form-table tr+tr {
   margin-top: var(--md-space-lg);
 }
 
@@ -1072,31 +1072,49 @@
 .brz-compare-mini-btn {
   width: 28px;
   height: 28px;
-  border-radius: var(--md-radius-xs);
-  border: 1px solid var(--md-outline);
-  background: var(--md-surface);
-  color: var(--md-on-surface-variant);
+  border-radius: var(--md-radius-sm);
+  border: none;
+  color: var(--md-on-primary);
   font-size: 0.875rem;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all var(--md-transition-fast);
+  box-shadow: var(--md-elevation-1);
 }
 
 .brz-compare-mini-btn:hover {
-  background: var(--md-surface-container);
-  border-color: var(--md-on-surface-variant);
+  transform: scale(1.05);
+  box-shadow: var(--md-elevation-2);
+}
+
+.brz-compare-mini-btn:first-child {
+  background: var(--md-success);
 }
 
 .brz-compare-mini-btn.brz-compare-danger {
-  color: var(--md-error);
-  background: var(--md-error-container);
-  border-color: transparent;
+  background: var(--md-error);
 }
 
 .brz-compare-mini-btn.brz-compare-danger:hover {
-  background: #fad2cf;
+  background: #c62828;
+}
+
+/* Column action buttons container - centered */
+.brz-compare-col-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-space-xs);
+  margin-bottom: var(--md-space-sm);
+}
+
+.brz-compare-th-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .brz-compare-id {
@@ -1337,6 +1355,7 @@
     opacity: 0;
     transform: translateY(var(--md-space-sm));
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1352,12 +1371,29 @@
   animation-fill-mode: both;
 }
 
-.brz-module-card:nth-child(1) { animation-delay: 0.05s; }
-.brz-module-card:nth-child(2) { animation-delay: 0.1s; }
-.brz-module-card:nth-child(3) { animation-delay: 0.15s; }
-.brz-module-card:nth-child(4) { animation-delay: 0.2s; }
-.brz-module-card:nth-child(5) { animation-delay: 0.25s; }
-.brz-module-card:nth-child(6) { animation-delay: 0.3s; }
+.brz-module-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.brz-module-card:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.brz-module-card:nth-child(3) {
+  animation-delay: 0.15s;
+}
+
+.brz-module-card:nth-child(4) {
+  animation-delay: 0.2s;
+}
+
+.brz-module-card:nth-child(5) {
+  animation-delay: 0.25s;
+}
+
+.brz-module-card:nth-child(6) {
+  animation-delay: 0.3s;
+}
 
 /* Ripple effect placeholder */
 .brz-button::before {
