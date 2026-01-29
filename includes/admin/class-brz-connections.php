@@ -4,6 +4,32 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class BRZ_Connections {
     public static function init() {
         add_action( 'admin_menu', array( __CLASS__, 'add_menu' ) );
+        add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
+        add_action( 'wp_ajax_brz_regenerate_api_key', array( __CLASS__, 'ajax_regenerate_api_key' ) );
+    }
+
+    /**
+     * Regenerate local API key via AJAX.
+     */
+    public static function ajax_regenerate_api_key() {
+        check_ajax_referer( 'brz_smart_linker_save' );
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'Permission denied' ), 403 );
+        }
+
+        $settings = BRZ_Smart_Linker::get_settings();
+        $new_key  = wp_generate_password( 32, false );
+        $settings['local_api_key'] = $new_key;
+        update_option( BRZ_Smart_Linker::OPTION_KEY, $settings, false );
+
+        wp_send_json_success( array( 'new_key' => $new_key, 'message' => 'کلید جدید ساخته شد.' ) );
+    }
+
+    public static function enqueue_assets( $hook ) {
+        if ( false === strpos( $hook, 'buyruz-connections' ) ) {
+            return;
+        }
+        wp_enqueue_style( 'brz-settings-admin', BRZ_URL . 'assets/admin/settings.css', array(), BRZ_VERSION );
     }
 
     public static function add_menu() {
@@ -103,7 +129,49 @@ class BRZ_Connections {
     }
 
     private static function render_peer( $settings ) {
+        // Get local endpoint and API key for this site
+        $local_endpoint = rest_url( 'brz/v1/inventory' );
+        $local_api_key  = $settings['local_api_key'] ?? '';
         ?>
+        <!-- اطلاعات API این سایت -->
+        <div class="brz-card brz-card--sub" style="margin-bottom: 24px; background: linear-gradient(135deg, #e0f2fe, #f0fdf4); border: 1px solid #bae6fd;">
+            <div class="brz-card__header" style="border-bottom: 1px solid #bae6fd;">
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <span style="width: 24px; height: 24px; background: #22c55e; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 12px;">📡</span>
+                    اطلاعات API این سایت (برای اشتراک با سایت دیگر)
+                </h3>
+            </div>
+            <div class="brz-card__body">
+                <p class="description" style="margin-bottom: 16px;">این اطلاعات را کپی کنید و در سایت مقصد (که می‌خواهد از این سایت داده دریافت کند) در بخش Remote وارد کنید.</p>
+                
+                <table class="form-table" role="presentation" style="margin: 0;">
+                    <tbody>
+                        <tr>
+                            <th scope="row" style="width: 140px;"><label>Endpoint این سایت</label></th>
+                            <td>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" id="brz-local-endpoint" class="regular-text code" dir="ltr" value="<?php echo esc_url( $local_endpoint ); ?>" readonly style="background: #fff;" />
+                                    <button type="button" class="button brz-copy-btn" data-target="brz-local-endpoint" title="کپی">📋</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><label>API Key این سایت</label></th>
+                            <td>
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" id="brz-local-apikey" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $local_api_key ); ?>" readonly style="background: #fff;" />
+                                    <button type="button" class="button brz-copy-btn" data-target="brz-local-apikey" title="کپی">📋</button>
+                                    <button type="button" class="button" id="brz-regenerate-key" title="ساخت کلید جدید">🔄</button>
+                                </div>
+                                <p class="description" style="margin-top: 8px;">این کلید خودکار ساخته شده. برای امنیت بیشتر می‌توانید آن را رژنریت کنید.</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- اتصال به سایت ریموت -->
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-settings-form" data-ajax="1">
             <?php wp_nonce_field( 'brz_smart_linker_save' ); ?>
             <input type="hidden" name="action" value="brz_smart_linker_save" />
@@ -259,6 +327,49 @@ class BRZ_Connections {
                             else { biStatus.textContent='خطا در ذخیره'; biStatus.style.color='#b91c1c'; }
                         })
                         .catch(()=>{ biStatus.textContent='خطا در ذخیره'; biStatus.style.color='#b91c1c'; });
+                });
+            }
+
+            // Copy buttons functionality
+            document.querySelectorAll('.brz-copy-btn').forEach(btn=>{
+                btn.addEventListener('click', ()=>{
+                    const targetId = btn.dataset.target;
+                    const input = document.getElementById(targetId);
+                    if(input){
+                        navigator.clipboard.writeText(input.value).then(()=>{
+                            const orig = btn.textContent;
+                            btn.textContent = '✓';
+                            btn.style.background = '#22c55e';
+                            btn.style.color = '#fff';
+                            setTimeout(()=>{ btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 1500);
+                        });
+                    }
+                });
+            });
+
+            // Regenerate API key
+            const regenBtn = document.getElementById('brz-regenerate-key');
+            if(regenBtn){
+                regenBtn.addEventListener('click', ()=>{
+                    if(!confirm('آیا کلید جدید بسازم؟ کلید قبلی دیگر کار نخواهد کرد.')) return;
+                    regenBtn.textContent = '⏳';
+                    regenBtn.disabled = true;
+                    const fd = new FormData();
+                    fd.append('action', 'brz_regenerate_api_key');
+                    fd.append('_wpnonce', '<?php echo esc_js( $nonce ); ?>');
+                    fetch(ajaxurl, {method:'POST', credentials:'same-origin', body:fd})
+                        .then(r=>r.json())
+                        .then(j=>{
+                            if(j?.success && j?.data?.new_key){
+                                document.getElementById('brz-local-apikey').value = j.data.new_key;
+                                regenBtn.textContent = '✓';
+                                setTimeout(()=>{ regenBtn.textContent = '🔄'; regenBtn.disabled = false; }, 1500);
+                            } else {
+                                regenBtn.textContent = '❌';
+                                setTimeout(()=>{ regenBtn.textContent = '🔄'; regenBtn.disabled = false; }, 1500);
+                            }
+                        })
+                        .catch(()=>{ regenBtn.textContent = '🔄'; regenBtn.disabled = false; });
                 });
             }
 

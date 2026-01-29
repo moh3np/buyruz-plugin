@@ -102,6 +102,7 @@ class BRZ_Smart_Linker {
         $defaults = array(
             'mode'           => 'manual', // manual|api
             'api_key'        => '',
+            'local_api_key'  => '', // API key for this site (others use to connect here)
             'sheet_id'       => '',
             'sheet_web_app'  => '',
             'google_client_id' => '',
@@ -128,7 +129,15 @@ class BRZ_Smart_Linker {
             $saved = array();
         }
 
-        return wp_parse_args( $saved, $defaults );
+        $settings = wp_parse_args( $saved, $defaults );
+        
+        // Auto-generate local_api_key if empty
+        if ( empty( $settings['local_api_key'] ) ) {
+            $settings['local_api_key'] = wp_generate_password( 32, false );
+            update_option( self::OPTION_KEY, $settings, false );
+        }
+        
+        return $settings;
     }
 
     /**
@@ -1177,7 +1186,7 @@ class BRZ_Smart_Linker {
      * Register REST endpoints for inventory provider.
      */
     public static function register_rest_routes() {
-        register_rest_route( 'buyruz/v1', '/inventory', array(
+        register_rest_route( 'brz/v1', '/inventory', array(
             'methods'  => WP_REST_Server::READABLE,
             'callback' => array( __CLASS__, 'rest_inventory' ),
             'permission_callback' => '__return_true',
@@ -1189,9 +1198,9 @@ class BRZ_Smart_Linker {
      */
     public static function rest_inventory( WP_REST_Request $request ) {
         $settings = self::get_settings();
-        $api_key  = isset( $settings['api_key'] ) ? $settings['api_key'] : '';
+        $local_api_key = isset( $settings['local_api_key'] ) ? $settings['local_api_key'] : '';
         $incoming = $request->get_param( 'api_key' );
-        if ( empty( $api_key ) || $incoming !== $api_key ) {
+        if ( empty( $local_api_key ) || $incoming !== $local_api_key ) {
             return new WP_REST_Response( array( 'message' => 'Forbidden' ), 403 );
         }
 
