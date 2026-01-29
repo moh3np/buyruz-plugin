@@ -149,9 +149,9 @@ class BRZ_Smart_Linker {
         }
 
         $settings = self::get_settings();
-        $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'general'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( ! in_array( $active_tab, array( 'general', 'strategy', 'exclusions', 'workbench', 'maintenance' ), true ) ) {
-            $active_tab = 'general';
+        $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'strategy'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( ! in_array( $active_tab, array( 'strategy', 'exclusions', 'workbench', 'maintenance' ), true ) ) {
+            $active_tab = 'strategy';
         }
 
         self::render_notices();
@@ -160,15 +160,16 @@ class BRZ_Smart_Linker {
         /* جلوگیری از تکرار هدر و مسیرها در صفحه لینک‌ساز هوشمند */
         .brz-admin-wrap .brz-hero:not(:first-of-type) { display: none; }
         .brz-admin-wrap .brz-side-nav:not(:first-of-type) { display: none; }
-        /* استایل اختصاصی لینک‌ساز هوشمند */
-        .brz-sl-shell { background:#f8fafc; border:1px solid #e5e7eb; border-radius:18px; padding:18px; box-shadow:0 10px 30px -12px rgba(15,23,42,0.2); }
-        .brz-sl-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px 0; }
-        .brz-sl-tab { border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px; background:#fff; color:#0f172a; text-decoration:none; }
-        .brz-sl-tab.is-active { background:linear-gradient(135deg,#2563eb,#9333ea); color:#fff; border-color:transparent; box-shadow:0 6px 16px -10px rgba(37,99,235,0.6); }
-        .brz-sl-hero { margin-bottom:16px; padding:18px; border-radius:18px; background:linear-gradient(135deg,#e0e7ff,#fdf2f8); border:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; }
-        .brz-sl-hero h2 { margin:0 0 6px 0; font-size:20px; }
-        .brz-sl-hero p { margin:0; color:#475569; }
-        .brz-sl-badge { background:#0f172a; color:#fff; border-radius:999px; padding:8px 12px; font-size:12px; }
+        /* استایل اختصاصی لینک‌ساز هوشمند - تمام عرض */
+        .brz-sl-shell { background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:20px; }
+        .brz-sl-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 16px 0; }
+        .brz-sl-tab { border:1px solid #e5e7eb; border-radius:8px; padding:10px 16px; background:#fff; color:#0f172a; text-decoration:none; font-size:14px; }
+        .brz-sl-tab:hover { background:#f1f5f9; }
+        .brz-sl-tab.is-active { background:linear-gradient(135deg,#2563eb,#9333ea); color:#fff; border-color:transparent; }
+        .brz-sl-hero { margin-bottom:20px; padding:20px; border-radius:12px; background:linear-gradient(135deg,#667eea,#764ba2); display:flex; align-items:center; justify-content:space-between; }
+        .brz-sl-hero h2 { margin:0 0 4px 0; font-size:22px; color:#fff; }
+        .brz-sl-hero p { margin:0; color:rgba(255,255,255,0.85); font-size:14px; }
+        .brz-sl-badge { background:rgba(255,255,255,0.2); color:#fff; border-radius:999px; padding:6px 12px; font-size:12px; }
         </style>
 
         <div class="brz-sl-hero">
@@ -181,7 +182,6 @@ class BRZ_Smart_Linker {
 
         <div class="brz-sl-shell">
             <div class="brz-sl-tabs" role="tablist">
-                <a class="brz-sl-tab <?php echo ( 'general' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">عمومی</a>
                 <a class="brz-sl-tab <?php echo ( 'strategy' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">استراتژی</a>
                 <a class="brz-sl-tab <?php echo ( 'exclusions' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">مستثنیات</a>
                 <a class="brz-sl-tab <?php echo ( 'workbench' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
@@ -190,9 +190,7 @@ class BRZ_Smart_Linker {
 
             <div>
                 <?php
-                if ( 'general' === $active_tab ) {
-                    self::render_general_tab( $settings );
-                } elseif ( 'strategy' === $active_tab ) {
+                if ( 'strategy' === $active_tab ) {
                     self::render_strategy_tab( $settings );
                 } elseif ( 'exclusions' === $active_tab ) {
                     self::render_exclusions_tab( $settings );
