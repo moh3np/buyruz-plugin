@@ -642,6 +642,11 @@ class BRZ_Settings {
                 return;
             }
 
+            if ( 'bi_exporter' === $module_slug ) {
+                BRZ_BI_Exporter::render_admin_page();
+                return;
+            }
+
             $label = isset( $modules[ $module_slug ]['label'] ) ? $modules[ $module_slug ]['label'] : $module_slug;
             self::render_generic_module_card( $label, $active );
         } );

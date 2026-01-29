@@ -25,6 +25,11 @@ class BRZ_Modules {
                 'description' => 'سینک دوطرفه پیشنهاد لینک، تایید و تزریق خودکار با Google Sheet.',
                 'class'       => 'BRZ_Smart_Linker',
             ),
+            'bi_exporter' => array(
+                'label'       => 'هوش تجاری',
+                'description' => 'خروجی JSON هوش تجاری و سئو برای اتصال به LLM.',
+                'class'       => 'BRZ_BI_Exporter',
+            ),
         );
     }
 

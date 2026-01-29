@@ -44,6 +44,7 @@ class BRZ_Connections {
                     <a class="nav-tab nav-tab-active" data-brz-tab="gsheet">گوگل شیت</a>
                     <a class="nav-tab" data-brz-tab="peer">فروشگاه / بلاگ</a>
                     <a class="nav-tab" data-brz-tab="ai">API هوش مصنوعی</a>
+                    <a class="nav-tab" data-brz-tab="bi">گزارش BI</a>
                 </h2>
                 <div class="brz-card__body">
                     <div class="brz-tab-pane" data-pane="gsheet">
@@ -54,6 +55,9 @@ class BRZ_Connections {
                     </div>
                     <div class="brz-tab-pane" data-pane="ai" style="display:none;">
                         <?php self::render_ai(); ?>
+                    </div>
+                    <div class="brz-tab-pane" data-pane="bi" style="display:none;">
+                        <?php self::render_bi(); ?>
                     </div>
                 </div>
             </div>
@@ -143,8 +147,46 @@ class BRZ_Connections {
         <?php
     }
 
+    private static function render_bi() {
+        $enabled = class_exists( 'BRZ_Modules' ) ? BRZ_Modules::is_enabled( 'bi_exporter' ) : true;
+        $state   = class_exists( 'BRZ_BI_Exporter' ) ? BRZ_BI_Exporter::get_state() : array();
+        $status  = 'منتظر اولین اجرا';
+        if ( ! empty( $state['status'] ) ) {
+            if ( 'running' === $state['status'] ) {
+                $status = 'در حال پردازش (' . (int) $state['processed'] . ' / ' . (int) $state['total'] . ')';
+            } elseif ( 'finished' === $state['status'] ) {
+                $status = 'آماده - ' . mysql2date( 'Y-m-d H:i', $state['finished_at'] );
+            }
+        }
+        $regen_nonce  = wp_create_nonce( 'brz_bi_exporter_regen' );
+        $status_nonce = wp_create_nonce( 'brz_bi_exporter_status' );
+        $download_url = wp_nonce_url( admin_url( 'admin-post.php?action=brz_bi_exporter_download' ), 'brz_bi_exporter_download' );
+        ?>
+        <div class="brz-card brz-card--sub">
+            <div class="brz-card__header"><h3>گزارش هوش تجاری (BI Dump)</h3></div>
+            <div class="brz-card__body">
+                <p class="description">گزارش JSON فشرده از تمام محصولات/پست‌ها برای ممیزی سئو و فروش. پردازش در پس‌زمینه انجام می‌شود.</p>
+                <?php if ( ! $enabled ) : ?>
+                    <p class="description" style="color:#b91c1c;">ماژول هوش تجاری غیرفعال است. از پیشخوان ماژول‌ها فعال کنید.</p>
+                    <a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=' . BRZ_Settings::PARENT_SLUG ) ); ?>">رفتن به پیشخوان</a>
+                <?php else : ?>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                        <button type="button" class="button button-primary" id="brz-bi-mini-regenerate" data-nonce="<?php echo esc_attr( $regen_nonce ); ?>">بازسازی گزارش</button>
+                        <button type="button" class="button" id="brz-bi-mini-refresh" data-nonce="<?php echo esc_attr( $status_nonce ); ?>">به‌روزرسانی وضعیت</button>
+                        <a class="button" href="<?php echo esc_url( $download_url ); ?>">دانلود JSON</a>
+                        <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-bi_exporter' ) ); ?>">جزئیات و تنظیمات</a>
+                    </div>
+                    <p id="brz-bi-mini-status" class="description" style="margin-top:8px;"><?php echo esc_html( $status ); ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+
     private static function inline_js() {
         $nonce = wp_create_nonce( 'brz_smart_linker_save' );
+        $bi_regen = wp_create_nonce( 'brz_bi_exporter_regen' );
+        $bi_status = wp_create_nonce( 'brz_bi_exporter_status' );
         ?>
         <script>
         (function(){
@@ -158,6 +200,11 @@ class BRZ_Connections {
                     panes.forEach(p=>p.style.display = (p.dataset.pane === target ? 'block' : 'none'));
                 });
             });
+
+            const biNonces = {
+                regen: '<?php echo esc_js( $bi_regen ); ?>',
+                status: '<?php echo esc_js( $bi_status ); ?>'
+            };
 
             const ajaxForms = document.querySelectorAll('form[data-ajax="1"]');
             ajaxForms.forEach(form=>{
@@ -200,6 +247,52 @@ class BRZ_Connections {
                     s.textContent='Testing...';
                     const fd=new FormData();fd.append('action','brz_smart_linker_test_peer');fd.append('_wpnonce','<?php echo esc_js( $nonce ); ?>');
                     fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:fd}).then(r=>r.json()).then(j=>{s.textContent=j?.data?.message||'OK';}).catch(()=>s.textContent='خطا');
+                });
+            }
+
+            // BI mini controls
+            const biRegen=document.getElementById('brz-bi-mini-regenerate');
+            const biRefresh=document.getElementById('brz-bi-mini-refresh');
+            const biStatusEl=document.getElementById('brz-bi-mini-status');
+
+            function updateBiStatus(text,isError){
+                if(!biStatusEl) return;
+                biStatusEl.textContent=text||'';
+                biStatusEl.style.color = isError ? '#b91c1c' : '';
+            }
+
+            function pollBiStatus(){
+                if(!biStatusEl || !window.ajaxurl) return;
+                const fd=new FormData();fd.append('action','brz_bi_exporter_status');fd.append('_wpnonce',biNonces.status);
+                fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:fd}).then(r=>r.json()).then(j=>{
+                    if(j?.success && j.data?.state){
+                        const st=j.data.state;
+                        if(st.status==='running'){
+                            updateBiStatus('در حال پردازش ('+(st.processed||0)+' / '+(st.total||0)+')');
+                        }else if(st.status==='finished'){
+                            updateBiStatus('آماده - '+(st.finished_at||''));
+                        }
+                    }
+                }).catch(()=>{});
+            }
+
+            if(biRegen){
+                biRegen.addEventListener('click',()=>{
+                    updateBiStatus('در حال صف‌بندی...');
+                    const fd=new FormData();fd.append('action','brz_bi_exporter_regenerate');fd.append('_wpnonce',biNonces.regen);
+                    fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:fd}).then(r=>r.json()).then(j=>{
+                        if(j?.success){
+                            updateBiStatus('در صف پردازش...');
+                            pollBiStatus();
+                        }else{
+                            updateBiStatus('خطا در صف‌بندی',true);
+                        }
+                    }).catch(()=>updateBiStatus('خطا در صف‌بندی',true));
+                });
+            }
+            if(biRefresh){
+                biRefresh.addEventListener('click',()=>{
+                    pollBiStatus();
                 });
             }
         })();
