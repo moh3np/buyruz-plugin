@@ -357,10 +357,6 @@ class BRZ_Settings {
                     <h2>پیشخوان ماژول‌ها</h2>
                     <p>شبکهٔ مدرن و واکنش‌گرا برای کنترل سریع ماژول‌ها.</p>
                 </div>
-                <div class="brz-section-actions">
-                    <span class="brz-status is-on">واکنش‌گرا و سریع</span>
-                    <a class="brz-button brz-button--ghost" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>">تنظیمات عمومی</a>
-                </div>
             </div>
 
             <div class="brz-grid">
@@ -401,17 +397,6 @@ class BRZ_Settings {
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <aside class="brz-grid__aside">
-                    <?php self::render_support_card(
-                        'بهینه و تمیز',
-                        array(
-                            'تغییر وضعیت ماژول‌ها سریع اعمال می‌شود و دادهٔ اضافی در دیتابیس باقی نمی‌گذارد.',
-                            'شبکهٔ کارت‌ها روی موبایل فشرده و دو ستونه می‌شود تا دید بهتری بدهد.',
-                            'اگر ماژول غیرفعال باشد، هیچ فایل یا هوکی از آن لود نمی‌شود.',
-                        ),
-                        'راهنما'
-                    ); ?>
-                </aside>
             </div>
             <?php
         } );
