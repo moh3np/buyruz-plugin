@@ -102,7 +102,7 @@
    ========================================================================== */
 
 .brz-admin-wrap {
-  max-width: 1280px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: var(--md-space-xl) var(--md-space-lg) 100px;
   font: var(--md-font-body-lg);
@@ -818,21 +818,22 @@
 .brz-tooltip {
   position: absolute;
   top: calc(100% + 12px);
-  right: 0;
-  width: 300px;
-  background: var(--md-surface);
-  color: var(--md-on-surface);
-  padding: var(--md-space-lg);
-  border-radius: var(--md-radius-lg);
-  font: var(--md-font-body-md);
+  left: 0;
+  width: 280px;
+  background: #fff;
+  color: #1f2937;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
   text-align: right;
-  box-shadow: var(--md-elevation-4);
-  border: 1px solid var(--md-outline-variant);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.3);
+  border: 1px solid #e5e7eb;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-8px);
-  transition: all var(--md-transition-normal);
-  z-index: 10000;
+  transition: all 0.2s ease;
+  z-index: 999999;
   pointer-events: none;
 }
 
@@ -840,9 +841,9 @@
   content: "";
   position: absolute;
   bottom: 100%;
-  right: 8px;
+  left: 8px;
   border: 8px solid transparent;
-  border-bottom-color: var(--md-surface);
+  border-bottom-color: #fff;
   filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.08));
 }
 
@@ -851,18 +852,6 @@
   visibility: visible;
   transform: translateY(0);
   pointer-events: auto;
-}
-
-/* RTL support */
-[dir="rtl"] .brz-tooltip {
-  right: auto;
-  left: 0;
-  text-align: right;
-}
-
-[dir="rtl"] .brz-tooltip::before {
-  right: auto;
-  left: 8px;
 }
 
 /* ==========================================================================

@@ -114,11 +114,13 @@ class BRZ_Connections {
                         <td><input type="text" id="brz-sl-refresh-token" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_refresh_token]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( isset( $settings['google_refresh_token'] ) ? $settings['google_refresh_token'] : '' ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label>Auth</label></th>
+                        <th scope="row"><label>احراز هویت</label></th>
                         <td>
-                            <a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_start' ), 'brz_gsheet_oauth' ) ); ?>">اتصال / نوسازی توکن</a>
-                            <button type="button" class="button" id="brz-sl-test-gsheet">تست اتصال</button>
-                            <span class="description" id="brz-sl-gsheet-status"></span>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_start' ), 'brz_gsheet_oauth' ) ); ?>">اتصال / نوسازی توکن</a>
+                                <button type="button" class="button" id="brz-sl-test-gsheet">تست اتصال</button>
+                                <span class="description" id="brz-sl-gsheet-status"></span>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -179,12 +181,22 @@ class BRZ_Connections {
             <table class="form-table" role="presentation">
                 <tbody>
                     <tr>
-                        <th scope="row"><label for="brz-sl-remote-endpoint">Remote API Endpoint <span class="brz-help-tip" data-tip="آدرس endpoint سایت مقابل برای اینونتوری.">?</span></label></th>
-                        <td><input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" /></td>
+                        <th scope="row"><label for="brz-sl-remote-endpoint">آدرس API سایت مقابل</label></th>
+                        <td>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="brz-help-tip" data-tip="آدرس endpoint سایت مقابل برای دریافت داده.">?</span>
+                                <input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" style="flex:1;" />
+                            </div>
+                        </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-remote-key">Remote API Key <span class="brz-help-tip" data-tip="توکن ایمن سرور مقابل برای full-dump.">?</span></label></th>
-                        <td><input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" /></td>
+                        <th scope="row"><label for="brz-sl-remote-key">کلید API سایت مقابل</label></th>
+                        <td>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="brz-help-tip" data-tip="کلید API که از سایت مقابل کپی کردید.">?</span>
+                                <input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" style="flex:1;" />
+                            </div>
+                        </td>
                     </tr>
                     <tr>
                         <th scope="row"><label>تست اتصال</label></th>
@@ -197,10 +209,10 @@ class BRZ_Connections {
                         <th scope="row"><label for="brz-sl-role">نقش این سایت</label></th>
                         <td>
                             <select id="brz-sl-role" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[site_role]">
-                                <option value="shop" <?php selected( $settings['site_role'], 'shop' ); ?>>Shop (WooCommerce)</option>
-                                <option value="blog" <?php selected( $settings['site_role'], 'blog' ); ?>>Blog (WordPress)</option>
+                                <option value="shop" <?php selected( $settings['site_role'], 'shop' ); ?>>فروشگاه (ووکامرس)</option>
+                                <option value="blog" <?php selected( $settings['site_role'], 'blog' ); ?>>بلاگ (وردپرس)</option>
                             </select>
-                            <p class="description">بر اساس نقش، گره shop/blog در JSON تعیین می‌شود.</p>
+                            <p class="description">بر اساس نقش، نوع داده‌هایی که به اشتراک گذاشته می‌شود تعیین می‌شود.</p>
                         </td>
                     </tr>
                     <input type="hidden" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[mode]" value="api" />
@@ -208,7 +220,7 @@ class BRZ_Connections {
             </table>
             <p class="submit" style="display:flex;gap:8px;align-items:center;margin-top:16px;">
                 <?php submit_button( 'ذخیره اتصال ریموت', 'primary', 'submit', false ); ?>
-                <button type="button" class="button" id="brz-sl-sync-btn">Sync Data</button>
+                <button type="button" class="button" id="brz-sl-sync-btn">همگام‌سازی داده</button>
                 <span id="brz-sl-sync-status" class="description"></span>
             </p>
         </form>
