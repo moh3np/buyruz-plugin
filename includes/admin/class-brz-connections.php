@@ -34,9 +34,6 @@ class BRZ_Connections {
                     </div>
                     <p>مدیریت همه اتصال‌ها: گوگل شیت، فروشگاه ↔ بلاگ، API هوش مصنوعی.</p>
                 </div>
-                <div class="brz-hero__aside">
-                    <div class="brz-hero__badge">اتصالات</div>
-                </div>
             </div>
 
             <div class="brz-card">
