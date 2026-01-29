@@ -359,9 +359,7 @@ class BRZ_Settings {
                 </div>
             </div>
 
-            <div class="brz-grid">
-                <div class="brz-grid__main">
-                    <div class="brz-module-grid">
+            <div class="brz-module-grid">
                         <?php foreach ( $modules as $slug => $meta ) : ?>
                             <?php $enabled = ! empty( $states[ $slug ] ); ?>
                             <?php $icon = self::module_icon_letter( $meta ); ?>
@@ -396,8 +394,6 @@ class BRZ_Settings {
                             </div>
                         <?php endforeach; ?>
                     </div>
-                </div>
-            </div>
             <?php
         } );
     }
