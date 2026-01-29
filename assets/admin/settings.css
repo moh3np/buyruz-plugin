@@ -787,6 +787,85 @@
 }
 
 /* ==========================================================================
+   14. HELP TOOLTIPS (Google Knowledge Panel Style)
+   ========================================================================== */
+
+.brz-help-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  border: 1.5px solid var(--md-on-surface-variant);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  margin-right: 6px;
+  vertical-align: middle;
+  transition: all var(--md-transition-fast);
+}
+
+.brz-help-tip:hover {
+  background: var(--md-primary);
+  border-color: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.brz-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 300px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  padding: var(--md-space-lg);
+  border-radius: var(--md-radius-lg);
+  font: var(--md-font-body-md);
+  text-align: right;
+  box-shadow: var(--md-elevation-4);
+  border: 1px solid var(--md-outline-variant);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all var(--md-transition-normal);
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.brz-tooltip::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  right: 8px;
+  border: 8px solid transparent;
+  border-bottom-color: var(--md-surface);
+  filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.08));
+}
+
+.brz-help-tip.is-open .brz-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* RTL support */
+[dir="rtl"] .brz-tooltip {
+  right: auto;
+  left: 0;
+  text-align: right;
+}
+
+[dir="rtl"] .brz-tooltip::before {
+  right: auto;
+  left: 8px;
+}
+
+/* ==========================================================================
    14. ALERTS & WARNINGS
    ========================================================================== */
 

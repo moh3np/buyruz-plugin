@@ -72,11 +72,11 @@ class BRZ_Connections {
             <table class="form-table" role="presentation">
                 <tbody>
                     <tr>
-                        <th scope="row"><label for="brz-sl-sheet-id">Google Sheet ID <span class="dashicons dashicons-editor-help" title="شناسه شیت در URL بین /d/ و /edit قرار دارد."></span></label></th>
+                        <th scope="row"><label for="brz-sl-sheet-id">Google Sheet ID <span class="brz-help-tip" data-tip="شناسه شیت در URL بین /d/ و /edit قرار دارد.">?</span></label></th>
                         <td><input type="text" id="brz-sl-sheet-id" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[sheet_id]" class="regular-text" value="<?php echo esc_attr( $settings['sheet_id'] ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-client-id">OAuth Client ID <span class="dashicons dashicons-editor-help" title="کلاینت OAuth 2.0 (Web application) از Google Cloud Console. Redirect URI: <?php echo esc_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_cb' ) ); ?>"></span></label></th>
+                        <th scope="row"><label for="brz-sl-client-id">OAuth Client ID <span class="brz-help-tip" data-tip="کلاینت OAuth 2.0 (Web application) از Google Cloud Console.">?</span></label></th>
                         <td><input type="text" id="brz-sl-client-id" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_client_id]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['google_client_id'] ); ?>" /></td>
                     </tr>
                     <tr>
@@ -84,7 +84,7 @@ class BRZ_Connections {
                         <td><input type="password" id="brz-sl-client-secret" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_client_secret]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['google_client_secret'] ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-refresh-token">Refresh Token <span class="dashicons dashicons-editor-help" title="پس از احراز هویت، رفرش توکن را ذخیره کنید تا دسترسی پایدار باشد."></span></label></th>
+                        <th scope="row"><label for="brz-sl-refresh-token">Refresh Token <span class="brz-help-tip" data-tip="پس از احراز هویت، رفرش توکن را ذخیره کنید.">?</span></label></th>
                         <td><input type="text" id="brz-sl-refresh-token" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_refresh_token]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( isset( $settings['google_refresh_token'] ) ? $settings['google_refresh_token'] : '' ); ?>" /></td>
                     </tr>
                     <tr>
@@ -111,13 +111,16 @@ class BRZ_Connections {
             <table class="form-table" role="presentation">
                 <tbody>
                     <tr>
-                        <th scope="row"><label for="brz-sl-remote-endpoint">Remote API Endpoint <span class="dashicons dashicons-editor-help" title="آدرس endpoint سایت مقابل برای اینونتوری."></span></label></th>
+                        <th scope="row"><label for="brz-sl-remote-endpoint">Remote API Endpoint <span class="brz-help-tip" data-tip="آدرس endpoint سایت مقابل برای اینونتوری.">?</span></label></th>
                         <td><input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-remote-key">Remote API Key <span class="dashicons dashicons-editor-help" title="توکن ایمن سرور مقابل برای full-dump."></span></label></th>
+                        <th scope="row"><label for="brz-sl-remote-key">Remote API Key <span class="brz-help-tip" data-tip="توکن ایمن سرور مقابل برای full-dump.">?</span></label></th>
+                        <td><input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label>تست اتصال</label></th>
                         <td>
-                            <input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" />
                             <button type="button" class="button" id="brz-sl-test-peer">تست اتصال ریموت</button>
                             <span class="description" id="brz-sl-peer-status"></span>
                         </td>
@@ -135,11 +138,11 @@ class BRZ_Connections {
                     <input type="hidden" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[mode]" value="api" />
                 </tbody>
             </table>
-            <div class="brz-save-bar" style="display:flex;gap:8px;align-items:center;">
+            <p class="submit" style="display:flex;gap:8px;align-items:center;margin-top:16px;">
                 <?php submit_button( 'ذخیره اتصال ریموت', 'primary', 'submit', false ); ?>
                 <button type="button" class="button" id="brz-sl-sync-btn">Sync Data</button>
                 <span id="brz-sl-sync-status" class="description"></span>
-            </div>
+            </p>
         </form>
         <?php
     }
@@ -259,16 +262,31 @@ class BRZ_Connections {
                 });
             }
 
-            // Help tooltips on click
-            document.querySelectorAll('.dashicons-editor-help').forEach(icon=>{
-                const tip = icon.dataset.tip || icon.getAttribute('title');
+            // Help tooltips - modern popup instead of alert
+            document.querySelectorAll('.brz-help-tip').forEach(icon=>{
+                const tip = icon.dataset.tip;
                 if(tip){
                     icon.setAttribute('role','button');
                     icon.setAttribute('tabindex','0');
-                    icon.addEventListener('click', ()=>alert(tip));
+                    icon.setAttribute('aria-label','راهنما');
+                    
+                    // Create tooltip element
+                    const tooltip = document.createElement('span');
+                    tooltip.className = 'brz-tooltip';
+                    tooltip.textContent = tip;
+                    icon.appendChild(tooltip);
+                    
+                    // Toggle on click
+                    icon.addEventListener('click', (e)=>{
+                        e.stopPropagation();
+                        document.querySelectorAll('.brz-help-tip.is-open').forEach(el=>{ if(el!==icon) el.classList.remove('is-open'); });
+                        icon.classList.toggle('is-open');
+                    });
                     icon.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); icon.click(); }});
                 }
             });
+            // Close tooltips when clicking outside
+            document.addEventListener('click', ()=>{ document.querySelectorAll('.brz-help-tip.is-open').forEach(el=>el.classList.remove('is-open')); });
 
             const syncBtn=document.getElementById('brz-sl-sync-btn');
             if(syncBtn){
