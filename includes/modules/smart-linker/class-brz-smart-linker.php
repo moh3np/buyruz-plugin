@@ -146,24 +146,35 @@ class BRZ_Smart_Linker {
         /* جلوگیری از تکرار هدر و مسیرها در صفحه لینک‌ساز هوشمند */
         .brz-admin-wrap .brz-hero:not(:first-of-type) { display: none; }
         .brz-admin-wrap .brz-side-nav:not(:first-of-type) { display: none; }
+        /* استایل اختصاصی لینک‌ساز هوشمند */
+        .brz-sl-shell { background:#f8fafc; border:1px solid #e5e7eb; border-radius:18px; padding:18px; box-shadow:0 10px 30px -12px rgba(15,23,42,0.2); }
+        .brz-sl-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 12px 0; }
+        .brz-sl-tab { border:1px solid #e5e7eb; border-radius:10px; padding:10px 14px; background:#fff; color:#0f172a; text-decoration:none; }
+        .brz-sl-tab.is-active { background:linear-gradient(135deg,#2563eb,#9333ea); color:#fff; border-color:transparent; box-shadow:0 6px 16px -10px rgba(37,99,235,0.6); }
+        .brz-sl-hero { margin-bottom:16px; padding:18px; border-radius:18px; background:linear-gradient(135deg,#e0e7ff,#fdf2f8); border:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; }
+        .brz-sl-hero h2 { margin:0 0 6px 0; font-size:20px; }
+        .brz-sl-hero p { margin:0; color:#475569; }
+        .brz-sl-badge { background:#0f172a; color:#fff; border-radius:999px; padding:8px 12px; font-size:12px; }
         </style>
-        <div class="brz-section-header">
+
+        <div class="brz-sl-hero">
             <div>
                 <h2>لینک‌ساز هوشمند</h2>
                 <p>لینک‌سازی داخلی با سینک دوطرفه بین سایت‌ها و Google Sheet.</p>
             </div>
+            <span class="brz-sl-badge">Smart Linker</span>
         </div>
 
-        <div class="brz-card">
-            <h2 class="nav-tab-wrapper">
-                <a class="nav-tab <?php echo ( 'general' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">عمومی</a>
-                <a class="nav-tab <?php echo ( 'strategy' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">استراتژی</a>
-                <a class="nav-tab <?php echo ( 'exclusions' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">مستثنیات</a>
-                <a class="nav-tab <?php echo ( 'workbench' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
-                <a class="nav-tab <?php echo ( 'maintenance' === $active_tab ) ? 'nav-tab-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">نگهداری</a>
-            </h2>
+        <div class="brz-sl-shell">
+            <div class="brz-sl-tabs" role="tablist">
+                <a class="brz-sl-tab <?php echo ( 'general' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>">عمومی</a>
+                <a class="brz-sl-tab <?php echo ( 'strategy' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">استراتژی</a>
+                <a class="brz-sl-tab <?php echo ( 'exclusions' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">مستثنیات</a>
+                <a class="brz-sl-tab <?php echo ( 'workbench' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
+                <a class="brz-sl-tab <?php echo ( 'maintenance' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">نگهداری</a>
+            </div>
 
-            <div class="brz-card__body">
+            <div>
                 <?php
                 if ( 'general' === $active_tab ) {
                     self::render_general_tab( $settings );
