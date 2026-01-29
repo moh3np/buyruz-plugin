@@ -106,6 +106,7 @@ class BRZ_Smart_Linker {
             'sheet_web_app'  => '',
             'google_client_id' => '',
             'google_client_secret' => '',
+            'google_refresh_token' => '',
             'link_density'   => self::DEFAULT_DENSITY,
             'open_new_tab'   => 1,
             'nofollow'       => 1,
@@ -116,6 +117,10 @@ class BRZ_Smart_Linker {
             'exclude_post_types' => array( 'post', 'product' ),
             'exclude_categories' => '',
             'exclude_html_tags'  => 'h1,h2,h3',
+            'ai_provider'    => 'openai',
+            'ai_api_key'     => '',
+            'ai_base_url'    => '',
+            'ai_model'       => '',
         );
 
         $saved = get_option( self::OPTION_KEY, array() );
@@ -196,47 +201,13 @@ class BRZ_Smart_Linker {
 
     private static function render_general_tab( $settings ) {
         ?>
-        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="brz-sl-form" data-ajax="1">
-            <?php wp_nonce_field( 'brz_smart_linker_save' ); ?>
-            <input type="hidden" name="action" value="brz_smart_linker_save" />
-            <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=general' ) ); ?>" />
-            <table class="form-table" role="presentation">
-                <tbody>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-role">نقش سایت</label></th>
-                        <td>
-                            <select id="brz-sl-role" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[site_role]">
-                                <option value="shop" <?php selected( $settings['site_role'], 'shop' ); ?>>Shop (WooCommerce)</option>
-                                <option value="blog" <?php selected( $settings['site_role'], 'blog' ); ?>>Blog (WordPress)</option>
-                            </select>
-                            <p class="description">بر اساس نقش، endpoint دادهٔ متناسب برمی‌گرداند.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-mode">حالت کار</label></th>
-                        <td>
-                            <label class="brz-toggle-wrap">
-                                <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[mode]" value="manual" />
-                                <input type="checkbox" id="brz-sl-mode" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[mode]" value="api" <?php checked( $settings['mode'], 'api' ); ?> />
-                                <span class="brz-toggle-switch"></span>
-                                <span class="brz-toggle-label">API Mode</span>
-                            </label>
-                            <p class="description">در حالت API، ارسال/دریافت خودکار با Google Sheet انجام می‌شود؛ در حالت Manual فقط داده‌ها ثبت می‌شود.</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-api-key">API Key</label></th>
-                        <td>
-                            <input type="text" id="brz-sl-api-key" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[api_key]" class="regular-text" value="<?php echo esc_attr( $settings['api_key'] ); ?>" autocomplete="off" />
-                            <p class="description">برای آینده؛ در حال حاضر اختیاری است.</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="brz-save-bar" style="display:flex;gap:8px;align-items:center;">
-                <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
+        <div class="brz-card brz-card--sub">
+            <div class="brz-card__header"><h3>تنظیمات اتصال</h3></div>
+            <div class="brz-card__body">
+                <p>تنظیمات اتصال (API Key، نقش سایت، حالت کار) فقط از صفحه «اتصالات» مدیریت می‌شود.</p>
+                <a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-connections' ) ); ?>">رفتن به تنظیمات اتصالات</a>
             </div>
-        </form>
+        </div>
         <?php
     }
 

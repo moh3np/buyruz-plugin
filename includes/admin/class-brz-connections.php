@@ -32,7 +32,7 @@ class BRZ_Connections {
                         <h1>اتصالات بایروز</h1>
                         <span class="brz-hero__version">نسخه <?php echo esc_html( BRZ_VERSION ); ?></span>
                     </div>
-                    <p>مدیریت همه اتصال‌ها: گوگل شیت، فروشگاه ↔ بلاگ، API هوش مصنوعی.</p>
+                    <p>یکپارچه‌سازی بلاگ ↔ فروشگاه، Google Sheet و API هوش مصنوعی با یک مسیر تنظیماتی.</p>
                 </div>
             </div>
 
@@ -41,6 +41,7 @@ class BRZ_Connections {
                     <a class="nav-tab nav-tab-active" data-brz-tab="gsheet">گوگل شیت</a>
                     <a class="nav-tab" data-brz-tab="peer">فروشگاه / بلاگ</a>
                     <a class="nav-tab" data-brz-tab="ai">API هوش مصنوعی</a>
+                    <a class="nav-tab" data-brz-tab="bi">تحلیل سایت</a>
                 </h2>
                 <div class="brz-card__body">
                     <div class="brz-tab-pane" data-pane="gsheet">
@@ -71,25 +72,25 @@ class BRZ_Connections {
             <table class="form-table" role="presentation">
                 <tbody>
                     <tr>
-                        <th scope="row"><label for="brz-sl-sheet-id">Google Sheet ID <span class="dashicons dashicons-editor-help" title="شناسه شیت را از URL شیت بردارید."></span></label></th>
+                        <th scope="row"><label for="brz-sl-sheet-id">Google Sheet ID <span class="dashicons dashicons-editor-help" title="شناسه شیت در URL بین /d/ و /edit قرار دارد."></span></label></th>
                         <td><input type="text" id="brz-sl-sheet-id" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[sheet_id]" class="regular-text" value="<?php echo esc_attr( $settings['sheet_id'] ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-sheet-url">Web App URL <span class="dashicons dashicons-editor-help" title="آدرس Web App منتشر شده از Google Apps Script."></span></label></th>
-                        <td>
-                            <input type="url" id="brz-sl-sheet-url" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[sheet_web_app]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['sheet_web_app'] ); ?>" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="brz-sl-client-id">Google Client ID <span class="dashicons dashicons-editor-help" title="Client ID اپ OAuth از Google Cloud Console."></span></label></th>
+                        <th scope="row"><label for="brz-sl-client-id">OAuth Client ID <span class="dashicons dashicons-editor-help" title="کلاینت OAuth 2.0 (Web application) از Google Cloud Console. Redirect URI: <?php echo esc_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_cb' ) ); ?>"></span></label></th>
                         <td><input type="text" id="brz-sl-client-id" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_client_id]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['google_client_id'] ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-client-secret">Google Client Secret</label></th>
+                        <th scope="row"><label for="brz-sl-client-secret">OAuth Client Secret</label></th>
+                        <td><input type="password" id="brz-sl-client-secret" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_client_secret]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['google_client_secret'] ); ?>" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="brz-sl-refresh-token">Refresh Token <span class="dashicons dashicons-editor-help" title="پس از احراز هویت، رفرش توکن را ذخیره کنید تا دسترسی پایدار باشد."></span></label></th>
+                        <td><input type="text" id="brz-sl-refresh-token" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_refresh_token]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( isset( $settings['google_refresh_token'] ) ? $settings['google_refresh_token'] : '' ); ?>" /></td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label>Auth</label></th>
                         <td>
-                            <input type="password" id="brz-sl-client-secret" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[google_client_secret]" class="regular-text code" dir="ltr" value="<?php echo esc_attr( $settings['google_client_secret'] ); ?>" />
-                            <p class="description">Redirect URL: <?php echo esc_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_cb' ) ); ?></p>
-                            <a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_start' ), 'brz_gsheet_oauth' ) ); ?>">اتصال به گوگل</a>
+                            <a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=brz_gsheet_oauth_start' ), 'brz_gsheet_oauth' ) ); ?>">اتصال / نوسازی توکن</a>
                             <button type="button" class="button" id="brz-sl-test-gsheet">تست اتصال</button>
                             <span class="description" id="brz-sl-gsheet-status"></span>
                         </td>
@@ -114,13 +115,24 @@ class BRZ_Connections {
                         <td><input type="url" id="brz-sl-remote-endpoint" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_endpoint]" class="regular-text code" dir="ltr" value="<?php echo esc_url( $settings['remote_endpoint'] ); ?>" /></td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="brz-sl-remote-key">Remote API Key</label></th>
+                        <th scope="row"><label for="brz-sl-remote-key">Remote API Key <span class="dashicons dashicons-editor-help" title="توکن ایمن سرور مقابل برای full-dump."></span></label></th>
                         <td>
                             <input type="text" id="brz-sl-remote-key" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[remote_api_key]" class="regular-text" value="<?php echo esc_attr( $settings['remote_api_key'] ); ?>" />
                             <button type="button" class="button" id="brz-sl-test-peer">تست اتصال ریموت</button>
                             <span class="description" id="brz-sl-peer-status"></span>
                         </td>
                     </tr>
+                    <tr>
+                        <th scope="row"><label for="brz-sl-role">نقش این سایت</label></th>
+                        <td>
+                            <select id="brz-sl-role" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[site_role]">
+                                <option value="shop" <?php selected( $settings['site_role'], 'shop' ); ?>>Shop (WooCommerce)</option>
+                                <option value="blog" <?php selected( $settings['site_role'], 'blog' ); ?>>Blog (WordPress)</option>
+                            </select>
+                            <p class="description">بر اساس نقش، گره shop/blog در JSON تعیین می‌شود.</p>
+                        </td>
+                    </tr>
+                    <input type="hidden" name="<?php echo esc_attr( BRZ_Smart_Linker::OPTION_KEY ); ?>[mode]" value="api" />
                 </tbody>
             </table>
             <div class="brz-save-bar" style="display:flex;gap:8px;align-items:center;">
