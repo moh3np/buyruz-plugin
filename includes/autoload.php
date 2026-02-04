@@ -29,6 +29,7 @@ spl_autoload_register( function( $class ) {
         'BRZ_Smart_Linker_Link_Injector' => 'modules/smart-linker/class-brz-smart-linker-link-injector.php',
         'BRZ_GSheet'                 => 'integration/class-brz-gsheet.php',
         'BRZ_Connections'            => 'admin/class-brz-connections.php',
+        'BRZ_Order_Processor'        => 'integration/class-brz-order-processor.php',
         'BRZ_BI_Exporter'            => 'modules/bi-exporter/class-brz-bi-exporter.php',
     );
 
