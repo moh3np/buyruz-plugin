@@ -385,4 +385,26 @@ class BRZ_Smart_Linker_Sync {
             'site_id' => $site_id,
         );
     }
+
+    /**
+     * AJAX handler for syncing from peer site.
+     */
+    public static function ajax_sync_from_peer() {
+        check_ajax_referer( 'brz_smart_linker_export' );
+
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( array( 'message' => 'دسترسی غیرمجاز' ), 403 );
+        }
+
+        $result = self::sync_from_peer();
+
+        if ( is_wp_error( $result ) ) {
+            wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+        }
+
+        wp_send_json_success( array(
+            'message' => sprintf( 'سینک موفق: %d آیتم از %s دریافت شد.', $result['count'], $result['site_id'] ),
+            'count'   => $result['count'],
+        ) );
+    }
 }
