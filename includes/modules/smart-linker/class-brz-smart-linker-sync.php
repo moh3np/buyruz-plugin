@@ -111,6 +111,11 @@ class BRZ_Smart_Linker_Sync {
 
         // Get freshly indexed content
         $content = BRZ_Smart_Linker_DB::get_content_index( 'local' );
+        
+        // Fallback: If content index is empty, get posts directly from WordPress
+        if ( empty( $content ) ) {
+            $content = self::get_posts_fallback( $site_role );
+        }
 
         return rest_ensure_response( array(
             'success'   => true,
@@ -119,6 +124,32 @@ class BRZ_Smart_Linker_Sync {
             'count'     => count( $content ),
             'items'     => $content,
         ) );
+    }
+    
+    /**
+     * Fallback to get posts directly from WordPress when content_index is empty.
+     *
+     * @param string $site_role
+     * @return array
+     */
+    private static function get_posts_fallback( $site_role ) {
+        $post_types = array( 'post', 'page' );
+        if ( 'shop' === $site_role && post_type_exists( 'product' ) ) {
+            $post_types[] = 'product';
+        }
+        
+        $posts = get_posts( array(
+            'post_type'      => $post_types,
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+        ) );
+        
+        $items = array();
+        foreach ( $posts as $post ) {
+            $items[] = self::build_content_data( $post, $site_role );
+        }
+        
+        return $items;
     }
 
     /**
