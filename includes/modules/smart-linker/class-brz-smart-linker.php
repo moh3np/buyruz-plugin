@@ -95,16 +95,16 @@ class BRZ_Smart_Linker {
     public static function maybe_migrate_table() {
         global $wpdb;
         
-        // Check legacy table
-        $table = BRZ_Smart_Linker_DB::table();
-        $exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
-        
         // Check v3.0 content_index table
         $content_table = BRZ_Smart_Linker_DB::content_index_table();
         $content_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $content_table ) );
         
+        // Check v3.0 pending_links table
+        $pending_table = BRZ_Smart_Linker_DB::pending_links_table();
+        $pending_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $pending_table ) );
+        
         // Run migration if any table is missing
-        if ( $exists !== $table || $content_exists !== $content_table ) {
+        if ( $content_exists !== $content_table || $pending_exists !== $pending_table ) {
             BRZ_Smart_Linker_DB::migrate();
         }
     }
