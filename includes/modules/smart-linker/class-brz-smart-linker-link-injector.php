@@ -9,16 +9,30 @@ class BRZ_Smart_Linker_Link_Injector {
     private $dom;
     private $body;
     private $original_html;
+    private $source_type;
+    private $settings;
+    private $excluded_tags;
 
     /**
      * @param int    $post_id
      * @param string $html
+     * @param string $source_type
+     * @param array  $settings Optional settings array with open_new_tab, nofollow, exclude_html_tags
      */
-    public function __construct( $post_id, $html, $source_type = 'post' ) {
+    public function __construct( $post_id, $html, $source_type = 'post', $settings = array() ) {
         $this->post_id       = (int) $post_id;
         $this->original_html = $html;
         $this->source_type   = $source_type;
-        $this->dom           = new DOMDocument();
+        $this->settings      = wp_parse_args( $settings, array(
+            'open_new_tab'      => 1,
+            'nofollow'          => 1,
+            'exclude_html_tags' => 'h1,h2,h3',
+        ) );
+        
+        // Parse excluded tags into array
+        $this->excluded_tags = array_filter( array_map( 'trim', explode( ',', strtolower( $this->settings['exclude_html_tags'] ) ) ) );
+        
+        $this->dom = new DOMDocument();
         libxml_use_internal_errors( true );
         $this->dom->loadHTML( '<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
         libxml_clear_errors();
@@ -131,6 +145,12 @@ class BRZ_Smart_Linker_Link_Injector {
                 continue;
             }
 
+            // Check if text node is inside an excluded tag (h1, h2, h3, etc.)
+            if ( $this->inside_excluded_tag( $text_node ) ) {
+                $offset_so_far += strlen( $text_node->nodeValue );
+                continue;
+            }
+
             $pos = stripos( $text_node->nodeValue, $keyword );
             if ( false === $pos ) {
                 $offset_so_far += strlen( $text_node->nodeValue );
@@ -158,6 +178,25 @@ class BRZ_Smart_Linker_Link_Injector {
             $a = $this->dom->createElement( 'a', htmlspecialchars( $match, ENT_QUOTES, 'UTF-8' ) );
             $a->setAttribute( 'href', esc_url( $target_url ) );
             $a->setAttribute( 'data-smart-link', '1' );
+            
+            // Apply link attributes from settings
+            if ( ! empty( $this->settings['open_new_tab'] ) ) {
+                $a->setAttribute( 'target', '_blank' );
+            }
+            
+            // Build rel attribute
+            $rel_parts = array();
+            if ( ! empty( $this->settings['nofollow'] ) ) {
+                $rel_parts[] = 'nofollow';
+            }
+            if ( ! empty( $this->settings['open_new_tab'] ) ) {
+                $rel_parts[] = 'noopener';
+                $rel_parts[] = 'noreferrer';
+            }
+            if ( ! empty( $rel_parts ) ) {
+                $a->setAttribute( 'rel', implode( ' ', $rel_parts ) );
+            }
+            
             $parent->insertBefore( $a, $text_node );
 
             if ( $after !== '' ) {
@@ -166,10 +205,32 @@ class BRZ_Smart_Linker_Link_Injector {
 
             $parent->removeChild( $text_node );
             return true;
-
-            $offset_so_far += strlen( $full );
         }
 
+        return false;
+    }
+
+    /**
+     * Check if text node is inside an excluded HTML tag.
+     *
+     * @param DOMNode $node
+     * @return bool
+     */
+    private function inside_excluded_tag( DOMNode $node ) {
+        if ( empty( $this->excluded_tags ) ) {
+            return false;
+        }
+
+        $current = $node->parentNode;
+        while ( $current ) {
+            if ( $current->nodeType === XML_ELEMENT_NODE ) {
+                $tag_name = strtolower( $current->nodeName );
+                if ( in_array( $tag_name, $this->excluded_tags, true ) ) {
+                    return true;
+                }
+            }
+            $current = $current->parentNode;
+        }
         return false;
     }
 

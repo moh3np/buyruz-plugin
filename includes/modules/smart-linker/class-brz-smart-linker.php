@@ -55,6 +55,14 @@ class BRZ_Smart_Linker {
         add_action( 'admin_post_brz_gsheet_oauth_start', array( 'BRZ_GSheet', 'handle_oauth_start' ) );
         add_action( 'admin_post_brz_gsheet_oauth_cb', array( 'BRZ_GSheet', 'handle_oauth_callback' ) );
 
+        // v3.0 AJAX handlers
+        add_action( 'wp_ajax_brz_smart_linker_sync_peer', array( 'BRZ_Smart_Linker_Sync', 'ajax_sync_from_peer' ) );
+        add_action( 'wp_ajax_brz_smart_linker_export', array( 'BRZ_Smart_Linker_Exporter', 'ajax_export' ) );
+        add_action( 'wp_ajax_brz_smart_linker_import', array( 'BRZ_Smart_Linker_Importer', 'ajax_import' ) );
+        add_action( 'wp_ajax_brz_smart_linker_update_status', array( 'BRZ_Smart_Linker_Importer', 'ajax_update_status' ) );
+        add_action( 'wp_ajax_brz_smart_linker_apply_links', array( 'BRZ_Smart_Linker_Importer', 'ajax_apply_links' ) );
+
+
         // Cron / background
         add_action( 'init', array( __CLASS__, 'maybe_migrate_table' ), 1 );
         add_action( 'init', array( __CLASS__, 'ensure_cron_events' ) );
@@ -149,9 +157,10 @@ class BRZ_Smart_Linker {
         }
 
         $settings = self::get_settings();
-        $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'strategy'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( ! in_array( $active_tab, array( 'strategy', 'exclusions', 'workbench', 'maintenance' ), true ) ) {
-            $active_tab = 'strategy';
+        $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'export'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $valid_tabs = array( 'export', 'import', 'review', 'applied', 'strategy', 'exclusions', 'maintenance' );
+        if ( ! in_array( $active_tab, $valid_tabs, true ) ) {
+            $active_tab = 'export';
         }
 
         self::render_notices();
@@ -174,28 +183,36 @@ class BRZ_Smart_Linker {
 
         <div class="brz-sl-hero">
             <div>
-                <h2>لینک‌ساز هوشمند</h2>
-                <p>لینک‌سازی داخلی با سینک دوطرفه بین سایت‌ها و Google Sheet.</p>
+                <h2>لینک‌ساز هوشمند v3.0</h2>
+                <p>لینک‌سازی داخلی هوشمند با AI - سینک یکپارچه بین سایت‌ها</p>
             </div>
             <span class="brz-sl-badge">Smart Linker</span>
         </div>
 
         <div class="brz-sl-shell">
             <div class="brz-sl-tabs" role="tablist">
-                <a class="brz-sl-tab <?php echo ( 'strategy' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">استراتژی</a>
-                <a class="brz-sl-tab <?php echo ( 'exclusions' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>">مستثنیات</a>
-                <a class="brz-sl-tab <?php echo ( 'workbench' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=workbench' ) ); ?>">میز کار</a>
-                <a class="brz-sl-tab <?php echo ( 'maintenance' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">نگهداری</a>
+                <a class="brz-sl-tab <?php echo ( 'export' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=export' ) ); ?>">📤 خروجی</a>
+                <a class="brz-sl-tab <?php echo ( 'import' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=import' ) ); ?>">📥 ورودی</a>
+                <?php $pending_count = BRZ_Smart_Linker_DB::get_pending_counts(); ?>
+                <a class="brz-sl-tab <?php echo ( 'review' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=review' ) ); ?>">✅ بررسی <?php if ( $pending_count['pending'] > 0 ) : ?><span class="brz-sl-count"><?php echo esc_html( $pending_count['pending'] ); ?></span><?php endif; ?></a>
+                <a class="brz-sl-tab <?php echo ( 'applied' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=applied' ) ); ?>">🔗 اعمال‌شده</a>
+                <a class="brz-sl-tab <?php echo ( 'strategy' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">⚙️ تنظیمات</a>
+                <a class="brz-sl-tab <?php echo ( 'maintenance' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">🔧 نگهداری</a>
             </div>
 
             <div>
                 <?php
-                if ( 'strategy' === $active_tab ) {
+                if ( 'export' === $active_tab ) {
+                    self::render_export_tab( $settings );
+                } elseif ( 'import' === $active_tab ) {
+                    self::render_import_tab( $settings );
+                } elseif ( 'review' === $active_tab ) {
+                    self::render_review_tab( $settings );
+                } elseif ( 'applied' === $active_tab ) {
+                    self::render_applied_tab( $settings );
+                } elseif ( 'strategy' === $active_tab ) {
                     self::render_strategy_tab( $settings );
-                } elseif ( 'exclusions' === $active_tab ) {
                     self::render_exclusions_tab( $settings );
-                } elseif ( 'workbench' === $active_tab ) {
-                    self::render_workbench_tab( $settings );
                 } else {
                     self::render_maintenance_tab( $settings );
                 }
@@ -218,7 +235,199 @@ class BRZ_Smart_Linker {
         <?php
     }
 
+    // ============================
+    // v3.0 Tab Render Methods
+    // ============================
+
+    /**
+     * Render Export tab - Generate JSON and AI prompt.
+     */
+    private static function render_export_tab( $settings ) {
+        ?>
+        <style>
+        .brz-sl-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 1200px) { .brz-sl-export-grid { grid-template-columns: 1fr; } }
+        .brz-sl-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+        .brz-sl-card h3 { margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; }
+        .brz-sl-textarea { width: 100%; min-height: 300px; font-family: monospace; font-size: 12px; direction: ltr; }
+        .brz-sl-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
+        .brz-sl-btn--primary { background: linear-gradient(135deg, #2563eb, #9333ea); color: #fff; }
+        .brz-sl-btn--secondary { background: #f1f5f9; color: #0f172a; border: 1px solid #e5e7eb; }
+        .brz-sl-stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+        .brz-sl-stat { background: #f8fafc; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+        .brz-sl-stat strong { color: #2563eb; }
+        .brz-sl-count { background: #ef4444; color: #fff; padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-right: 4px; }
+        .brz-sl-empty { text-align: center; padding: 40px; color: #64748b; }
+        .brz-sl-review-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; }
+        .brz-sl-review-table th { background: #f8fafc; padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; }
+        .brz-sl-review-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+        .brz-sl-review-table tr:hover { background: #f8fafc; }
+        .brz-sl-context { background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 13px; margin-top: 8px; }
+        .brz-sl-context mark { background: #fef08a; padding: 2px 4px; border-radius: 2px; }
+        .brz-sl-priority { padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+        .brz-sl-priority--high { background: #fef2f2; color: #dc2626; }
+        .brz-sl-priority--medium { background: #fefce8; color: #ca8a04; }
+        .brz-sl-priority--low { background: #f0fdf4; color: #16a34a; }
+        .brz-sl-actions { display: flex; gap: 6px; }
+        .brz-sl-action-btn { padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; }
+        .brz-sl-action-btn--approve { background: #16a34a; color: #fff; }
+        .brz-sl-action-btn--reject { background: #dc2626; color: #fff; }
+        </style>
+
+        <div class="brz-sl-export-grid">
+            <div class="brz-sl-card">
+                <h3>🔄 سینک از سایت دیگر</h3>
+                <p>ابتدا داده‌های سایت همتا را دریافت کنید.</p>
+                <div style="margin-top: 16px;">
+                    <button type="button" class="brz-sl-btn brz-sl-btn--secondary" id="brz-sl-sync-peer">🔄 دریافت از سایت همتا</button>
+                    <span id="brz-sl-sync-status" style="margin-right: 12px;"></span>
+                </div>
+            </div>
+            <div class="brz-sl-card">
+                <h3>📤 تولید خروجی JSON</h3>
+                <p>فایل JSON برای ارسال به AI.</p>
+                <div class="brz-sl-stats" id="brz-sl-export-stats"></div>
+                <button type="button" class="brz-sl-btn brz-sl-btn--primary" id="brz-sl-generate-export">⚡ تولید Export</button>
+            </div>
+        </div>
+        <div class="brz-sl-card" style="margin-top: 20px;">
+            <h3>📋 پرامپت AI</h3>
+            <textarea class="brz-sl-textarea" id="brz-sl-prompt" readonly placeholder="ابتدا روی «تولید Export» کلیک کنید..."></textarea>
+            <button type="button" class="brz-sl-btn brz-sl-btn--secondary" style="margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-prompt').value);">📋 کپی پرامپت</button>
+        </div>
+        <div class="brz-sl-card" style="margin-top: 20px;">
+            <h3>📄 فایل JSON</h3>
+            <textarea class="brz-sl-textarea" id="brz-sl-json" readonly placeholder="ابتدا روی «تولید Export» کلیک کنید..." style="min-height: 200px;"></textarea>
+            <div style="margin-top: 12px; display: flex; gap: 12px;">
+                <button type="button" class="brz-sl-btn brz-sl-btn--secondary" id="brz-sl-download-json">💾 دانلود JSON</button>
+                <button type="button" class="brz-sl-btn brz-sl-btn--secondary" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-json').value);">📋 کپی JSON</button>
+            </div>
+        </div>
+        <script>
+        (function() {
+            var nonce = '<?php echo wp_create_nonce( 'brz_smart_linker_export' ); ?>';
+            document.getElementById('brz-sl-sync-peer').onclick = function() {
+                var btn = this; btn.disabled = true; btn.textContent = '⏳...';
+                jQuery.post(ajaxurl, {action: 'brz_smart_linker_sync_peer', _ajax_nonce: nonce}, function(r) {
+                    btn.disabled = false; btn.textContent = '🔄 دریافت از سایت همتا';
+                    document.getElementById('brz-sl-sync-status').innerHTML = r.success ? '<span style="color:green">✅ '+r.data.message+'</span>' : '<span style="color:red">❌ '+r.data.message+'</span>';
+                });
+            };
+            document.getElementById('brz-sl-generate-export').onclick = function() {
+                var btn = this; btn.disabled = true; btn.textContent = '⏳...';
+                jQuery.post(ajaxurl, {action: 'brz_smart_linker_export', _ajax_nonce: nonce}, function(r) {
+                    btn.disabled = false; btn.textContent = '⚡ تولید Export';
+                    if (r.success) {
+                        document.getElementById('brz-sl-prompt').value = r.data.prompt;
+                        document.getElementById('brz-sl-json').value = JSON.stringify(r.data.json, null, 2);
+                        var c = r.data.json.meta.counts;
+                        document.getElementById('brz-sl-export-stats').innerHTML = '<div class="brz-sl-stat">محصولات: <strong>'+c.products+'</strong></div><div class="brz-sl-stat">مقالات: <strong>'+c.posts+'</strong></div><div class="brz-sl-stat">صفحات: <strong>'+c.pages+'</strong></div>';
+                    }
+                });
+            };
+            document.getElementById('brz-sl-download-json').onclick = function() {
+                var j = document.getElementById('brz-sl-json').value; if(!j)return;
+                var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([j],{type:'application/json'}));
+                a.download = 'smart-linker-export.json'; a.click();
+            };
+        })();
+        </script>
+        <?php
+    }
+
+    private static function render_import_tab( $settings ) {
+        ?>
+        <div class="brz-sl-card">
+            <h3>📥 وارد کردن پاسخ AI</h3>
+            <p>پاسخ JSON که از ChatGPT یا Gemini دریافت کردید را اینجا قرار دهید.</p>
+            <form id="brz-sl-import-form">
+                <?php wp_nonce_field( 'brz_smart_linker_import', '_ajax_nonce' ); ?>
+                <textarea class="brz-sl-textarea" name="json" id="brz-sl-import-json" placeholder='[{"source_id": 123, "keyword": "...", "target_id": 456, "target_url": "..."}]'></textarea>
+                <div style="margin-top: 12px;">
+                    <button type="submit" class="brz-sl-btn brz-sl-btn--primary">📥 وارد کردن</button>
+                    <span id="brz-sl-import-status" style="margin-right: 12px;"></span>
+                </div>
+            </form>
+        </div>
+        <script>
+        document.getElementById('brz-sl-import-form').onsubmit = function(e) {
+            e.preventDefault(); var s = document.getElementById('brz-sl-import-status'), btn = this.querySelector('button');
+            btn.disabled = true; btn.textContent = '⏳...';
+            jQuery.post(ajaxurl, {action: 'brz_smart_linker_import', _ajax_nonce: this._ajax_nonce.value, json: document.getElementById('brz-sl-import-json').value}, function(r) {
+                btn.disabled = false; btn.textContent = '📥 وارد کردن';
+                s.innerHTML = r.success ? '<span style="color:green">✅ '+r.data.message+'</span>' : '<span style="color:red">❌ '+r.data.message+'</span>';
+            });
+        };
+        </script>
+        <?php
+    }
+
+    private static function render_review_tab( $settings ) {
+        $links = BRZ_Smart_Linker_Importer::get_links_with_preview( 'pending', 100 );
+        $counts = BRZ_Smart_Linker_DB::get_pending_counts();
+        ?>
+        <div class="brz-sl-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h3 style="margin:0;">✅ بررسی لینک‌ها</h3>
+                    <p style="margin:8px 0 0;color:#64748b;">منتظر: <strong><?php echo esc_html( $counts['pending'] ); ?></strong> | تأیید: <strong><?php echo esc_html( $counts['approved'] ); ?></strong></p>
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button class="brz-sl-btn brz-sl-btn--primary" id="brz-sl-approve-all" <?php echo empty($links)?'disabled':''; ?>>✅ تأیید همه</button>
+                    <?php if ( $counts['approved'] > 0 ) : ?>
+                    <button class="brz-sl-btn brz-sl-btn--primary" id="brz-sl-apply-approved" style="background:linear-gradient(135deg,#16a34a,#059669);">🚀 اعمال <?php echo esc_html($counts['approved']); ?> لینک</button>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php if ( empty( $links ) ) : ?>
+                <div class="brz-sl-empty"><p style="font-size:48px;margin:0;">📭</p><p>لینکی وجود ندارد.</p></div>
+            <?php else : ?>
+                <table class="brz-sl-review-table"><thead><tr><th>مبدأ</th><th>کلمه</th><th>مقصد</th><th>اولویت</th><th>عمل</th></tr></thead><tbody>
+                <?php foreach ( $links as $link ) : ?>
+                <tr data-id="<?php echo esc_attr($link['id']); ?>">
+                    <td><a href="<?php echo esc_url($link['source_edit_url']); ?>" target="_blank"><?php echo esc_html($link['source_title']); ?></a><div class="brz-sl-context"><?php echo $link['context']; ?></div></td>
+                    <td><strong><?php echo esc_html($link['keyword']); ?></strong></td>
+                    <td><a href="<?php echo esc_url($link['target_url']); ?>" target="_blank"><?php echo esc_html($link['target_title']); ?></a></td>
+                    <td><span class="brz-sl-priority brz-sl-priority--<?php echo esc_attr($link['priority']); ?>"><?php echo esc_html($link['priority']); ?></span></td>
+                    <td><div class="brz-sl-actions"><button class="brz-sl-action-btn brz-sl-action-btn--approve" data-id="<?php echo esc_attr($link['id']); ?>">✅</button><button class="brz-sl-action-btn brz-sl-action-btn--reject" data-id="<?php echo esc_attr($link['id']); ?>">❌</button></div></td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody></table>
+            <?php endif; ?>
+        </div>
+        <script>
+        (function() {
+            var n = '<?php echo wp_create_nonce('brz_smart_linker_review'); ?>', an = '<?php echo wp_create_nonce('brz_smart_linker_apply'); ?>';
+            function upd(ids,s,cb){jQuery.post(ajaxurl,{action:'brz_smart_linker_update_status',_ajax_nonce:n,ids:ids,status:s},cb);}
+            document.querySelectorAll('.brz-sl-action-btn--approve').forEach(function(b){b.onclick=function(){upd([this.dataset.id],'approved',function(){location.reload();});}});
+            document.querySelectorAll('.brz-sl-action-btn--reject').forEach(function(b){b.onclick=function(){upd([this.dataset.id],'rejected',function(){location.reload();});}});
+            document.getElementById('brz-sl-approve-all')?.addEventListener('click',function(){var ids=[];document.querySelectorAll('tr[data-id]').forEach(function(r){ids.push(r.dataset.id);});if(ids.length&&confirm('تأیید '+ids.length+' لینک?'))upd(ids,'approved',function(){location.reload();});});
+            document.getElementById('brz-sl-apply-approved')?.addEventListener('click',function(){if(!confirm('اعمال لینک‌ها?'))return;this.disabled=true;this.textContent='⏳...';jQuery.post(ajaxurl,{action:'brz_smart_linker_apply_links',_ajax_nonce:an},function(r){alert(r.success?r.data.message:r.data.message);location.reload();});});
+        })();
+        </script>
+        <?php
+    }
+
+    private static function render_applied_tab( $settings ) {
+        $links = BRZ_Smart_Linker_DB::get_pending_links( 'applied', 100 );
+        ?>
+        <div class="brz-sl-card">
+            <h3>🔗 لینک‌های اعمال‌شده</h3>
+            <?php if ( empty( $links ) ) : ?>
+                <div class="brz-sl-empty"><p style="font-size:48px;margin:0;">📝</p><p>هنوز لینکی اعمال نشده.</p></div>
+            <?php else : ?>
+                <table class="brz-sl-review-table"><thead><tr><th>مبدأ</th><th>کلمه</th><th>مقصد</th><th>تاریخ</th></tr></thead><tbody>
+                <?php foreach ( $links as $link ) : $p=get_post($link['source_id']); ?>
+                <tr><td><?php echo $p?esc_html(get_the_title($p)):'(حذف)'; ?></td><td><strong><?php echo esc_html($link['keyword']); ?></strong></td><td><a href="<?php echo esc_url($link['target_url']); ?>" target="_blank"><?php echo esc_html($link['target_url']); ?></a></td><td><?php echo esc_html($link['applied_at']); ?></td></tr>
+                <?php endforeach; ?>
+                </tbody></table>
+            <?php endif; ?>
+        </div>
+        <?php
+    }
+
     private static function render_strategy_tab( $settings ) {
+
         ?>
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-settings-form" id="brz-sl-strategy-form" data-ajax="1">
             <?php wp_nonce_field( 'brz_smart_linker_save' ); ?>
@@ -624,11 +833,13 @@ class BRZ_Smart_Linker {
 
         $summary = array( 'products' => 0, 'posts' => 0 );
 
+        $settings = self::get_settings();
+
         foreach ( $by_post as $post_id => $rows ) {
             $post = get_post( $post_id );
             if ( ! $post ) { continue; }
             $content = $post->post_content;
-            $injector = new BRZ_Smart_Linker_Link_Injector( $post_id, $content, $post->post_type );
+            $injector = new BRZ_Smart_Linker_Link_Injector( $post_id, $content, $post->post_type, $settings );
             $result   = $injector->inject( $rows );
             if ( $result['changed'] ) {
                 wp_update_post( array(
@@ -791,7 +1002,8 @@ class BRZ_Smart_Linker {
                 continue;
             }
 
-            $injector = new BRZ_Smart_Linker_Link_Injector( $post_id, $content, $post->post_type );
+            $settings = self::get_settings();
+            $injector = new BRZ_Smart_Linker_Link_Injector( $post_id, $content, $post->post_type, $settings );
             $result   = $injector->inject( $to_inject );
 
             if ( $result['changed'] ) {
