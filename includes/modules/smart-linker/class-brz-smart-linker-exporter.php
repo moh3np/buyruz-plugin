@@ -11,6 +11,7 @@ class BRZ_Smart_Linker_Exporter {
     /**
      * Generate unified JSON export for AI consumption.
      * Automatically fetches from both local and peer sites.
+     * Only includes linkable (index) content - noindex items are excluded.
      *
      * @return array
      */
@@ -23,8 +24,8 @@ class BRZ_Smart_Linker_Exporter {
         $peer_warning = isset( $peer_result['warning'] ) ? $peer_result['warning'] : null;
         $peer_count = isset( $peer_result['count'] ) ? $peer_result['count'] : 0;
 
-        // Step 3: Get all content from both sites (now unified in content_index)
-        $all_content = BRZ_Smart_Linker_DB::get_content_index();
+        // Step 3: Get ONLY linkable content (noindex items are excluded)
+        $all_content = BRZ_Smart_Linker_DB::get_content_index( null, true ); // true = only_linkable
 
         // Organize by type
         $export = array(

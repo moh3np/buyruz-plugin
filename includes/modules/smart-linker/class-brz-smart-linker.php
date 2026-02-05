@@ -197,18 +197,19 @@ class BRZ_Smart_Linker {
             <span class="brz-sl-badge">Smart Linker</span>
         </div>
 
-        <div class="brz-sl-shell">
+        <div class="brz-sl-shell" style="max-width: none; padding: 0 20px;">
             <div class="brz-sl-tabs" role="tablist">
                 <a class="brz-sl-tab <?php echo ( 'export' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=export' ) ); ?>">📤 خروجی</a>
                 <a class="brz-sl-tab <?php echo ( 'import' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=import' ) ); ?>">📥 ورودی</a>
                 <?php $pending_count = BRZ_Smart_Linker_DB::get_pending_counts(); ?>
                 <a class="brz-sl-tab <?php echo ( 'review' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=review' ) ); ?>">✅ بررسی <?php if ( $pending_count['pending'] > 0 ) : ?><span class="brz-sl-count"><?php echo esc_html( $pending_count['pending'] ); ?></span><?php endif; ?></a>
                 <a class="brz-sl-tab <?php echo ( 'applied' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=applied' ) ); ?>">🔗 اعمال‌شده</a>
+                <a class="brz-sl-tab <?php echo ( 'analytics' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=analytics' ) ); ?>">📊 آنالیز</a>
                 <a class="brz-sl-tab <?php echo ( 'strategy' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">⚙️ تنظیمات</a>
                 <a class="brz-sl-tab <?php echo ( 'maintenance' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">🔧 نگهداری</a>
             </div>
 
-            <div>
+            <div style="width: 100%;">
                 <?php
                 if ( 'export' === $active_tab ) {
                     self::render_export_tab( $settings );
@@ -218,6 +219,8 @@ class BRZ_Smart_Linker {
                     self::render_review_tab( $settings );
                 } elseif ( 'applied' === $active_tab ) {
                     self::render_applied_tab( $settings );
+                } elseif ( 'analytics' === $active_tab ) {
+                    self::render_analytics_tab( $settings );
                 } elseif ( 'strategy' === $active_tab ) {
                     self::render_strategy_tab( $settings );
                     self::render_exclusions_tab( $settings );
@@ -530,6 +533,161 @@ class BRZ_Smart_Linker {
             </table>
             <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
         </form>
+        <?php
+    }
+
+    /**
+     * Render Analytics tab - shows all content with link counts
+     */
+    private static function render_analytics_tab( $settings ) {
+        // Get all content for analytics (including noindex items)
+        $all_content = BRZ_Smart_Linker_DB::get_content_index();
+        
+        // Get analytics settings (which columns to show)
+        $show_type = isset( $settings['analytics_show_type'] ) ? $settings['analytics_show_type'] : true;
+        $show_site = isset( $settings['analytics_show_site'] ) ? $settings['analytics_show_site'] : true;
+        $show_outbound = isset( $settings['analytics_show_outbound'] ) ? $settings['analytics_show_outbound'] : true;
+        $show_inbound = isset( $settings['analytics_show_inbound'] ) ? $settings['analytics_show_inbound'] : true;
+        $show_keyword = isset( $settings['analytics_show_keyword'] ) ? $settings['analytics_show_keyword'] : true;
+        $show_seo = isset( $settings['analytics_show_seo'] ) ? $settings['analytics_show_seo'] : true;
+        $show_wordcount = isset( $settings['analytics_show_wordcount'] ) ? $settings['analytics_show_wordcount'] : false;
+        $show_updated = isset( $settings['analytics_show_updated'] ) ? $settings['analytics_show_updated'] : false;
+        ?>
+        <style>
+        .brz-analytics-filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; align-items: center; }
+        .brz-analytics-filters select, .brz-analytics-filters input { padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; }
+        .brz-analytics-filters input[type="search"] { width: 250px; }
+        .brz-analytics-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .brz-analytics-table th { background: linear-gradient(135deg, #1e293b, #334155); color: #fff; padding: 14px 12px; text-align: right; font-weight: 500; font-size: 13px; }
+        .brz-analytics-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        .brz-analytics-table tr:hover { background: #f8fafc; }
+        .brz-analytics-table tr.noindex { background: #fef3c7; }
+        .brz-analytics-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .brz-analytics-badge--index { background: #d1fae5; color: #065f46; }
+        .brz-analytics-badge--noindex { background: #fef3c7; color: #92400e; }
+        .brz-analytics-badge--type { background: #e0e7ff; color: #3730a3; }
+        .brz-analytics-badge--site { background: #f3e8ff; color: #7c3aed; }
+        .brz-analytics-count { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 50%; font-weight: 600; font-size: 12px; }
+        .brz-analytics-count--out { background: #dbeafe; color: #1e40af; }
+        .brz-analytics-count--in { background: #dcfce7; color: #166534; }
+        .brz-analytics-stats { display: flex; gap: 16px; margin-bottom: 20px; }
+        .brz-analytics-stat { background: #fff; padding: 16px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .brz-analytics-stat strong { font-size: 24px; color: #2563eb; display: block; }
+        .brz-analytics-stat span { font-size: 12px; color: #64748b; }
+        </style>
+
+        <div class="brz-analytics-stats">
+            <div class="brz-analytics-stat"><strong id="brz-total-count"><?php echo count( $all_content ); ?></strong><span>کل محتوا</span></div>
+            <div class="brz-analytics-stat"><strong id="brz-linkable-count"><?php echo count( array_filter( $all_content, function( $item ) { return ! empty( $item['is_linkable'] ); } ) ); ?></strong><span>قابل لینک (index)</span></div>
+            <div class="brz-analytics-stat"><strong id="brz-noindex-count"><?php echo count( array_filter( $all_content, function( $item ) { return empty( $item['is_linkable'] ); } ) ); ?></strong><span>noindex</span></div>
+        </div>
+
+        <div class="brz-analytics-filters">
+            <select id="brz-filter-type">
+                <option value="">همه انواع</option>
+                <option value="product">محصول</option>
+                <option value="post">مقاله</option>
+                <option value="page">صفحه</option>
+                <option value="term_product_cat">دسته محصول</option>
+                <option value="term_category">دسته مقاله</option>
+            </select>
+            <select id="brz-filter-site">
+                <option value="">همه سایت‌ها</option>
+                <option value="local">محلی</option>
+                <option value="shop">فروشگاه</option>
+                <option value="blog">وبلاگ</option>
+            </select>
+            <select id="brz-filter-seo">
+                <option value="">همه وضعیت‌ها</option>
+                <option value="index">index</option>
+                <option value="noindex">noindex</option>
+            </select>
+            <input type="search" id="brz-filter-search" placeholder="جستجو در عنوان...">
+            <button type="button" class="brz-sl-btn brz-sl-btn--secondary" id="brz-refresh-analytics">🔄 بروزرسانی</button>
+        </div>
+
+        <table class="brz-analytics-table">
+            <thead>
+                <tr>
+                    <th>عنوان</th>
+                    <?php if ( $show_type ) : ?><th>نوع</th><?php endif; ?>
+                    <?php if ( $show_site ) : ?><th>سایت</th><?php endif; ?>
+                    <?php if ( $show_outbound ) : ?><th>خروجی</th><?php endif; ?>
+                    <?php if ( $show_inbound ) : ?><th>ورودی</th><?php endif; ?>
+                    <?php if ( $show_keyword ) : ?><th>کلمه کلیدی</th><?php endif; ?>
+                    <?php if ( $show_seo ) : ?><th>SEO</th><?php endif; ?>
+                    <?php if ( $show_wordcount ) : ?><th>کلمات</th><?php endif; ?>
+                    <?php if ( $show_updated ) : ?><th>آخرین بروزرسانی</th><?php endif; ?>
+                </tr>
+            </thead>
+            <tbody id="brz-analytics-body">
+                <?php foreach ( $all_content as $item ) : 
+                    $is_linkable = ! empty( $item['is_linkable'] );
+                    $type_labels = array(
+                        'product' => 'محصول',
+                        'post' => 'مقاله',
+                        'page' => 'صفحه',
+                        'term_product_cat' => 'دسته محصول',
+                        'term_category' => 'دسته مقاله',
+                        'term_post_tag' => 'برچسب',
+                    );
+                    $type_label = isset( $type_labels[ $item['post_type'] ] ) ? $type_labels[ $item['post_type'] ] : $item['post_type'];
+                ?>
+                <tr class="<?php echo $is_linkable ? '' : 'noindex'; ?>" 
+                    data-type="<?php echo esc_attr( $item['post_type'] ); ?>"
+                    data-site="<?php echo esc_attr( $item['site_id'] ); ?>"
+                    data-seo="<?php echo $is_linkable ? 'index' : 'noindex'; ?>"
+                    data-title="<?php echo esc_attr( strtolower( $item['title'] ) ); ?>">
+                    <td>
+                        <a href="<?php echo esc_url( $item['url'] ); ?>" target="_blank" style="color: #2563eb; text-decoration: none;">
+                            <?php echo esc_html( $item['title'] ); ?>
+                        </a>
+                    </td>
+                    <?php if ( $show_type ) : ?><td><span class="brz-analytics-badge brz-analytics-badge--type"><?php echo esc_html( $type_label ); ?></span></td><?php endif; ?>
+                    <?php if ( $show_site ) : ?><td><span class="brz-analytics-badge brz-analytics-badge--site"><?php echo esc_html( $item['site_id'] ); ?></span></td><?php endif; ?>
+                    <?php if ( $show_outbound ) : ?><td><span class="brz-analytics-count brz-analytics-count--out">0</span></td><?php endif; ?>
+                    <?php if ( $show_inbound ) : ?><td><span class="brz-analytics-count brz-analytics-count--in">0</span></td><?php endif; ?>
+                    <?php if ( $show_keyword ) : ?><td><?php echo esc_html( $item['focus_keyword'] ?: '—' ); ?></td><?php endif; ?>
+                    <?php if ( $show_seo ) : ?><td><span class="brz-analytics-badge <?php echo $is_linkable ? 'brz-analytics-badge--index' : 'brz-analytics-badge--noindex'; ?>"><?php echo $is_linkable ? 'index' : 'noindex'; ?></span></td><?php endif; ?>
+                    <?php if ( $show_wordcount ) : ?><td><?php echo esc_html( $item['word_count'] ?: '—' ); ?></td><?php endif; ?>
+                    <?php if ( $show_updated ) : ?><td style="font-size:11px;"><?php echo esc_html( $item['last_synced'] ); ?></td><?php endif; ?>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <script>
+        (function() {
+            function filterTable() {
+                var type = document.getElementById('brz-filter-type').value;
+                var site = document.getElementById('brz-filter-site').value;
+                var seo = document.getElementById('brz-filter-seo').value;
+                var search = document.getElementById('brz-filter-search').value.toLowerCase();
+                var rows = document.querySelectorAll('#brz-analytics-body tr');
+                var shown = 0;
+                
+                rows.forEach(function(row) {
+                    var show = true;
+                    if (type && row.dataset.type !== type) show = false;
+                    if (site && row.dataset.site !== site) show = false;
+                    if (seo && row.dataset.seo !== seo) show = false;
+                    if (search && row.dataset.title.indexOf(search) === -1) show = false;
+                    row.style.display = show ? '' : 'none';
+                    if (show) shown++;
+                });
+                document.getElementById('brz-total-count').textContent = shown;
+            }
+            
+            document.getElementById('brz-filter-type').onchange = filterTable;
+            document.getElementById('brz-filter-site').onchange = filterTable;
+            document.getElementById('brz-filter-seo').onchange = filterTable;
+            document.getElementById('brz-filter-search').oninput = filterTable;
+            
+            document.getElementById('brz-refresh-analytics').onclick = function() {
+                location.reload();
+            };
+        })();
+        </script>
         <?php
     }
 

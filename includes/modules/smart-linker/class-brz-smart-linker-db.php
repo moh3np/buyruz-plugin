@@ -2,7 +2,7 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /**
- * Persistence layer for Smart Internal Linking v3.0.
+ * Persistence layer for Smart Internal Linking v3.1.
  *
  * Responsibility:
  * - Table name resolution
@@ -10,20 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * - CRUD helpers with strict sanitization
  */
 class BRZ_Smart_Linker_DB {
-    const TABLE_SUFFIX        = 'smart_links_log';
-    const CACHE_SUFFIX        = 'buyruz_remote_cache';
     const CONTENT_INDEX_SUFFIX = 'brz_content_index';
     const PENDING_LINKS_SUFFIX = 'brz_pending_links';
-
-    /**
-     * Return fully-qualified table name with WordPress prefix.
-     *
-     * @return string
-     */
-    public static function table() {
-        global $wpdb;
-        return $wpdb->prefix . self::TABLE_SUFFIX;
-    }
 
     /**
      * Content index table name.
@@ -44,45 +32,13 @@ class BRZ_Smart_Linker_DB {
     /**
      * Create or upgrade all tables.
      * Uses dbDelta to stay compatible across environments.
+     * v3.1: Only creates v3.0 tables (content_index, pending_links)
      */
     public static function migrate() {
         global $wpdb;
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
         $charset_collate = $wpdb->get_charset_collate();
-
-        // Legacy links log table
-        $table = self::table();
-        $sql = "CREATE TABLE {$table} (
-            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            post_id bigint(20) unsigned NOT NULL,
-            keyword varchar(191) NOT NULL,
-            target_url text NOT NULL,
-            fingerprint varchar(191) NOT NULL,
-            status ENUM('pending','approved','active','user_deleted','manual_override') NOT NULL DEFAULT 'pending',
-            created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
-            KEY post_id (post_id),
-            UNIQUE KEY fingerprint (fingerprint)
-        ) {$charset_collate};";
-        dbDelta( $sql );
-
-        // Remote cache table for peer-to-peer sync
-        $cache = self::cache_table();
-        $sql_cache = "CREATE TABLE {$cache} (
-            id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-            remote_id bigint(20) unsigned NOT NULL,
-            type varchar(20) NOT NULL,
-            title varchar(255) NOT NULL,
-            url text NOT NULL,
-            categories text NULL,
-            stock_status varchar(40) NULL,
-            updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            KEY type (type),
-            UNIQUE KEY remote_unique (remote_id,type)
-        ) {$charset_collate};";
-        dbDelta( $sql_cache );
 
         // v3.0: Content Index table (unified knowledge base)
         $content_index = self::content_index_table();
@@ -135,6 +91,45 @@ class BRZ_Smart_Linker_DB {
             KEY batch_id (batch_id)
         ) {$charset_collate};";
         dbDelta( $sql_pending );
+
+        // Drop legacy tables if they exist (cleanup)
+        self::drop_legacy_tables();
+    }
+
+    /**
+     * Drop legacy tables from older versions.
+     */
+    public static function drop_legacy_tables() {
+        global $wpdb;
+        
+        // Legacy tables to remove
+        $legacy_tables = array(
+            $wpdb->prefix . 'smart_links_log',
+            $wpdb->prefix . 'buyruz_remote_cache',
+        );
+
+        foreach ( $legacy_tables as $table ) {
+            $wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        }
+    }
+
+    /**
+     * Drop ALL Smart Linker tables (for uninstall).
+     */
+    public static function drop_all_tables() {
+        global $wpdb;
+        
+        $tables = array(
+            self::content_index_table(),
+            self::pending_links_table(),
+        );
+
+        foreach ( $tables as $table ) {
+            $wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        }
+
+        // Also drop legacy tables
+        self::drop_legacy_tables();
     }
 
     // ============================
@@ -207,11 +202,12 @@ class BRZ_Smart_Linker_DB {
     /**
      * Get all content from index.
      *
-     * @param string $site_id Optional site filter
+     * @param string $site_id Optional site filter (null = all sites)
+     * @param bool   $only_linkable If true, only return items with is_linkable = 1
      * @param string $post_type Optional type filter
      * @return array
      */
-    public static function get_content_index( $site_id = null, $post_type = null ) {
+    public static function get_content_index( $site_id = null, $only_linkable = false, $post_type = null ) {
         global $wpdb;
         $table = self::content_index_table();
 
@@ -221,6 +217,9 @@ class BRZ_Smart_Linker_DB {
         if ( $site_id ) {
             $where[] = 'site_id = %s';
             $params[] = $site_id;
+        }
+        if ( $only_linkable ) {
+            $where[] = 'is_linkable = 1';
         }
         if ( $post_type ) {
             $where[] = 'post_type = %s';
@@ -520,64 +519,6 @@ class BRZ_Smart_Linker_DB {
      */
     public static function active_for_post( $post_id ) {
         return self::get_for_post( $post_id, array( 'active' ) );
-    }
-
-    /**
-     * Cache table name with prefix.
-     */
-    public static function cache_table() {
-        global $wpdb;
-        return $wpdb->prefix . self::CACHE_SUFFIX;
-    }
-
-    /**
-     * Replace cache rows for a type in bulk.
-     *
-     * @param string $type product|post
-     * @param array  $items
-     */
-    public static function replace_cache( $type, array $items ) {
-        global $wpdb;
-        $table = self::cache_table();
-        $type  = sanitize_key( $type );
-
-        $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE type = %s", $type ) );
-
-        foreach ( $items as $item ) {
-            $wpdb->insert(
-                $table,
-                array(
-                    'remote_id'    => isset( $item['remote_id'] ) ? (int) $item['remote_id'] : 0,
-                    'type'         => $type,
-                    'title'        => sanitize_text_field( isset( $item['title'] ) ? $item['title'] : '' ),
-                    'url'          => esc_url_raw( isset( $item['url'] ) ? $item['url'] : '' ),
-                    'categories'   => isset( $item['categories'] ) ? maybe_serialize( $item['categories'] ) : '',
-                    'stock_status' => sanitize_text_field( isset( $item['stock_status'] ) ? $item['stock_status'] : '' ),
-                    'updated_at'   => current_time( 'mysql' ),
-                ),
-                array( '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
-            );
-        }
-    }
-
-    /**
-     * Fetch cache rows with optional keyword filter.
-     */
-    public static function search_cache( $type, $keyword = '', $limit = 20 ) {
-        global $wpdb;
-        $table = self::cache_table();
-        $type  = sanitize_key( $type );
-        $limit = (int) $limit;
-        if ( $limit < 1 ) { $limit = 20; }
-
-        if ( $keyword ) {
-            $like = '%' . $wpdb->esc_like( $keyword ) . '%';
-            $sql  = $wpdb->prepare( "SELECT * FROM {$table} WHERE type = %s AND title LIKE %s ORDER BY updated_at DESC LIMIT %d", $type, $like, $limit );
-        } else {
-            $sql  = $wpdb->prepare( "SELECT * FROM {$table} WHERE type = %s ORDER BY updated_at DESC LIMIT %d", $type, $limit );
-        }
-
-        return $wpdb->get_results( $sql, ARRAY_A );
     }
 
     /**
