@@ -52,6 +52,27 @@ class BRZ_Order_Processor {
             'permission_callback' => [ __CLASS__, 'check_permission' ],
             'args'                => self::get_endpoint_args(),
         ] );
+        
+        // Endpoint موجودی تاپین
+        register_rest_route( 'buyruz/v1', '/tapin/balance', [
+            'methods'             => WP_REST_Server::READABLE, // GET
+            'callback'            => [ __CLASS__, 'get_balance' ],
+            'permission_callback' => [ __CLASS__, 'check_permission' ],
+        ] );
+    }
+    
+    /**
+     * دریافت موجودی تاپین (Endpoint)
+     * @return WP_REST_Response
+     */
+    public static function get_balance(): WP_REST_Response {
+        $balance = self::get_tapin_balance();
+        
+        return new WP_REST_Response( [
+            'success' => $balance !== null,
+            'balance' => $balance,
+            'message' => $balance !== null ? 'موجودی تاپین دریافت شد.' : 'خطا در دریافت موجودی.',
+        ], 200 );
     }
 
     /**
@@ -245,6 +266,11 @@ class BRZ_Order_Processor {
             }
         }
         
+        // اضافه کردن اطلاعات مالی تاپین
+        $result['real_shipping_cost'] = self::get_real_shipping_cost( $order );
+        $result['tapin_balance']      = self::get_tapin_balance();
+        $result['shipping_method']    = self::get_shipping_method_label( $order );
+        
         // تغییر وضعیت (اگر درخواست شده)
         if ( ! empty( $new_status ) && $new_status !== $order->get_status() ) {
             $order->set_status( $new_status, 'تغییر وضعیت از گوگل شیت - ' );
@@ -256,6 +282,73 @@ class BRZ_Order_Processor {
         do_action( 'buyruz_order_processed', $order_id, $result );
         
         return new WP_REST_Response( $result, 200 );
+    }
+    
+    /**
+     * دریافت هزینه واقعی ارسال (از تاپین)
+     * @param WC_Order $order
+     * @return int - هزینه به ریال
+     */
+    private static function get_real_shipping_cost( WC_Order $order ): int {
+        $price = intval( $order->get_meta( 'tapin_send_price' ) ?: 0 );
+        $tax   = intval( $order->get_meta( 'tapin_send_price_tax' ) ?: 0 );
+        return $price + $tax;
+    }
+    
+    /**
+     * دریافت موجودی کیف پول تاپین
+     * @return int|null - موجودی به ریال یا null در صورت خطا
+     */
+    private static function get_tapin_balance(): ?int {
+        if ( ! class_exists( 'PWS_Tapin' ) || ! method_exists( 'PWS_Tapin', 'request' ) ) {
+            return null;
+        }
+        
+        // استفاده از کش
+        $cached = get_transient( 'brz_tapin_balance' );
+        if ( $cached !== false ) {
+            return intval( $cached );
+        }
+        
+        try {
+            if ( method_exists( 'PWS_Tapin', 'set_gateway' ) && function_exists( 'PWS' ) ) {
+                PWS_Tapin::set_gateway( PWS()->get_option( 'tapin.gateway' ) );
+            }
+            
+            $response = PWS_Tapin::request( 'v2/public/transaction/credit/', [
+                'shop_id' => function_exists( 'PWS' ) ? PWS()->get_option( 'tapin.shop_id' ) : '',
+            ] );
+            
+            if ( is_wp_error( $response ) || ! isset( $response->returns->status ) || $response->returns->status !== 200 ) {
+                return null;
+            }
+            
+            $balance = intval( $response->entries->credit ?? 0 );
+            set_transient( 'brz_tapin_balance', $balance, 5 * MINUTE_IN_SECONDS );
+            
+            return $balance;
+        } catch ( \Exception $e ) {
+            return null;
+        }
+    }
+    
+    /**
+     * دریافت نام روش ارسال
+     * @param WC_Order $order
+     * @return string
+     */
+    private static function get_shipping_method_label( WC_Order $order ): string {
+        if ( class_exists( 'PWS_Order' ) && method_exists( 'PWS_Order', 'get_shipping_method' ) ) {
+            $label = PWS_Order::get_shipping_method( $order, true );
+            return $label ?: 'نامشخص';
+        }
+        
+        // Fallback: read from shipping items
+        foreach ( $order->get_shipping_methods() as $shipping_item ) {
+            return $shipping_item->get_method_title() ?: 'نامشخص';
+        }
+        
+        return 'نامشخص';
     }
 
     /**
