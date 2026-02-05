@@ -177,13 +177,19 @@ class BRZ_Smart_Linker {
         /* جلوگیری از تکرار هدر و مسیرها در صفحه لینک‌ساز هوشمند */
         .brz-admin-wrap .brz-hero:not(:first-of-type) { display: none; }
         .brz-admin-wrap .brz-side-nav:not(:first-of-type) { display: none; }
+        /* حذف padding های وردپرس برای full-width */
+        #wpcontent { padding-left: 0 !important; }
+        #wpbody-content { padding-bottom: 0 !important; }
+        .wrap { margin: 0 !important; max-width: none !important; }
+        .brz-admin-wrap { margin: 0 !important; padding: 0 !important; }
+        .brz-content-wrapper { margin: 0 !important; padding: 0 !important; max-width: none !important; }
         /* استایل اختصاصی لینک‌ساز هوشمند - تمام عرض */
-        .brz-sl-shell { background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:20px; }
+        .brz-sl-shell { background:#f8fafc; border:none; border-radius:0; padding:20px 30px; margin: 0 !important; }
         .brz-sl-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 16px 0; }
         .brz-sl-tab { border:1px solid #e5e7eb; border-radius:8px; padding:10px 16px; background:#fff; color:#0f172a; text-decoration:none; font-size:14px; }
         .brz-sl-tab:hover { background:#f1f5f9; }
         .brz-sl-tab.is-active { background:linear-gradient(135deg,#2563eb,#9333ea); color:#fff; border-color:transparent; }
-        .brz-sl-hero { margin-bottom:20px; padding:20px; border-radius:12px; background:linear-gradient(135deg,#667eea,#764ba2); display:flex; align-items:center; justify-content:space-between; }
+        .brz-sl-hero { margin:0 0 20px 0; padding:20px 30px; border-radius:0; background:linear-gradient(135deg,#667eea,#764ba2); display:flex; align-items:center; justify-content:space-between; }
         .brz-sl-hero h2 { margin:0 0 4px 0; font-size:22px; color:#fff; }
         .brz-sl-hero p { margin:0; color:rgba(255,255,255,0.85); font-size:14px; }
         .brz-sl-badge { background:rgba(255,255,255,0.2); color:#fff; border-radius:999px; padding:6px 12px; font-size:12px; }
