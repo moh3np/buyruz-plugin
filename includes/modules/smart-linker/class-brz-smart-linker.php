@@ -647,16 +647,28 @@ class BRZ_Smart_Linker {
                         var c = r.data.json.meta.counts;
                         var peerCount = r.data.json.meta.peer_count || 0;
                         
-                        // Generate stats based on site type
+                        // Generate stats based on counts - only show items with count > 0
                         var statsHtml = '';
-                        if (isShop) {
-                            statsHtml = '<div class="brz-sl-stat-item"><strong>'+c.products+'</strong><span>محصولات</span></div>' +
-                                '<div class="brz-sl-stat-item"><strong>'+c.pages+'</strong><span>صفحات</span></div>' +
-                                '<div class="brz-sl-stat-item"><strong>'+c.product_categories+'</strong><span>دسته‌بندی محصولات</span></div>' +
-                                '<div class="brz-sl-stat-item"><strong>'+c.tags+'</strong><span>تگ محصولات</span></div>';
-                        } else {
-                            statsHtml = '<div class="brz-sl-stat-item"><strong>'+c.posts+'</strong><span>مقالات</span></div>' +
-                                '<div class="brz-sl-stat-item"><strong>'+c.pages+'</strong><span>صفحات</span></div>';
+                        
+                        // Shop-type stats
+                        if (c.products > 0) {
+                            statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.products+'</strong><span>محصولات</span></div>';
+                        }
+                        if (c.pages > 0) {
+                            statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.pages+'</strong><span>صفحات</span></div>';
+                        }
+                        if (c.product_categories > 0) {
+                            statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.product_categories+'</strong><span>دسته‌بندی محصولات</span></div>';
+                        }
+                        if (c.tags > 0) {
+                            statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.tags+'</strong><span>تگ محصولات</span></div>';
+                        }
+                        // Blog-type stats
+                        if (c.posts > 0) {
+                            statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.posts+'</strong><span>مقالات</span></div>';
+                        }
+                        if (c.post_categories > 0) {
+                            statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.post_categories+'</strong><span>دسته‌بندی مقالات</span></div>';
                         }
                         document.getElementById('brz-sl-export-stats').innerHTML = statsHtml;
                         

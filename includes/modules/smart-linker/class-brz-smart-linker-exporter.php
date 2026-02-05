@@ -26,6 +26,18 @@ class BRZ_Smart_Linker_Exporter {
 
         // Step 3: Get ONLY linkable content (noindex items are excluded)
         $all_content = BRZ_Smart_Linker_DB::get_content_index( null, true ); // true = only_linkable
+        
+        // Fallback: If content_index is empty, get local content directly from WordPress
+        $local_count = 0;
+        $local_content_from_db = BRZ_Smart_Linker_DB::get_content_index( 'local', true );
+        $local_count = count( $local_content_from_db );
+        
+        if ( empty( $local_content_from_db ) ) {
+            // Table doesn't exist or is empty - get directly from WordPress
+            $local_content = self::get_local_content_fallback();
+            $all_content = array_merge( $all_content, $local_content );
+            $local_count = count( $local_content );
+        }
 
         // Organize by type
         $export = array(
@@ -34,6 +46,7 @@ class BRZ_Smart_Linker_Exporter {
                 'plugin_version' => defined( 'BRZ_VERSION' ) ? BRZ_VERSION : '1.0.0',
                 'site_url'       => home_url(),
                 'total_items'    => count( $all_content ),
+                'local_count'    => $local_count,
                 'peer_count'     => $peer_count,
                 'warning'        => $peer_warning,
             ),
@@ -81,6 +94,34 @@ class BRZ_Smart_Linker_Exporter {
         );
 
         return $export;
+    }
+    
+    /**
+     * Fallback: Get local content directly from WordPress when content_index table is empty.
+     *
+     * @return array
+     */
+    private static function get_local_content_fallback() {
+        $settings = BRZ_Smart_Linker::get_settings();
+        $site_role = isset( $settings['site_role'] ) ? $settings['site_role'] : 'shop';
+        
+        $post_types = array( 'post', 'page' );
+        if ( 'shop' === $site_role && post_type_exists( 'product' ) ) {
+            $post_types[] = 'product';
+        }
+        
+        $posts = get_posts( array(
+            'post_type'      => $post_types,
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+        ) );
+        
+        $items = array();
+        foreach ( $posts as $post ) {
+            $items[] = BRZ_Smart_Linker_Sync::build_content_data( $post, $site_role );
+        }
+        
+        return $items;
     }
 
     /**

@@ -279,12 +279,13 @@ class BRZ_Smart_Linker_Sync {
 
     /**
      * Build content data array from a post.
+     * Public method to allow fallback access from exporter.
      *
      * @param WP_Post $post
      * @param string  $site_role
      * @return array
      */
-    private static function build_content_data( WP_Post $post, $site_role ) {
+    public static function build_content_data( WP_Post $post, $site_role ) {
         $content = wp_strip_all_tags( $post->post_content );
         $word_count = str_word_count( $content );
         $excerpt = mb_substr( $content, 0, 1000, 'UTF-8' );
