@@ -174,36 +174,229 @@ class BRZ_Smart_Linker {
         self::render_notices();
         ?>
         <style>
-        /* جلوگیری از تکرار هدر و مسیرها در صفحه لینک‌ساز هوشمند */
-        .brz-admin-wrap .brz-hero:not(:first-of-type) { display: none; }
-        .brz-admin-wrap .brz-side-nav:not(:first-of-type) { display: none; }
+        /* ==================== Smart Linker v3.1 - Professional UI ==================== */
+        
         /* حذف padding های وردپرس برای full-width */
         #wpcontent { padding-left: 0 !important; }
         #wpbody-content { padding-bottom: 0 !important; }
         .wrap { margin: 0 !important; max-width: none !important; }
         .brz-admin-wrap { margin: 0 !important; padding: 0 !important; }
         .brz-content-wrapper { margin: 0 !important; padding: 0 !important; max-width: none !important; }
-        /* استایل اختصاصی لینک‌ساز هوشمند - تمام عرض */
-        .brz-sl-shell { background:#f8fafc; border:none; border-radius:0; padding:20px 30px; margin: 0 !important; }
-        .brz-sl-tabs { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 16px 0; }
-        .brz-sl-tab { border:1px solid #e5e7eb; border-radius:8px; padding:10px 16px; background:#fff; color:#0f172a; text-decoration:none; font-size:14px; }
-        .brz-sl-tab:hover { background:#f1f5f9; }
-        .brz-sl-tab.is-active { background:linear-gradient(135deg,#2563eb,#9333ea); color:#fff; border-color:transparent; }
-        .brz-sl-hero { margin:0 0 20px 0; padding:20px 30px; border-radius:0; background:linear-gradient(135deg,#667eea,#764ba2); display:flex; align-items:center; justify-content:space-between; }
-        .brz-sl-hero h2 { margin:0 0 4px 0; font-size:22px; color:#fff; }
-        .brz-sl-hero p { margin:0; color:rgba(255,255,255,0.85); font-size:14px; }
-        .brz-sl-badge { background:rgba(255,255,255,0.2); color:#fff; border-radius:999px; padding:6px 12px; font-size:12px; }
+        .brz-admin-wrap .brz-hero:not(:first-of-type) { display: none; }
+        .brz-admin-wrap .brz-side-nav:not(:first-of-type) { display: none; }
+        
+        /* Hero Section - با فاصله مناسب */
+        .brz-sl-hero { 
+            margin: 0; 
+            padding: 28px 40px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        }
+        .brz-sl-hero h2 { margin: 0 0 6px 0; font-size: 26px; color: #fff; font-weight: 700; }
+        .brz-sl-hero p { margin: 0; color: rgba(255,255,255,0.9); font-size: 14px; }
+        .brz-sl-badge { 
+            background: rgba(255,255,255,0.2); 
+            backdrop-filter: blur(10px);
+            color: #fff; 
+            border-radius: 999px; 
+            padding: 8px 16px; 
+            font-size: 12px; 
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        /* Shell Container - فاصله مناسب از اطراف */
+        .brz-sl-shell { 
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); 
+            padding: 24px 40px 40px 40px; 
+            min-height: calc(100vh - 200px);
+        }
+        
+        /* Tabs - طراحی مدرن */
+        .brz-sl-tabs { 
+            display: flex; 
+            gap: 8px; 
+            flex-wrap: wrap; 
+            margin: 0 0 24px 0; 
+            padding: 16px 20px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .brz-sl-tab { 
+            border: none; 
+            border-radius: 10px; 
+            padding: 12px 20px; 
+            background: #f1f5f9; 
+            color: #475569; 
+            text-decoration: none; 
+            font-size: 14px; 
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .brz-sl-tab:hover { 
+            background: #e2e8f0; 
+            color: #1e293b;
+            transform: translateY(-1px);
+        }
+        .brz-sl-tab.is-active { 
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); 
+            color: #fff; 
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .brz-sl-count { 
+            background: #ef4444; 
+            color: #fff; 
+            border-radius: 999px; 
+            padding: 2px 8px; 
+            font-size: 11px; 
+            margin-right: 6px;
+        }
+        
+        /* Content Cards */
+        .brz-sl-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #e2e8f0;
+        }
+        .brz-sl-card h3 {
+            margin: 0 0 12px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .brz-sl-card p {
+            margin: 0 0 20px 0;
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        /* Buttons - دکمه‌های مدرن */
+        .brz-sl-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .brz-sl-btn--primary {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+        .brz-sl-btn--primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+        }
+        .brz-sl-btn--secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+        .brz-sl-btn--secondary:hover {
+            background: #e2e8f0;
+        }
+        
+        /* Stats Grid */
+        .brz-sl-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .brz-sl-stat {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #bae6fd;
+        }
+        .brz-sl-stat strong {
+            display: block;
+            font-size: 24px;
+            font-weight: 700;
+            color: #0369a1;
+        }
+        .brz-sl-stat span {
+            font-size: 12px;
+            color: #0c4a6e;
+        }
+        
+        /* Textareas */
+        .brz-sl-textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Vazirmatn', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: vertical;
+            background: #f8fafc;
+        }
+        .brz-sl-textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        /* Messages */
+        .brz-sl-success {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-top: 16px;
+        }
+        .brz-sl-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-top: 16px;
+        }
+        
+        /* Two Column Layout */
+        .brz-sl-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .brz-sl-hero { padding: 20px; }
+            .brz-sl-shell { padding: 16px; }
+            .brz-sl-tabs { padding: 12px; }
+            .brz-sl-grid { grid-template-columns: 1fr; }
+        }
         </style>
 
         <div class="brz-sl-hero">
             <div>
-                <h2>لینک‌ساز هوشمند v3.0</h2>
+                <h2>لینک‌ساز هوشمند v3.1</h2>
                 <p>لینک‌سازی داخلی هوشمند با AI - سینک یکپارچه بین سایت‌ها</p>
             </div>
             <span class="brz-sl-badge">Smart Linker</span>
         </div>
 
-        <div class="brz-sl-shell" style="max-width: none; padding: 0 20px;">
+        <div class="brz-sl-shell">
             <div class="brz-sl-tabs" role="tablist">
                 <a class="brz-sl-tab <?php echo ( 'export' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=export' ) ); ?>">📤 خروجی</a>
                 <a class="brz-sl-tab <?php echo ( 'import' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=import' ) ); ?>">📥 ورودی</a>
@@ -215,7 +408,7 @@ class BRZ_Smart_Linker {
                 <a class="brz-sl-tab <?php echo ( 'maintenance' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">🔧 نگهداری</a>
             </div>
 
-            <div style="width: 100%;">
+            <div>
                 <?php
                 if ( 'export' === $active_tab ) {
                     self::render_export_tab( $settings );
