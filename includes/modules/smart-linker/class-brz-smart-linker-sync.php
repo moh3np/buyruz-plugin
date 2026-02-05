@@ -502,6 +502,18 @@ class BRZ_Smart_Linker_Sync {
 
         $code = wp_remote_retrieve_response_code( $response );
         if ( 200 !== $code ) {
+            // More detailed error for 404 to help debugging
+            if ( 404 === $code ) {
+                return array(
+                    'success' => false,
+                    'count'   => 0,
+                    'site_id' => null,
+                    'warning' => sprintf( 
+                        'خطای HTTP 404: Endpoint در سایت همتا یافت نشد. مطمئن شوید افزونه در سایت همتا فعال و به‌روز است. (URL: %s)',
+                        esc_url( $url )
+                    ),
+                );
+            }
             return array(
                 'success' => false,
                 'count'   => 0,

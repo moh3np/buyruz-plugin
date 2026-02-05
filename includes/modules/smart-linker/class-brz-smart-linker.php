@@ -453,48 +453,172 @@ class BRZ_Smart_Linker {
      * Render Export tab - Generate JSON and AI prompt.
      */
     private static function render_export_tab( $settings ) {
+        // Determine site type for appropriate labels
+        $site_role = isset( $settings['site_role'] ) ? $settings['site_role'] : 'blog';
+        $is_shop   = ( 'shop' === $site_role );
         ?>
         <style>
-        .brz-sl-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 1200px) { .brz-sl-export-grid { grid-template-columns: 1fr; } }
-        .brz-sl-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
-        .brz-sl-card h3 { margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; }
-        .brz-sl-textarea { width: 100%; min-height: 300px; font-family: monospace; font-size: 12px; direction: ltr; }
-        .brz-sl-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; }
-        .brz-sl-btn--primary { background: linear-gradient(135deg, #2563eb, #9333ea); color: #fff; }
-        .brz-sl-btn--secondary { background: #f1f5f9; color: #0f172a; border: 1px solid #e5e7eb; }
-        .brz-sl-stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
-        .brz-sl-stat { background: #f8fafc; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
-        .brz-sl-stat strong { color: #2563eb; }
-        .brz-sl-warning { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 13px; }
-        .brz-sl-success { background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 13px; }
-        .brz-sl-empty { text-align: center; padding: 40px; color: #64748b; }
+        .brz-sl-export-card { 
+            background: #fff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 16px; 
+            padding: 28px; 
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .brz-sl-export-card h3 { 
+            margin: 0 0 12px 0; 
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .brz-sl-export-card p {
+            margin: 0 0 20px 0;
+            color: #64748b;
+            font-size: 14px;
+        }
+        .brz-sl-export-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+        }
+        @media (max-width: 1200px) { 
+            .brz-sl-export-grid { grid-template-columns: 1fr; } 
+        }
+        .brz-sl-stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+            gap: 12px; 
+            margin: 20px 0; 
+        }
+        .brz-sl-stat-item { 
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 16px; 
+            border-radius: 12px; 
+            text-align: center;
+            border: 1px solid #bae6fd;
+        }
+        .brz-sl-stat-item strong { 
+            display: block;
+            font-size: 22px; 
+            font-weight: 700;
+            color: #0369a1; 
+        }
+        .brz-sl-stat-item span { 
+            font-size: 12px; 
+            color: #0c4a6e;
+        }
+        .brz-sl-export-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            transition: all 0.2s ease;
+        }
+        .brz-sl-export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+        }
+        .brz-sl-export-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .brz-sl-textarea { 
+            width: 100%; 
+            min-height: 280px; 
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Vazirmatn', monospace; 
+            font-size: 12px; 
+            direction: ltr;
+            background: #f8fafc;
+            resize: vertical;
+        }
+        .brz-sl-textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .brz-sl-copy-btn { 
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px; 
+            border-radius: 8px; 
+            border: 1px solid #e2e8f0;
+            background: #f1f5f9;
+            color: #475569;
+            cursor: pointer; 
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .brz-sl-copy-btn:hover { 
+            background: #e2e8f0; 
+        }
+        .brz-sl-warning { 
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+        .brz-sl-success { 
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-top: 16px;
+            font-size: 14px;
+        }
         </style>
 
-        <div class="brz-sl-card" style="max-width: 800px;">
+        <div class="brz-sl-export-card">
             <h3>📤 تولید Export یکپارچه</h3>
             <p>با یک کلیک، داده‌های هر دو سایت (محلی و همتا) ایندکس و ترکیب می‌شوند و JSON + پرامپت آماده می‌شود.</p>
-            <div class="brz-sl-stats" id="brz-sl-export-stats">
-                <div class="brz-sl-stat">محصولات: <strong>0</strong></div>
-                <div class="brz-sl-stat">مقالات: <strong>0</strong></div>
-                <div class="brz-sl-stat">صفحات: <strong>0</strong></div>
+            
+            <div class="brz-sl-stats-grid" id="brz-sl-export-stats">
+                <?php if ( $is_shop ) : ?>
+                    <div class="brz-sl-stat-item"><strong>0</strong><span>محصولات</span></div>
+                    <div class="brz-sl-stat-item"><strong>0</strong><span>صفحات</span></div>
+                    <div class="brz-sl-stat-item"><strong>0</strong><span>دسته‌بندی محصولات</span></div>
+                    <div class="brz-sl-stat-item"><strong>0</strong><span>تگ محصولات</span></div>
+                <?php else : ?>
+                    <div class="brz-sl-stat-item"><strong>0</strong><span>مقالات</span></div>
+                    <div class="brz-sl-stat-item"><strong>0</strong><span>صفحات</span></div>
+                <?php endif; ?>
             </div>
-            <button type="button" class="brz-sl-btn brz-sl-btn--primary" id="brz-sl-generate-export" style="font-size:16px; padding: 14px 24px;">⚡ تولید Export یکپارچه</button>
+            
+            <button type="button" class="brz-sl-export-btn" id="brz-sl-generate-export">⚡ تولید Export یکپارچه</button>
             <div id="brz-sl-export-message"></div>
         </div>
 
-        <div class="brz-sl-export-grid" style="margin-top: 20px;">
-            <div class="brz-sl-card">
+        <div class="brz-sl-export-grid">
+            <div class="brz-sl-export-card">
                 <h3>📋 پرامپت AI</h3>
                 <textarea class="brz-sl-textarea" id="brz-sl-prompt" readonly placeholder="ابتدا روی «تولید Export یکپارچه» کلیک کنید..."></textarea>
-                <button type="button" class="brz-sl-btn brz-sl-btn--secondary" style="margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-prompt').value);this.textContent='✅ کپی شد';setTimeout(()=>this.textContent='📋 کپی پرامپت',1500);">📋 کپی پرامپت</button>
+                <div style="margin-top: 12px;">
+                    <button type="button" class="brz-sl-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-prompt').value);this.innerHTML='✅ کپی شد';setTimeout(()=>this.innerHTML='📋 کپی پرامپت',1500);">📋 کپی پرامپت</button>
+                </div>
             </div>
-            <div class="brz-sl-card">
+            <div class="brz-sl-export-card">
                 <h3>📄 فایل JSON</h3>
                 <textarea class="brz-sl-textarea" id="brz-sl-json" readonly placeholder="ابتدا روی «تولید Export یکپارچه» کلیک کنید..."></textarea>
                 <div style="margin-top: 12px; display: flex; gap: 12px;">
-                    <button type="button" class="brz-sl-btn brz-sl-btn--secondary" id="brz-sl-download-json">💾 دانلود JSON</button>
-                    <button type="button" class="brz-sl-btn brz-sl-btn--secondary" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-json').value);this.textContent='✅ کپی شد';setTimeout(()=>this.textContent='📋 کپی JSON',1500);">📋 کپی JSON</button>
+                    <button type="button" class="brz-sl-copy-btn" id="brz-sl-download-json">💾 دانلود JSON</button>
+                    <button type="button" class="brz-sl-copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-json').value);this.innerHTML='✅ کپی شد';setTimeout(()=>this.innerHTML='📋 کپی JSON',1500);">📋 کپی JSON</button>
                 </div>
             </div>
         </div>
@@ -502,6 +626,8 @@ class BRZ_Smart_Linker {
         <script>
         (function() {
             var nonce = '<?php echo wp_create_nonce( 'brz_smart_linker_export' ); ?>';
+            var isShop = <?php echo $is_shop ? 'true' : 'false'; ?>;
+            
             document.getElementById('brz-sl-generate-export').onclick = function() {
                 var btn = this; 
                 btn.disabled = true; 
@@ -518,13 +644,18 @@ class BRZ_Smart_Linker {
                         
                         var c = r.data.json.meta.counts;
                         var peerCount = r.data.json.meta.peer_count || 0;
-                        var localCount = r.data.json.meta.total_items - peerCount;
                         
-                        var statsHtml = '<div class="brz-sl-stat">محصولات: <strong>'+c.products+'</strong></div>' +
-                            '<div class="brz-sl-stat">مقالات: <strong>'+c.posts+'</strong></div>' +
-                            '<div class="brz-sl-stat">صفحات: <strong>'+c.pages+'</strong></div>' +
-                            '<div class="brz-sl-stat">دسته‌ها: <strong>'+(c.product_categories+c.post_categories)+'</strong></div>' +
-                            '<div class="brz-sl-stat">تگ‌ها: <strong>'+c.tags+'</strong></div>';
+                        // Generate stats based on site type
+                        var statsHtml = '';
+                        if (isShop) {
+                            statsHtml = '<div class="brz-sl-stat-item"><strong>'+c.products+'</strong><span>محصولات</span></div>' +
+                                '<div class="brz-sl-stat-item"><strong>'+c.pages+'</strong><span>صفحات</span></div>' +
+                                '<div class="brz-sl-stat-item"><strong>'+c.product_categories+'</strong><span>دسته‌بندی محصولات</span></div>' +
+                                '<div class="brz-sl-stat-item"><strong>'+c.tags+'</strong><span>تگ محصولات</span></div>';
+                        } else {
+                            statsHtml = '<div class="brz-sl-stat-item"><strong>'+c.posts+'</strong><span>مقالات</span></div>' +
+                                '<div class="brz-sl-stat-item"><strong>'+c.pages+'</strong><span>صفحات</span></div>';
+                        }
                         document.getElementById('brz-sl-export-stats').innerHTML = statsHtml;
                         
                         // Show success or warning message
