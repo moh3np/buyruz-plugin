@@ -64,17 +64,17 @@ class BRZ_Connections {
 
             <div class="brz-card">
                 <h2 class="nav-tab-wrapper">
-                    <a class="nav-tab nav-tab-active" data-brz-tab="gsheet">گوگل شیت</a>
-                    <a class="nav-tab" data-brz-tab="peer">فروشگاه / بلاگ</a>
+                    <a class="nav-tab nav-tab-active" data-brz-tab="peer">فروشگاه / بلاگ</a>
+                    <a class="nav-tab" data-brz-tab="gsheet">گوگل شیت</a>
                     <a class="nav-tab" data-brz-tab="ai">API هوش مصنوعی</a>
                     <a class="nav-tab" data-brz-tab="bi">تحلیل سایت</a>
                 </h2>
                 <div class="brz-card__body">
-                    <div class="brz-tab-pane" data-pane="gsheet">
-                        <?php self::render_gsheet( $settings ); ?>
-                    </div>
-                    <div class="brz-tab-pane" data-pane="peer" style="display:none;">
+                    <div class="brz-tab-pane" data-pane="peer">
                         <?php self::render_peer( $settings ); ?>
+                    </div>
+                    <div class="brz-tab-pane" data-pane="gsheet" style="display:none;">
+                        <?php self::render_gsheet( $settings ); ?>
                     </div>
                     <div class="brz-tab-pane" data-pane="ai" style="display:none;">
                         <?php self::render_ai(); ?>
