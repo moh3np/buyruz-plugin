@@ -62,14 +62,21 @@ class BRZ_Smart_Linker {
         add_action( 'wp_ajax_brz_smart_linker_update_status', array( 'BRZ_Smart_Linker_Importer', 'ajax_update_status' ) );
         add_action( 'wp_ajax_brz_smart_linker_apply_links', array( 'BRZ_Smart_Linker_Importer', 'ajax_apply_links' ) );
 
+        // v3.1 Link Health AJAX handlers
+        add_action( 'wp_ajax_brz_health_scan', array( __CLASS__, 'ajax_health_scan' ) );
+        add_action( 'wp_ajax_brz_health_check', array( __CLASS__, 'ajax_health_check' ) );
+        add_action( 'wp_ajax_brz_health_export', array( __CLASS__, 'ajax_health_export' ) );
+
         // Initialize Sync module (registers REST API routes for peer communication)
         BRZ_Smart_Linker_Sync::init();
 
         // Cron / background
         add_action( 'init', array( __CLASS__, 'maybe_migrate_table' ), 1 );
         add_action( 'init', array( __CLASS__, 'ensure_cron_events' ) );
+        add_action( 'init', array( __CLASS__, 'ensure_health_cron' ) );
         add_action( self::CRON_PROCESS_HOOK, array( __CLASS__, 'process_queue' ) );
         add_action( self::CRON_APPROVAL_HOOK, array( __CLASS__, 'poll_approvals' ) );
+        add_action( 'brz_link_health_cron', array( __CLASS__, 'cron_link_health_scan' ) );
 
         // REST provider endpoint
         add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
@@ -105,9 +112,18 @@ class BRZ_Smart_Linker {
         $pending_table = BRZ_Smart_Linker_DB::pending_links_table();
         $pending_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $pending_table ) );
         
+        // Check v3.1 link_health table
+        $health_table = BRZ_Smart_Linker_Health::table();
+        $health_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $health_table ) );
+        
         // Run migration if any table is missing
         if ( $content_exists !== $content_table || $pending_exists !== $pending_table ) {
             BRZ_Smart_Linker_DB::migrate();
+        }
+        
+        // Run health table migration separately
+        if ( $health_exists !== $health_table ) {
+            BRZ_Smart_Linker_Health::migrate();
         }
     }
 
@@ -140,6 +156,9 @@ class BRZ_Smart_Linker {
             'ai_api_key'     => '',
             'ai_base_url'    => '',
             'ai_model'       => '',
+            // Link Health settings
+            'health_scan_enabled'   => 1,
+            'health_scan_frequency' => 'weekly', // disabled|daily|weekly
         );
 
         $saved = get_option( self::OPTION_KEY, array() );
@@ -168,7 +187,7 @@ class BRZ_Smart_Linker {
 
         $settings = self::get_settings();
         $active_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'export'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        $valid_tabs = array( 'export', 'import', 'review', 'applied', 'strategy', 'exclusions', 'maintenance' );
+        $valid_tabs = array( 'export', 'import', 'review', 'applied', 'analytics', 'health', 'strategy', 'exclusions', 'maintenance' );
         if ( ! in_array( $active_tab, $valid_tabs, true ) ) {
             $active_tab = 'export';
         }
@@ -406,6 +425,8 @@ class BRZ_Smart_Linker {
                 <a class="brz-sl-tab <?php echo ( 'review' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=review' ) ); ?>">✅ بررسی <?php if ( $pending_count['pending'] > 0 ) : ?><span class="brz-sl-count"><?php echo esc_html( $pending_count['pending'] ); ?></span><?php endif; ?></a>
                 <a class="brz-sl-tab <?php echo ( 'applied' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=applied' ) ); ?>">🔗 اعمال‌شده</a>
                 <a class="brz-sl-tab <?php echo ( 'analytics' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=analytics' ) ); ?>">📊 آنالیز</a>
+                <?php $health_stats = BRZ_Smart_Linker_Health::get_stats(); ?>
+                <a class="brz-sl-tab <?php echo ( 'health' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=health' ) ); ?>">🔗 سلامت لینک<?php if ( $health_stats['broken'] > 0 ) : ?><span class="brz-sl-count brz-sl-count--danger"><?php echo esc_html( $health_stats['broken'] ); ?></span><?php endif; ?></a>
                 <a class="brz-sl-tab <?php echo ( 'strategy' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>">⚙️ تنظیمات</a>
                 <a class="brz-sl-tab <?php echo ( 'maintenance' === $active_tab ) ? 'is-active' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=maintenance' ) ); ?>">🔧 نگهداری</a>
             </div>
@@ -422,11 +443,15 @@ class BRZ_Smart_Linker {
                     self::render_applied_tab( $settings );
                 } elseif ( 'analytics' === $active_tab ) {
                     self::render_analytics_tab( $settings );
+                } elseif ( 'health' === $active_tab ) {
+                    self::render_health_tab( $settings );
                 } elseif ( 'strategy' === $active_tab ) {
                     self::render_strategy_tab( $settings );
                     self::render_exclusions_tab( $settings );
-                } else {
+                } elseif ( 'maintenance' === $active_tab ) {
                     self::render_maintenance_tab( $settings );
+                } else {
+                    self::render_export_tab( $settings );
                 }
                 ?>
             </div>
@@ -2058,4 +2083,484 @@ class BRZ_Smart_Linker {
 
         return rest_ensure_response( $payload );
     }
+
+    /**
+     * Render the Link Health tab.
+     *
+     * @param array $settings Current settings
+     */
+    private static function render_health_tab( $settings ) {
+        $stats = BRZ_Smart_Linker_Health::get_stats();
+        $filter = isset( $_GET['filter'] ) ? sanitize_text_field( $_GET['filter'] ) : 'all';
+        $issues = BRZ_Smart_Linker_Health::get_issues( $filter, 100 );
+        ?>
+        <style>
+        .brz-health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .brz-health-stat { background: #fff; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.06); border: 1px solid #e5e7eb; transition: transform .2s; }
+        .brz-health-stat:hover { transform: translateY(-2px); }
+        .brz-health-stat strong { display: block; font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+        .brz-health-stat span { color: #6b7280; font-size: 13px; }
+        .brz-health-stat--ok strong { color: #10b981; }
+        .brz-health-stat--broken strong { color: #ef4444; }
+        .brz-health-stat--noindex strong { color: #f59e0b; }
+        .brz-health-stat--redirect strong { color: #3b82f6; }
+        .brz-health-stat--external strong { color: #8b5cf6; }
+        .brz-health-stat--pending strong { color: #6b7280; }
+        
+        .brz-health-actions { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: center; }
+        .brz-health-btn { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all .2s; display: inline-flex; align-items: center; gap: 8px; }
+        .brz-health-btn--primary { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+        .brz-health-btn--primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102,126,234,.4); }
+        .brz-health-btn--secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+        .brz-health-btn--secondary:hover { background: #e5e7eb; }
+        .brz-health-btn:disabled { opacity: .6; cursor: not-allowed; transform: none !important; }
+        
+        .brz-health-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+        .brz-health-filter { padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 500; transition: all .2s; }
+        .brz-health-filter--active { background: #1f2937; color: #fff; }
+        .brz-health-filter:not(.brz-health-filter--active) { background: #f3f4f6; color: #4b5563; }
+        .brz-health-filter:not(.brz-health-filter--active):hover { background: #e5e7eb; }
+        
+        .brz-health-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+        .brz-health-table th { background: #f9fafb; padding: 14px 16px; text-align: right; font-weight: 600; color: #374151; font-size: 13px; border-bottom: 1px solid #e5e7eb; }
+        .brz-health-table td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; vertical-align: middle; }
+        .brz-health-table tr:hover { background: #f9fafb; }
+        .brz-health-table a { color: #3b82f6; text-decoration: none; word-break: break-all; }
+        .brz-health-table a:hover { text-decoration: underline; }
+        
+        .brz-health-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .brz-health-badge--ok { background: #d1fae5; color: #065f46; }
+        .brz-health-badge--broken { background: #fee2e2; color: #991b1b; }
+        .brz-health-badge--noindex { background: #fef3c7; color: #92400e; }
+        .brz-health-badge--redirect { background: #dbeafe; color: #1e40af; }
+        .brz-health-badge--external { background: #ede9fe; color: #5b21b6; }
+        .brz-health-badge--nofollow { background: #f3f4f6; color: #4b5563; }
+        
+        .brz-health-progress { background: #e5e7eb; border-radius: 8px; height: 8px; overflow: hidden; margin-top: 8px; }
+        .brz-health-progress-bar { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); transition: width .5s; }
+        
+        .brz-health-empty { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .brz-health-empty-icon { font-size: 48px; margin-bottom: 16px; opacity: .5; }
+        
+        .brz-health-message { padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+        .brz-health-message--success { background: #d1fae5; color: #065f46; }
+        .brz-health-message--warning { background: #fef3c7; color: #92400e; }
+        .brz-health-message--info { background: #dbeafe; color: #1e40af; }
+        
+        #brz-health-scan-progress { display: none; }
+        </style>
+
+        <div class="brz-sl-card">
+            <h3>🔗 سلامت لینک‌ها</h3>
+            <p>بررسی لینک‌های شکسته، هدف‌های noindex، و تحلیل لینک‌های خارجی</p>
+
+            <!-- Stats Grid -->
+            <div class="brz-health-grid">
+                <div class="brz-health-stat brz-health-stat--ok">
+                    <strong><?php echo esc_html( $stats['ok'] ); ?></strong>
+                    <span>✅ سالم</span>
+                </div>
+                <div class="brz-health-stat brz-health-stat--broken">
+                    <strong><?php echo esc_html( $stats['broken'] ); ?></strong>
+                    <span>❌ شکسته</span>
+                </div>
+                <div class="brz-health-stat brz-health-stat--noindex">
+                    <strong><?php echo esc_html( $stats['noindex'] ); ?></strong>
+                    <span>🚫 هدف noindex</span>
+                </div>
+                <div class="brz-health-stat brz-health-stat--redirect">
+                    <strong><?php echo esc_html( $stats['redirect'] ); ?></strong>
+                    <span>↪️ ریدایرکت</span>
+                </div>
+                <div class="brz-health-stat brz-health-stat--external">
+                    <strong><?php echo esc_html( $stats['external'] ); ?></strong>
+                    <span>🌐 خارجی</span>
+                </div>
+                <div class="brz-health-stat brz-health-stat--pending">
+                    <strong><?php echo esc_html( $stats['pending'] ); ?></strong>
+                    <span>⏳ در انتظار</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="brz-health-actions">
+                <button type="button" class="brz-health-btn brz-health-btn--primary" id="brz-health-scan">
+                    🔍 اسکن محتوا
+                </button>
+                <button type="button" class="brz-health-btn brz-health-btn--secondary" id="brz-health-check">
+                    ⚡ بررسی لینک‌ها
+                </button>
+                <?php if ( $stats['total'] > 0 ) : ?>
+                <button type="button" class="brz-health-btn brz-health-btn--secondary" id="brz-health-export">
+                    📥 دانلود CSV
+                </button>
+                <?php endif; ?>
+                
+                <div class="brz-health-filters" style="margin-right: auto;">
+                    <?php
+                    $filters = array(
+                        'all'      => '🔗 همه (' . $stats['total'] . ')',
+                        'broken'   => '❌ شکسته (' . $stats['broken'] . ')',
+                        'noindex'  => '🚫 noindex (' . $stats['noindex'] . ')',
+                        'redirect' => '↪️ ریدایرکت (' . $stats['redirect'] . ')',
+                        'external' => '🌐 خارجی (' . $stats['external'] . ')',
+                        'nofollow' => '🔒 nofollow (' . $stats['nofollow'] . ')',
+                    );
+                    foreach ( $filters as $key => $label ) :
+                    ?>
+                    <a class="brz-health-filter <?php echo $filter === $key ? 'brz-health-filter--active' : ''; ?>" 
+                       href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=health&filter=' . $key ) ); ?>">
+                        <?php echo esc_html( $label ); ?>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Progress indicator -->
+            <div id="brz-health-scan-progress" class="brz-health-message brz-health-message--info">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span>⏳</span>
+                    <div style="flex: 1;">
+                        <div id="brz-health-progress-text">در حال اسکن...</div>
+                        <div class="brz-health-progress">
+                            <div class="brz-health-progress-bar" id="brz-health-progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="brz-health-message"></div>
+
+            <!-- Results Table -->
+            <?php if ( empty( $issues ) && $stats['total'] === 0 ) : ?>
+            <div class="brz-health-empty">
+                <div class="brz-health-empty-icon">🔍</div>
+                <p>هنوز اسکنی انجام نشده است.</p>
+                <p>روی «اسکن محتوا» کلیک کنید تا لینک‌ها استخراج شوند.</p>
+            </div>
+            <?php elseif ( empty( $issues ) ) : ?>
+            <div class="brz-health-empty">
+                <div class="brz-health-empty-icon">✅</div>
+                <p>هیچ موردی با این فیلتر یافت نشد.</p>
+            </div>
+            <?php else : ?>
+            <table class="brz-health-table">
+                <thead>
+                    <tr>
+                        <th>منبع</th>
+                        <th>لینک</th>
+                        <th>متن</th>
+                        <th>وضعیت</th>
+                        <th>نوع</th>
+                        <th>زمان پاسخ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $issues as $issue ) : 
+                        $status_class = 'ok';
+                        $status_label = $issue->status_message ?: 'OK';
+                        if ( $issue->status_code >= 400 || $issue->status_code === 0 ) {
+                            $status_class = 'broken';
+                        } elseif ( $issue->target_is_noindex ) {
+                            $status_class = 'noindex';
+                            $status_label = 'noindex target';
+                        } elseif ( $issue->redirect_count > 0 ) {
+                            $status_class = 'redirect';
+                            $status_label = $issue->redirect_count . 'x redirect';
+                        }
+                    ?>
+                    <tr>
+                        <td>
+                            <a href="<?php echo esc_url( $issue->source_url ); ?>" target="_blank" title="<?php echo esc_attr( $issue->source_url ); ?>">
+                                <?php echo esc_html( mb_substr( $issue->source_url, 0, 40 ) ); ?>...
+                            </a>
+                            <br><small style="color: #9ca3af;">ID: <?php echo esc_html( $issue->source_id ); ?></small>
+                        </td>
+                        <td>
+                            <a href="<?php echo esc_url( $issue->link_url ); ?>" target="_blank" title="<?php echo esc_attr( $issue->link_url ); ?>">
+                                <?php echo esc_html( mb_substr( $issue->link_url, 0, 50 ) ); ?>...
+                            </a>
+                        </td>
+                        <td><?php echo esc_html( mb_substr( $issue->link_text ?: '-', 0, 30 ) ); ?></td>
+                        <td>
+                            <span class="brz-health-badge brz-health-badge--<?php echo esc_attr( $status_class ); ?>">
+                                <?php echo esc_html( $status_label ); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="brz-health-badge brz-health-badge--<?php echo $issue->link_type === 'external' ? 'external' : 'ok'; ?>">
+                                <?php echo $issue->link_type === 'external' ? '🌐 خارجی' : '📄 داخلی'; ?>
+                            </span>
+                            <?php if ( $issue->is_nofollow ) : ?>
+                            <span class="brz-health-badge brz-health-badge--nofollow">nofollow</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php echo $issue->response_time ? esc_html( $issue->response_time . 'ms' ) : '-'; ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+
+            <?php if ( $stats['last_scan'] ) : ?>
+            <p style="margin-top: 16px; color: #6b7280; font-size: 13px;">
+                آخرین اسکن: <?php echo esc_html( $stats['last_scan']['completed_at'] ?? 'نامشخص' ); ?>
+                | <?php echo esc_html( $stats['last_scan']['posts_scanned'] ?? 0 ); ?> محتوا
+                | <?php echo esc_html( $stats['last_scan']['links_found'] ?? 0 ); ?> لینک یافت شد
+            </p>
+            <?php endif; ?>
+        </div>
+
+        <script>
+        (function() {
+            var scanBtn = document.getElementById('brz-health-scan');
+            var checkBtn = document.getElementById('brz-health-check');
+            var progressDiv = document.getElementById('brz-health-scan-progress');
+            var progressBar = document.getElementById('brz-health-progress-bar');
+            var progressText = document.getElementById('brz-health-progress-text');
+            var messageDiv = document.getElementById('brz-health-message');
+
+            function showMessage(msg, type) {
+                messageDiv.innerHTML = '<div class="brz-health-message brz-health-message--' + type + '">' + msg + '</div>';
+            }
+
+            if (scanBtn) {
+                scanBtn.onclick = function() {
+                    scanBtn.disabled = true;
+                    progressDiv.style.display = 'block';
+                    progressText.textContent = 'در حال اسکن محتوا...';
+                    progressBar.style.width = '30%';
+
+                    jQuery.post(ajaxurl, {
+                        action: 'brz_health_scan',
+                        _ajax_nonce: '<?php echo wp_create_nonce( 'brz_health_scan' ); ?>'
+                    }).done(function(r) {
+                        progressBar.style.width = '100%';
+                        if (r.success) {
+                            showMessage('✅ اسکن تمام شد! ' + r.data.posts_scanned + ' محتوا، ' + r.data.links_found + ' لینک یافت شد.', 'success');
+                            setTimeout(function() { location.reload(); }, 1500);
+                        } else {
+                            showMessage('❌ خطا: ' + (r.data || 'خطای ناشناخته'), 'warning');
+                        }
+                    }).fail(function() {
+                        showMessage('❌ خطای شبکه', 'warning');
+                    }).always(function() {
+                        scanBtn.disabled = false;
+                        setTimeout(function() { progressDiv.style.display = 'none'; }, 2000);
+                    });
+                };
+            }
+
+            if (checkBtn) {
+                checkBtn.onclick = function() {
+                    checkBtn.disabled = true;
+                    progressDiv.style.display = 'block';
+                    progressText.textContent = 'در حال بررسی لینک‌ها...';
+                    progressBar.style.width = '0%';
+
+                    function runBatch() {
+                        jQuery.post(ajaxurl, {
+                            action: 'brz_health_check',
+                            _ajax_nonce: '<?php echo wp_create_nonce( 'brz_health_check' ); ?>'
+                        }).done(function(r) {
+                            if (r.success) {
+                                var pending = r.data.remaining || 0;
+                                var checked = r.data.checked || 0;
+                                var total = checked + pending;
+                                var pct = total > 0 ? Math.round((checked / total) * 100) : 100;
+                                progressBar.style.width = pct + '%';
+                                progressText.textContent = 'بررسی شد: ' + r.data.checked + ' | مانده: ' + pending;
+
+                                if (pending > 0) {
+                                    setTimeout(runBatch, 500);
+                                } else {
+                                    showMessage('✅ بررسی تمام شد! ' + r.data.ok + ' سالم، ' + r.data.broken + ' شکسته', 'success');
+                                    checkBtn.disabled = false;
+                                    setTimeout(function() { location.reload(); }, 1500);
+                                }
+                            } else {
+                                showMessage('❌ خطا: ' + (r.data || 'نامشخص'), 'warning');
+                                checkBtn.disabled = false;
+                            }
+                        }).fail(function() {
+                            showMessage('❌ خطای شبکه', 'warning');
+                            checkBtn.disabled = false;
+                        });
+                    }
+                    runBatch();
+                };
+            }
+
+            var exportBtn = document.getElementById('brz-health-export');
+            if (exportBtn) {
+                exportBtn.onclick = function() {
+                    window.location.href = ajaxurl + '?action=brz_health_export&_wpnonce=<?php echo wp_create_nonce( 'brz_health_export' ); ?>';
+                };
+            }
+        })();
+        </script>
+        <?php
+    }
+
+    /**
+     * AJAX: Scan all content for links.
+     */
+    public static function ajax_health_scan() {
+        check_ajax_referer( 'brz_health_scan' );
+
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( 'دسترسی ندارید' );
+        }
+
+        $settings = self::get_settings();
+        $site_role = isset( $settings['site_role'] ) ? $settings['site_role'] : 'shop';
+        
+        $post_types = array( 'post', 'page' );
+        if ( 'shop' === $site_role && post_type_exists( 'product' ) ) {
+            $post_types[] = 'product';
+        }
+
+        $stats = BRZ_Smart_Linker_Health::scan_all_content( $post_types );
+        
+        wp_send_json_success( $stats );
+    }
+
+    /**
+     * AJAX: Check pending links (batch).
+     */
+    public static function ajax_health_check() {
+        check_ajax_referer( 'brz_health_check' );
+
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_send_json_error( 'دسترسی ندارید' );
+        }
+
+        $stats = BRZ_Smart_Linker_Health::check_pending_links( 100 );
+        
+        // Get remaining count
+        $overall = BRZ_Smart_Linker_Health::get_stats();
+        $stats['remaining'] = $overall['pending'];
+        
+        wp_send_json_success( $stats );
+    }
+
+    /**
+     * AJAX: Export health data as CSV.
+     */
+    public static function ajax_health_export() {
+        if ( ! wp_verify_nonce( $_GET['_wpnonce'] ?? '', 'brz_health_export' ) ) {
+            wp_die( 'Invalid nonce' );
+        }
+
+        if ( ! current_user_can( BRZ_Settings::CAPABILITY ) ) {
+            wp_die( 'Access denied' );
+        }
+
+        $issues = BRZ_Smart_Linker_Health::get_issues( 'all', 10000 );
+
+        header( 'Content-Type: text/csv; charset=utf-8' );
+        header( 'Content-Disposition: attachment; filename=link-health-' . gmdate( 'Y-m-d' ) . '.csv' );
+
+        $output = fopen( 'php://output', 'w' );
+        
+        // BOM for Excel UTF-8
+        fprintf( $output, chr(0xEF) . chr(0xBB) . chr(0xBF) );
+        
+        // Header
+        fputcsv( $output, array(
+            'Source URL',
+            'Source ID',
+            'Link URL',
+            'Link Text',
+            'Type',
+            'Status Code',
+            'Status Message',
+            'Is Nofollow',
+            'Target Noindex',
+            'Redirect Count',
+            'Final URL',
+            'Response Time (ms)',
+            'Last Checked',
+        ) );
+
+        foreach ( $issues as $issue ) {
+            fputcsv( $output, array(
+                $issue->source_url,
+                $issue->source_id,
+                $issue->link_url,
+                $issue->link_text,
+                $issue->link_type,
+                $issue->status_code,
+                $issue->status_message,
+                $issue->is_nofollow ? 'Yes' : 'No',
+                $issue->target_is_noindex ? 'Yes' : 'No',
+                $issue->redirect_count,
+                $issue->final_url,
+                $issue->response_time,
+                $issue->last_checked,
+            ) );
+        }
+
+        fclose( $output );
+        exit;
+    }
+
+    /**
+     * Cron: Scheduled link health scan.
+     */
+    public static function cron_link_health_scan() {
+        $settings = self::get_settings();
+        
+        if ( empty( $settings['health_scan_enabled'] ) ) {
+            return;
+        }
+
+        $site_role = isset( $settings['site_role'] ) ? $settings['site_role'] : 'shop';
+        
+        $post_types = array( 'post', 'page' );
+        if ( 'shop' === $site_role && post_type_exists( 'product' ) ) {
+            $post_types[] = 'product';
+        }
+
+        // Step 1: Scan content for links
+        BRZ_Smart_Linker_Health::scan_all_content( $post_types );
+        
+        // Step 2: Check all pending links in batches
+        $max_iterations = 200; // Safety limit
+        $iteration = 0;
+        
+        while ( $iteration < $max_iterations ) {
+            $stats = BRZ_Smart_Linker_Health::check_pending_links( 50 );
+            if ( $stats['checked'] === 0 ) {
+                break;
+            }
+            $iteration++;
+            
+            // Small delay to be nice to servers
+            usleep( 100000 ); // 100ms
+        }
+    }
+
+    /**
+     * Ensure link health cron is scheduled.
+     */
+    public static function ensure_health_cron() {
+        $settings = self::get_settings();
+        $frequency = isset( $settings['health_scan_frequency'] ) ? $settings['health_scan_frequency'] : 'weekly';
+        $enabled = ! empty( $settings['health_scan_enabled'] );
+        
+        $scheduled = wp_next_scheduled( 'brz_link_health_cron' );
+        
+        if ( ! $enabled || 'disabled' === $frequency ) {
+            if ( $scheduled ) {
+                wp_unschedule_event( $scheduled, 'brz_link_health_cron' );
+            }
+            return;
+        }
+        
+        if ( ! $scheduled ) {
+            wp_schedule_event( time() + 3600, $frequency, 'brz_link_health_cron' );
+        }
+    }
 }
+
