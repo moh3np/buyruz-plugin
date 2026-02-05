@@ -62,6 +62,8 @@ class BRZ_Smart_Linker {
         add_action( 'wp_ajax_brz_smart_linker_update_status', array( 'BRZ_Smart_Linker_Importer', 'ajax_update_status' ) );
         add_action( 'wp_ajax_brz_smart_linker_apply_links', array( 'BRZ_Smart_Linker_Importer', 'ajax_apply_links' ) );
 
+        // Initialize Sync module (registers REST API routes for peer communication)
+        BRZ_Smart_Linker_Sync::init();
 
         // Cron / background
         add_action( 'init', array( __CLASS__, 'maybe_migrate_table' ), 1 );
