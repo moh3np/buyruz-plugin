@@ -514,6 +514,18 @@ class BRZ_Smart_Linker_Sync {
                     ),
                 );
             }
+            // Detailed error for 401/403 (API key issues)
+            if ( 401 === $code || 403 === $code ) {
+                return array(
+                    'success' => false,
+                    'count'   => 0,
+                    'site_id' => null,
+                    'warning' => sprintf( 
+                        'خطای احراز هویت (%d): کلید API اشتباه است. مطمئن شوید «کلید API سایت همتا» در این سایت با «کلید API محلی» در سایت مقصد یکسان است.',
+                        $code
+                    ),
+                );
+            }
             return array(
                 'success' => false,
                 'count'   => 0,
