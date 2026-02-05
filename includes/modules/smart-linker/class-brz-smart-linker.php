@@ -264,79 +264,91 @@ class BRZ_Smart_Linker {
         .brz-sl-stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
         .brz-sl-stat { background: #f8fafc; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
         .brz-sl-stat strong { color: #2563eb; }
-        .brz-sl-count { background: #ef4444; color: #fff; padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-right: 4px; }
+        .brz-sl-warning { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 13px; }
+        .brz-sl-success { background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 12px; border-radius: 8px; margin-top: 12px; font-size: 13px; }
         .brz-sl-empty { text-align: center; padding: 40px; color: #64748b; }
-        .brz-sl-review-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; }
-        .brz-sl-review-table th { background: #f8fafc; padding: 12px; text-align: right; border-bottom: 1px solid #e5e7eb; }
-        .brz-sl-review-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-        .brz-sl-review-table tr:hover { background: #f8fafc; }
-        .brz-sl-context { background: #f1f5f9; padding: 8px; border-radius: 6px; font-size: 13px; margin-top: 8px; }
-        .brz-sl-context mark { background: #fef08a; padding: 2px 4px; border-radius: 2px; }
-        .brz-sl-priority { padding: 4px 8px; border-radius: 4px; font-size: 11px; }
-        .brz-sl-priority--high { background: #fef2f2; color: #dc2626; }
-        .brz-sl-priority--medium { background: #fefce8; color: #ca8a04; }
-        .brz-sl-priority--low { background: #f0fdf4; color: #16a34a; }
-        .brz-sl-actions { display: flex; gap: 6px; }
-        .brz-sl-action-btn { padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; }
-        .brz-sl-action-btn--approve { background: #16a34a; color: #fff; }
-        .brz-sl-action-btn--reject { background: #dc2626; color: #fff; }
         </style>
 
-        <div class="brz-sl-export-grid">
+        <div class="brz-sl-card" style="max-width: 800px;">
+            <h3>📤 تولید Export یکپارچه</h3>
+            <p>با یک کلیک، داده‌های هر دو سایت (محلی و همتا) ایندکس و ترکیب می‌شوند و JSON + پرامپت آماده می‌شود.</p>
+            <div class="brz-sl-stats" id="brz-sl-export-stats">
+                <div class="brz-sl-stat">محصولات: <strong>0</strong></div>
+                <div class="brz-sl-stat">مقالات: <strong>0</strong></div>
+                <div class="brz-sl-stat">صفحات: <strong>0</strong></div>
+            </div>
+            <button type="button" class="brz-sl-btn brz-sl-btn--primary" id="brz-sl-generate-export" style="font-size:16px; padding: 14px 24px;">⚡ تولید Export یکپارچه</button>
+            <div id="brz-sl-export-message"></div>
+        </div>
+
+        <div class="brz-sl-export-grid" style="margin-top: 20px;">
             <div class="brz-sl-card">
-                <h3>🔄 سینک از سایت دیگر</h3>
-                <p>ابتدا داده‌های سایت همتا را دریافت کنید.</p>
-                <div style="margin-top: 16px;">
-                    <button type="button" class="brz-sl-btn brz-sl-btn--secondary" id="brz-sl-sync-peer">🔄 دریافت از سایت همتا</button>
-                    <span id="brz-sl-sync-status" style="margin-right: 12px;"></span>
+                <h3>📋 پرامپت AI</h3>
+                <textarea class="brz-sl-textarea" id="brz-sl-prompt" readonly placeholder="ابتدا روی «تولید Export یکپارچه» کلیک کنید..."></textarea>
+                <button type="button" class="brz-sl-btn brz-sl-btn--secondary" style="margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-prompt').value);this.textContent='✅ کپی شد';setTimeout(()=>this.textContent='📋 کپی پرامپت',1500);">📋 کپی پرامپت</button>
+            </div>
+            <div class="brz-sl-card">
+                <h3>📄 فایل JSON</h3>
+                <textarea class="brz-sl-textarea" id="brz-sl-json" readonly placeholder="ابتدا روی «تولید Export یکپارچه» کلیک کنید..."></textarea>
+                <div style="margin-top: 12px; display: flex; gap: 12px;">
+                    <button type="button" class="brz-sl-btn brz-sl-btn--secondary" id="brz-sl-download-json">💾 دانلود JSON</button>
+                    <button type="button" class="brz-sl-btn brz-sl-btn--secondary" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-json').value);this.textContent='✅ کپی شد';setTimeout(()=>this.textContent='📋 کپی JSON',1500);">📋 کپی JSON</button>
                 </div>
             </div>
-            <div class="brz-sl-card">
-                <h3>📤 تولید خروجی JSON</h3>
-                <p>فایل JSON برای ارسال به AI.</p>
-                <div class="brz-sl-stats" id="brz-sl-export-stats"></div>
-                <button type="button" class="brz-sl-btn brz-sl-btn--primary" id="brz-sl-generate-export">⚡ تولید Export</button>
-            </div>
         </div>
-        <div class="brz-sl-card" style="margin-top: 20px;">
-            <h3>📋 پرامپت AI</h3>
-            <textarea class="brz-sl-textarea" id="brz-sl-prompt" readonly placeholder="ابتدا روی «تولید Export» کلیک کنید..."></textarea>
-            <button type="button" class="brz-sl-btn brz-sl-btn--secondary" style="margin-top:12px" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-prompt').value);">📋 کپی پرامپت</button>
-        </div>
-        <div class="brz-sl-card" style="margin-top: 20px;">
-            <h3>📄 فایل JSON</h3>
-            <textarea class="brz-sl-textarea" id="brz-sl-json" readonly placeholder="ابتدا روی «تولید Export» کلیک کنید..." style="min-height: 200px;"></textarea>
-            <div style="margin-top: 12px; display: flex; gap: 12px;">
-                <button type="button" class="brz-sl-btn brz-sl-btn--secondary" id="brz-sl-download-json">💾 دانلود JSON</button>
-                <button type="button" class="brz-sl-btn brz-sl-btn--secondary" onclick="navigator.clipboard.writeText(document.getElementById('brz-sl-json').value);">📋 کپی JSON</button>
-            </div>
-        </div>
+
         <script>
         (function() {
             var nonce = '<?php echo wp_create_nonce( 'brz_smart_linker_export' ); ?>';
-            document.getElementById('brz-sl-sync-peer').onclick = function() {
-                var btn = this; btn.disabled = true; btn.textContent = '⏳...';
-                jQuery.post(ajaxurl, {action: 'brz_smart_linker_sync_peer', _ajax_nonce: nonce}, function(r) {
-                    btn.disabled = false; btn.textContent = '🔄 دریافت از سایت همتا';
-                    document.getElementById('brz-sl-sync-status').innerHTML = r.success ? '<span style="color:green">✅ '+r.data.message+'</span>' : '<span style="color:red">❌ '+r.data.message+'</span>';
-                });
-            };
             document.getElementById('brz-sl-generate-export').onclick = function() {
-                var btn = this; btn.disabled = true; btn.textContent = '⏳...';
+                var btn = this; 
+                btn.disabled = true; 
+                btn.innerHTML = '⏳ در حال پردازش... (ممکن است چند ثانیه طول بکشد)';
+                document.getElementById('brz-sl-export-message').innerHTML = '';
+                
                 jQuery.post(ajaxurl, {action: 'brz_smart_linker_export', _ajax_nonce: nonce}, function(r) {
-                    btn.disabled = false; btn.textContent = '⚡ تولید Export';
+                    btn.disabled = false; 
+                    btn.textContent = '⚡ تولید Export یکپارچه';
+                    
                     if (r.success) {
                         document.getElementById('brz-sl-prompt').value = r.data.prompt;
                         document.getElementById('brz-sl-json').value = JSON.stringify(r.data.json, null, 2);
+                        
                         var c = r.data.json.meta.counts;
-                        document.getElementById('brz-sl-export-stats').innerHTML = '<div class="brz-sl-stat">محصولات: <strong>'+c.products+'</strong></div><div class="brz-sl-stat">مقالات: <strong>'+c.posts+'</strong></div><div class="brz-sl-stat">صفحات: <strong>'+c.pages+'</strong></div>';
+                        var peerCount = r.data.json.meta.peer_count || 0;
+                        var localCount = r.data.json.meta.total_items - peerCount;
+                        
+                        var statsHtml = '<div class="brz-sl-stat">محصولات: <strong>'+c.products+'</strong></div>' +
+                            '<div class="brz-sl-stat">مقالات: <strong>'+c.posts+'</strong></div>' +
+                            '<div class="brz-sl-stat">صفحات: <strong>'+c.pages+'</strong></div>' +
+                            '<div class="brz-sl-stat">دسته‌ها: <strong>'+(c.product_categories+c.post_categories)+'</strong></div>' +
+                            '<div class="brz-sl-stat">تگ‌ها: <strong>'+c.tags+'</strong></div>';
+                        document.getElementById('brz-sl-export-stats').innerHTML = statsHtml;
+                        
+                        // Show success or warning message
+                        var msgDiv = document.getElementById('brz-sl-export-message');
+                        if (r.data.warning) {
+                            msgDiv.innerHTML = '<div class="brz-sl-warning">⚠️ ' + r.data.warning + '</div>';
+                        } else {
+                            msgDiv.innerHTML = '<div class="brz-sl-success">✅ Export موفق! ' + r.data.json.meta.total_items + ' آیتم از ' + (peerCount > 0 ? '2 سایت' : 'سایت محلی') + ' دریافت شد.</div>';
+                        }
+                    } else {
+                        document.getElementById('brz-sl-export-message').innerHTML = '<div class="brz-sl-warning">❌ خطا: ' + (r.data.message || 'خطای ناشناخته') + '</div>';
                     }
+                }).fail(function() {
+                    btn.disabled = false;
+                    btn.textContent = '⚡ تولید Export یکپارچه';
+                    document.getElementById('brz-sl-export-message').innerHTML = '<div class="brz-sl-warning">❌ خطای شبکه</div>';
                 });
             };
+            
             document.getElementById('brz-sl-download-json').onclick = function() {
-                var j = document.getElementById('brz-sl-json').value; if(!j)return;
-                var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([j],{type:'application/json'}));
-                a.download = 'smart-linker-export.json'; a.click();
+                var j = document.getElementById('brz-sl-json').value; 
+                if(!j) { alert('ابتدا Export تولید کنید'); return; }
+                var a = document.createElement('a'); 
+                a.href = URL.createObjectURL(new Blob([j],{type:'application/json'}));
+                a.download = 'smart-linker-export.json'; 
+                a.click();
             };
         })();
         </script>

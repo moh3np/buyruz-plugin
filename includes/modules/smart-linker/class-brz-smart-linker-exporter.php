@@ -10,23 +10,31 @@ class BRZ_Smart_Linker_Exporter {
 
     /**
      * Generate unified JSON export for AI consumption.
+     * Automatically fetches from both local and peer sites.
      *
      * @return array
      */
     public static function generate_export() {
-        // First, refresh local index
+        // Step 1: Refresh local index
         BRZ_Smart_Linker_Sync::refresh_local_index();
 
-        // Get all content from both sites
+        // Step 2: Fetch from peer site (will merge into content_index table)
+        $peer_result = BRZ_Smart_Linker_Sync::fetch_peer_and_merge();
+        $peer_warning = isset( $peer_result['warning'] ) ? $peer_result['warning'] : null;
+        $peer_count = isset( $peer_result['count'] ) ? $peer_result['count'] : 0;
+
+        // Step 3: Get all content from both sites (now unified in content_index)
         $all_content = BRZ_Smart_Linker_DB::get_content_index();
 
         // Organize by type
         $export = array(
             'meta' => array(
-                'exported_at'   => current_time( 'c' ),
-                'plugin_version'=> defined( 'BRZ_VERSION' ) ? BRZ_VERSION : '1.0.0',
-                'site_url'      => home_url(),
-                'total_items'   => count( $all_content ),
+                'exported_at'    => current_time( 'c' ),
+                'plugin_version' => defined( 'BRZ_VERSION' ) ? BRZ_VERSION : '1.0.0',
+                'site_url'       => home_url(),
+                'total_items'    => count( $all_content ),
+                'peer_count'     => $peer_count,
+                'warning'        => $peer_warning,
             ),
             'products'           => array(),
             'posts'              => array(),
@@ -217,10 +225,12 @@ PROMPT;
         }
 
         $export = self::generate_export();
+        $warning = isset( $export['meta']['warning'] ) ? $export['meta']['warning'] : null;
 
         wp_send_json_success( array(
-            'json'   => $export,
-            'prompt' => self::generate_prompt( $export ),
+            'json'    => $export,
+            'prompt'  => self::generate_prompt( $export ),
+            'warning' => $warning,
         ) );
     }
 

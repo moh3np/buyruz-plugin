@@ -26,6 +26,13 @@ class BRZ_Smart_Linker_Sync {
             'permission_callback' => array( __CLASS__, 'check_api_key' ),
         ) );
 
+        // Generate fresh inventory (refresh index then return)
+        register_rest_route( 'brz/v1', '/linker/generate-inventory', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'generate_inventory' ),
+            'permission_callback' => array( __CLASS__, 'check_api_key' ),
+        ) );
+
         // Receive content index from peer
         register_rest_route( 'brz/v1', '/linker/sync', array(
             'methods'             => WP_REST_Server::CREATABLE,
@@ -77,6 +84,32 @@ class BRZ_Smart_Linker_Sync {
         self::refresh_local_index();
 
         // Get local content
+        $content = BRZ_Smart_Linker_DB::get_content_index( 'local' );
+
+        return rest_ensure_response( array(
+            'success'   => true,
+            'site_role' => $site_role,
+            'site_url'  => home_url(),
+            'count'     => count( $content ),
+            'items'     => $content,
+        ) );
+    }
+
+    /**
+     * Generate fresh inventory (explicitly refresh index first).
+     * This endpoint is called by peer when user clicks "Generate Export".
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response
+     */
+    public static function generate_inventory( WP_REST_Request $request ) {
+        $settings = BRZ_Smart_Linker::get_settings();
+        $site_role = isset( $settings['site_role'] ) ? $settings['site_role'] : 'shop';
+
+        // Force refresh local index
+        self::refresh_local_index();
+
+        // Get freshly indexed content
         $content = BRZ_Smart_Linker_DB::get_content_index( 'local' );
 
         return rest_ensure_response( array(
@@ -418,5 +451,93 @@ class BRZ_Smart_Linker_Sync {
             'message' => sprintf( 'سینک موفق: %d آیتم از %s دریافت شد.', $result['count'], $result['site_id'] ),
             'count'   => $result['count'],
         ) );
+    }
+
+    /**
+     * Fetch from peer's generate-inventory endpoint and merge into local content_index.
+     * Returns result array or WP_Error (but doesn't halt on peer error).
+     *
+     * @return array { success: bool, count: int, site_id: string, warning: string|null }
+     */
+    public static function fetch_peer_and_merge() {
+        $settings = BRZ_Smart_Linker::get_settings();
+
+        // If no peer configured, return early with warning
+        if ( empty( $settings['remote_endpoint'] ) || empty( $settings['remote_api_key'] ) ) {
+            return array(
+                'success' => false,
+                'count'   => 0,
+                'site_id' => null,
+                'warning' => 'تنظیمات سایت همتا انجام نشده. فقط داده‌های محلی صادر می‌شود.',
+            );
+        }
+
+        // Call peer's generate-inventory endpoint (this triggers refresh on peer)
+        $url = trailingslashit( $settings['remote_endpoint'] ) . 'wp-json/brz/v1/linker/generate-inventory';
+        $url = add_query_arg( 'api_key', $settings['remote_api_key'], $url );
+
+        $response = wp_remote_get( $url, array( 'timeout' => 45 ) );
+
+        // Handle connection errors gracefully
+        if ( is_wp_error( $response ) ) {
+            return array(
+                'success' => false,
+                'count'   => 0,
+                'site_id' => null,
+                'warning' => 'اتصال به سایت همتا ناموفق: ' . $response->get_error_message(),
+            );
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        if ( 200 !== $code ) {
+            return array(
+                'success' => false,
+                'count'   => 0,
+                'site_id' => null,
+                'warning' => sprintf( 'خطای HTTP %d از سایت همتا', $code ),
+            );
+        }
+
+        $body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+        if ( empty( $body['success'] ) ) {
+            $msg = isset( $body['message'] ) ? $body['message'] : 'پاسخ نامعتبر';
+            return array(
+                'success' => false,
+                'count'   => 0,
+                'site_id' => null,
+                'warning' => 'خطا از سایت همتا: ' . $msg,
+            );
+        }
+
+        $items = isset( $body['items'] ) ? $body['items'] : array();
+        if ( empty( $items ) ) {
+            return array(
+                'success' => true,
+                'count'   => 0,
+                'site_id' => isset( $body['site_role'] ) ? $body['site_role'] : 'peer',
+                'warning' => 'سایت همتا محتوایی ندارد.',
+            );
+        }
+
+        $site_id = isset( $body['site_role'] ) ? $body['site_role'] : 'peer';
+
+        // Clear old peer data and insert new
+        BRZ_Smart_Linker_DB::clear_content_index( $site_id );
+
+        $count = 0;
+        foreach ( $items as $item ) {
+            $item['site_id'] = $site_id;
+            if ( BRZ_Smart_Linker_DB::upsert_content( $item ) ) {
+                $count++;
+            }
+        }
+
+        return array(
+            'success' => true,
+            'count'   => $count,
+            'site_id' => $site_id,
+            'warning' => null,
+        );
     }
 }
