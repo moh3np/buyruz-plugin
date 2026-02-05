@@ -473,7 +473,19 @@ class BRZ_Smart_Linker_Sync {
         }
 
         // Call peer's generate-inventory endpoint (this triggers refresh on peer)
-        $url = trailingslashit( $settings['remote_endpoint'] ) . 'wp-json/brz/v1/linker/generate-inventory';
+        // Smart URL handling: extract base domain if user entered full endpoint URL
+        $remote_endpoint = $settings['remote_endpoint'];
+        
+        // If URL contains /wp-json/, extract just the base domain
+        if ( strpos( $remote_endpoint, '/wp-json/' ) !== false ) {
+            $remote_endpoint = preg_replace( '#/wp-json/.*$#', '', $remote_endpoint );
+        }
+        // Also handle /brz/ path directly
+        if ( strpos( $remote_endpoint, '/brz/' ) !== false ) {
+            $remote_endpoint = preg_replace( '#/brz/.*$#', '', $remote_endpoint );
+        }
+        
+        $url = trailingslashit( $remote_endpoint ) . 'wp-json/brz/v1/linker/generate-inventory';
         $url = add_query_arg( 'api_key', $settings['remote_api_key'], $url );
 
         $response = wp_remote_get( $url, array( 'timeout' => 45 ) );
