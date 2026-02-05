@@ -1667,29 +1667,85 @@ class BRZ_Smart_Linker {
      * @return array
      */
     private static function sanitize_settings( array $input ) {
+        // CRITICAL: Get existing settings first to preserve fields not in form
+        $existing = get_option( self::OPTION_KEY, array() );
+        if ( ! is_array( $existing ) ) {
+            $existing = array();
+        }
+        
         $cleaned = array();
-        $cleaned['mode']          = ( isset( $input['mode'] ) && 'api' === $input['mode'] ) ? 'api' : 'manual';
-        $cleaned['api_key']       = sanitize_text_field( isset( $input['api_key'] ) ? $input['api_key'] : '' );
-        $cleaned['sheet_id']      = sanitize_text_field( isset( $input['sheet_id'] ) ? $input['sheet_id'] : '' );
-        $cleaned['sheet_web_app'] = esc_url_raw( isset( $input['sheet_web_app'] ) ? $input['sheet_web_app'] : '' );
-        $cleaned['google_client_id']     = sanitize_text_field( isset( $input['google_client_id'] ) ? $input['google_client_id'] : '' );
-        $cleaned['google_client_secret'] = sanitize_text_field( isset( $input['google_client_secret'] ) ? $input['google_client_secret'] : '' );
-        $cleaned['site_role']     = ( isset( $input['site_role'] ) && 'blog' === $input['site_role'] ) ? 'blog' : 'shop';
-        $cleaned['remote_endpoint']= esc_url_raw( isset( $input['remote_endpoint'] ) ? $input['remote_endpoint'] : '' );
-        $cleaned['remote_api_key'] = sanitize_text_field( isset( $input['remote_api_key'] ) ? $input['remote_api_key'] : '' );
-        $cleaned['link_density']  = max( 0, min( 15, (int) ( isset( $input['link_density'] ) ? $input['link_density'] : self::DEFAULT_DENSITY ) ) );
-        $cleaned['open_new_tab']  = empty( $input['open_new_tab'] ) ? 0 : 1;
-        $cleaned['nofollow']      = empty( $input['nofollow'] ) ? 0 : 1;
-        $cleaned['prevent_self']  = empty( $input['prevent_self'] ) ? 0 : 1;
+        
+        // Only update fields that are actually in the input
+        // This prevents wiping out fields like local_api_key that aren't in every form
+        
+        if ( isset( $input['mode'] ) ) {
+            $cleaned['mode'] = ( 'api' === $input['mode'] ) ? 'api' : 'manual';
+        }
+        if ( isset( $input['api_key'] ) ) {
+            $cleaned['api_key'] = sanitize_text_field( $input['api_key'] );
+        }
+        if ( isset( $input['sheet_id'] ) ) {
+            $cleaned['sheet_id'] = sanitize_text_field( $input['sheet_id'] );
+        }
+        if ( isset( $input['sheet_web_app'] ) ) {
+            $cleaned['sheet_web_app'] = esc_url_raw( $input['sheet_web_app'] );
+        }
+        if ( isset( $input['google_client_id'] ) ) {
+            $cleaned['google_client_id'] = sanitize_text_field( $input['google_client_id'] );
+        }
+        if ( isset( $input['google_client_secret'] ) ) {
+            $cleaned['google_client_secret'] = sanitize_text_field( $input['google_client_secret'] );
+        }
+        if ( isset( $input['google_refresh_token'] ) ) {
+            $cleaned['google_refresh_token'] = sanitize_text_field( $input['google_refresh_token'] );
+        }
+        if ( isset( $input['site_role'] ) ) {
+            $cleaned['site_role'] = ( 'blog' === $input['site_role'] ) ? 'blog' : 'shop';
+        }
+        if ( isset( $input['remote_endpoint'] ) ) {
+            $cleaned['remote_endpoint'] = esc_url_raw( $input['remote_endpoint'] );
+        }
+        if ( isset( $input['remote_api_key'] ) ) {
+            $cleaned['remote_api_key'] = sanitize_text_field( $input['remote_api_key'] );
+        }
+        if ( isset( $input['link_density'] ) ) {
+            $cleaned['link_density'] = max( 0, min( 15, (int) $input['link_density'] ) );
+        }
+        if ( isset( $input['open_new_tab'] ) ) {
+            $cleaned['open_new_tab'] = empty( $input['open_new_tab'] ) ? 0 : 1;
+        }
+        if ( isset( $input['nofollow'] ) ) {
+            $cleaned['nofollow'] = empty( $input['nofollow'] ) ? 0 : 1;
+        }
+        if ( isset( $input['prevent_self'] ) ) {
+            $cleaned['prevent_self'] = empty( $input['prevent_self'] ) ? 0 : 1;
+        }
+        if ( isset( $input['exclude_post_types'] ) ) {
+            $allowed_pt = array( 'post', 'product', 'page' );
+            $selected   = (array) $input['exclude_post_types'];
+            $cleaned['exclude_post_types'] = array_values( array_intersect( $allowed_pt, $selected ) );
+        }
+        if ( isset( $input['exclude_categories'] ) ) {
+            $cleaned['exclude_categories'] = sanitize_text_field( $input['exclude_categories'] );
+        }
+        if ( isset( $input['exclude_html_tags'] ) ) {
+            $cleaned['exclude_html_tags'] = sanitize_text_field( $input['exclude_html_tags'] );
+        }
+        if ( isset( $input['local_api_key'] ) ) {
+            $cleaned['local_api_key'] = sanitize_text_field( $input['local_api_key'] );
+        }
+        if ( isset( $input['ai_api_key'] ) ) {
+            $cleaned['ai_api_key'] = sanitize_text_field( $input['ai_api_key'] );
+        }
+        if ( isset( $input['ai_base_url'] ) ) {
+            $cleaned['ai_base_url'] = esc_url_raw( $input['ai_base_url'] );
+        }
+        if ( isset( $input['ai_model'] ) ) {
+            $cleaned['ai_model'] = sanitize_text_field( $input['ai_model'] );
+        }
 
-        $allowed_pt = array( 'post', 'product', 'page' );
-        $selected   = isset( $input['exclude_post_types'] ) ? (array) $input['exclude_post_types'] : array();
-        $cleaned['exclude_post_types'] = array_values( array_intersect( $allowed_pt, $selected ) );
-
-        $cleaned['exclude_categories'] = sanitize_text_field( isset( $input['exclude_categories'] ) ? $input['exclude_categories'] : '' );
-        $cleaned['exclude_html_tags']  = sanitize_text_field( isset( $input['exclude_html_tags'] ) ? $input['exclude_html_tags'] : '' );
-
-        return $cleaned;
+        // Merge: existing settings first, then overwrite with cleaned input
+        return array_merge( $existing, $cleaned );
     }
 
     /**
