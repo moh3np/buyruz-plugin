@@ -348,7 +348,7 @@ class BRZ_Smart_Linker_Sync {
         $settings = BRZ_Smart_Linker::get_settings();
 
         if ( empty( $settings['remote_endpoint'] ) || empty( $settings['remote_api_key'] ) ) {
-            return new WP_Error( 'no_peer', 'Remote endpoint or API key not configured' );
+            return new WP_Error( 'no_peer', 'تنظیمات Remote Endpoint یا API Key انجام نشده است.' );
         }
 
         $url = trailingslashit( $settings['remote_endpoint'] ) . 'wp-json/brz/v1/linker/inventory';
@@ -357,13 +357,25 @@ class BRZ_Smart_Linker_Sync {
         $response = wp_remote_get( $url, array( 'timeout' => 30 ) );
 
         if ( is_wp_error( $response ) ) {
-            return $response;
+            return new WP_Error( 'connection_error', 'خطا در اتصال: ' . $response->get_error_message() );
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        if ( 200 !== $code ) {
+            return new WP_Error( 'http_error', sprintf( 'خطای HTTP %d از سایت همتا', $code ) );
         }
 
         $body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-        if ( empty( $body['success'] ) || empty( $body['items'] ) ) {
-            return new WP_Error( 'invalid_response', 'Invalid response from peer' );
+        if ( empty( $body['success'] ) ) {
+            $msg = isset( $body['message'] ) ? $body['message'] : 'پاسخ نامعتبر از سایت همتا';
+            return new WP_Error( 'invalid_response', $msg );
+        }
+
+        // Handle case where peer has no content indexed yet
+        $items = isset( $body['items'] ) ? $body['items'] : array();
+        if ( empty( $items ) ) {
+            return new WP_Error( 'no_content', 'سایت همتا هنوز محتوایی ایندکس نکرده. ابتدا در سایت همتا Export بزنید.' );
         }
 
         $site_id = isset( $body['site_role'] ) ? $body['site_role'] : 'peer';
@@ -372,7 +384,7 @@ class BRZ_Smart_Linker_Sync {
         BRZ_Smart_Linker_DB::clear_content_index( $site_id );
 
         $count = 0;
-        foreach ( $body['items'] as $item ) {
+        foreach ( $items as $item ) {
             $item['site_id'] = $site_id;
             if ( BRZ_Smart_Linker_DB::upsert_content( $item ) ) {
                 $count++;
