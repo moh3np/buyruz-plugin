@@ -456,6 +456,8 @@ class BRZ_Smart_Linker {
             <?php wp_nonce_field( 'brz_smart_linker_save' ); ?>
             <input type="hidden" name="action" value="brz_smart_linker_save" />
             <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=strategy' ) ); ?>" />
+            
+            <h3 style="margin-top:0;">⚙️ تنظیمات لینک‌سازی</h3>
             <table class="form-table" role="presentation">
                 <tbody>
                     <tr>
@@ -484,6 +486,41 @@ class BRZ_Smart_Linker {
                     </tr>
                 </tbody>
             </table>
+
+            <h3 style="margin-top:24px;">📊 تنظیمات تب آنالیز</h3>
+            <table class="form-table" role="presentation">
+                <tbody>
+                    <tr>
+                        <th scope="row">ستون‌های نمایشی</th>
+                        <td>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_type]" value="1" <?php checked( isset( $settings['analytics_show_type'] ) ? $settings['analytics_show_type'] : true ); ?> /> نوع</label>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_site]" value="1" <?php checked( isset( $settings['analytics_show_site'] ) ? $settings['analytics_show_site'] : true ); ?> /> سایت</label>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_outbound]" value="1" <?php checked( isset( $settings['analytics_show_outbound'] ) ? $settings['analytics_show_outbound'] : true ); ?> /> لینک خروجی</label>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_inbound]" value="1" <?php checked( isset( $settings['analytics_show_inbound'] ) ? $settings['analytics_show_inbound'] : true ); ?> /> لینک ورودی</label>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_keyword]" value="1" <?php checked( isset( $settings['analytics_show_keyword'] ) ? $settings['analytics_show_keyword'] : true ); ?> /> کلمه کلیدی</label>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_seo]" value="1" <?php checked( isset( $settings['analytics_show_seo'] ) ? $settings['analytics_show_seo'] : true ); ?> /> وضعیت SEO</label>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_wordcount]" value="1" <?php checked( ! empty( $settings['analytics_show_wordcount'] ) ); ?> /> تعداد کلمات</label>
+                            <label style="display:inline-block;margin-left:16px;"><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[analytics_show_updated]" value="1" <?php checked( ! empty( $settings['analytics_show_updated'] ) ); ?> /> آخرین بروزرسانی</label>
+                            <p class="description">ستون‌های انتخاب‌شده در تب آنالیز نمایش داده می‌شوند.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top:24px;">🗑️ تنظیمات حذف</h3>
+            <table class="form-table" role="presentation">
+                <tbody>
+                    <tr>
+                        <th scope="row">حذف داده‌ها</th>
+                        <td>
+                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delete_data_on_uninstall]" value="1" <?php checked( ! empty( $settings['delete_data_on_uninstall'] ) ); ?> /> حذف تمام جداول دیتابیس هنگام حذف افزونه</label>
+                            <p class="description" style="color:#dc2626;">⚠️ با فعال کردن این گزینه، هنگام حذف (Uninstall) افزونه، تمام داده‌های Smart Linker از جمله ایندکس محتوا و لینک‌های pending پاک می‌شوند.</p>
+                            <p class="description" style="color:#059669;">✅ توجه: لینک‌های اعمال‌شده در محتوا حفظ می‌شوند زیرا مستقیماً در post_content ذخیره شده‌اند.</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
             <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
         </form>
         <?php
