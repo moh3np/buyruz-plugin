@@ -486,7 +486,8 @@ class BRZ_Smart_Linker_Sync {
         }
         
         $url = trailingslashit( $remote_endpoint ) . 'wp-json/brz/v1/linker/generate-inventory';
-        $url = add_query_arg( 'api_key', $settings['remote_api_key'], $url );
+        // Use rawurlencode for API key (matches test connection behavior)
+        $url = add_query_arg( 'api_key', rawurlencode( $settings['remote_api_key'] ), $url );
 
         $response = wp_remote_get( $url, array( 'timeout' => 45 ) );
 
