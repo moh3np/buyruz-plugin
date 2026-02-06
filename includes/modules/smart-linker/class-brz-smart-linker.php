@@ -78,6 +78,10 @@ class BRZ_Smart_Linker {
         add_action( self::CRON_APPROVAL_HOOK, array( __CLASS__, 'poll_approvals' ) );
         add_action( 'brz_link_health_cron', array( __CLASS__, 'cron_link_health_scan' ) );
 
+        // Deactivation dialog
+        add_action( 'wp_ajax_brz_smart_linker_set_delete_pref', array( __CLASS__, 'ajax_set_delete_pref' ) );
+        add_action( 'admin_footer-plugins.php', array( __CLASS__, 'render_deactivation_dialog' ) );
+
         // REST provider endpoint
         add_action( 'rest_api_init', array( __CLASS__, 'register_rest_routes' ) );
     }
@@ -96,6 +100,76 @@ class BRZ_Smart_Linker {
     public static function on_deactivate() {
         wp_clear_scheduled_hook( self::CRON_PROCESS_HOOK );
         wp_clear_scheduled_hook( self::CRON_APPROVAL_HOOK );
+    }
+
+    /**
+     * AJAX handler: save user's preference for deleting data on uninstall.
+     */
+    public static function ajax_set_delete_pref() {
+        check_ajax_referer( 'brz_deactivation_nonce' );
+        if ( ! current_user_can( 'activate_plugins' ) ) {
+            wp_send_json_error();
+        }
+        $delete = ! empty( $_POST['delete_data'] ) ? 1 : 0;
+        $settings = get_option( self::OPTION_KEY, array() );
+        if ( ! is_array( $settings ) ) {
+            $settings = array();
+        }
+        $settings['delete_data_on_uninstall'] = $delete;
+        update_option( self::OPTION_KEY, $settings, false );
+        wp_send_json_success();
+    }
+
+    /**
+     * Render deactivation confirmation dialog on plugins.php page.
+     */
+    public static function render_deactivation_dialog() {
+        $plugin_file = plugin_basename( BRZ_PATH . 'buyruz-settings.php' );
+        $nonce       = wp_create_nonce( 'brz_deactivation_nonce' );
+        ?>
+        <div id="brz-deactivate-dialog" style="display:none;position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:460px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);direction:rtl;text-align:right;">
+                <h3 style="margin:0 0 12px;">⚠️ غیرفعال‌سازی افزونه بایروز</h3>
+                <p style="margin:0 0 16px;color:#555;font-size:14px;line-height:1.7;">آیا می‌خواهید داده‌های Smart Linker (جداول دیتابیس، ایندکس محتوا و لینک‌های pending) نیز پاک شوند؟</p>
+                <p style="margin:0 0 16px;color:#059669;font-size:13px;">✅ لینک‌های اعمال‌شده در محتوا در هر صورت حفظ می‌شوند.</p>
+                <div style="display:flex;gap:10px;justify-content:flex-start;">
+                    <button type="button" id="brz-deactivate-keep" style="padding:8px 20px;border:1px solid #2563eb;background:#2563eb;color:#fff;border-radius:8px;cursor:pointer;font-size:14px;">غیرفعال (حفظ داده‌ها)</button>
+                    <button type="button" id="brz-deactivate-delete" style="padding:8px 20px;border:1px solid #dc2626;background:#fff;color:#dc2626;border-radius:8px;cursor:pointer;font-size:14px;">غیرفعال + حذف داده‌ها</button>
+                    <button type="button" id="brz-deactivate-cancel" style="padding:8px 20px;border:1px solid #ccc;background:#f5f5f5;color:#333;border-radius:8px;cursor:pointer;font-size:14px;">انصراف</button>
+                </div>
+            </div>
+        </div>
+        <script>
+        (function(){
+            var pluginFile = <?php echo wp_json_encode( $plugin_file ); ?>;
+            var nonce = <?php echo wp_json_encode( $nonce ); ?>;
+            var deactivateLink = document.querySelector('tr[data-plugin="' + pluginFile + '"] .deactivate a');
+            if (!deactivateLink) return;
+
+            var dialog = document.getElementById('brz-deactivate-dialog');
+            var originalHref = deactivateLink.href;
+
+            deactivateLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                dialog.style.display = 'flex';
+            });
+
+            function proceed(deleteData) {
+                jQuery.post(ajaxurl, {
+                    action: 'brz_smart_linker_set_delete_pref',
+                    _ajax_nonce: nonce,
+                    delete_data: deleteData ? 1 : 0
+                }).always(function() {
+                    window.location.href = originalHref;
+                });
+            }
+
+            document.getElementById('brz-deactivate-keep').onclick = function() { proceed(false); };
+            document.getElementById('brz-deactivate-delete').onclick = function() { proceed(true); };
+            document.getElementById('brz-deactivate-cancel').onclick = function() { dialog.style.display = 'none'; };
+        })();
+        </script>
+        <?php
     }
 
     /**
@@ -453,7 +527,6 @@ class BRZ_Smart_Linker {
                     self::render_health_tab( $settings );
                 } elseif ( 'strategy' === $active_tab ) {
                     self::render_strategy_tab( $settings );
-                    self::render_exclusions_tab( $settings );
                 } elseif ( 'maintenance' === $active_tab ) {
                     self::render_maintenance_tab( $settings );
                 } else {
@@ -879,21 +952,7 @@ class BRZ_Smart_Linker {
                 </tbody>
             </table>
 
-            <h3 style="margin-top:24px;">🗑️ تنظیمات حذف</h3>
-            <table class="form-table" role="presentation">
-                <tbody>
-                    <tr>
-                        <th scope="row">حذف داده‌ها</th>
-                        <td>
-                            <label><input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[delete_data_on_uninstall]" value="1" <?php checked( ! empty( $settings['delete_data_on_uninstall'] ) ); ?> /> حذف تمام جداول دیتابیس هنگام حذف افزونه</label>
-                            <p class="description" style="color:#dc2626;">⚠️ با فعال کردن این گزینه، هنگام حذف (Uninstall) افزونه، تمام داده‌های Smart Linker از جمله ایندکس محتوا و لینک‌های pending پاک می‌شوند.</p>
-                            <p class="description" style="color:#059669;">✅ توجه: لینک‌های اعمال‌شده در محتوا حفظ می‌شوند زیرا مستقیماً در post_content ذخیره شده‌اند.</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h3 style="margin-top:24px;">📤 فیلتر خروجی Export</h3>
+            <h3 style="margin-top:24px;">� فیلتر خروجی Export</h3>
             <p class="description" style="margin-bottom:12px;">مشخص کنید هنگام تولید Export یکپارچه، برای هر نوع محتوا فقط آیتم‌های ایندکس‌شده (index) نمایش داده شوند یا همه آیتم‌ها (شامل noindex).</p>
             <table class="form-table" role="presentation">
                 <tbody>
@@ -919,29 +978,20 @@ class BRZ_Smart_Linker {
                 </tbody>
             </table>
 
-            <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
-        </form>
-        <?php
-    }
-
-    private static function render_exclusions_tab( $settings ) {
-        $post_types = array(
-            'post'    => 'نوشته',
-            'product' => 'محصول',
-            'page'    => 'برگه',
-        );
-        $selected_pt = is_array( $settings['exclude_post_types'] ) ? $settings['exclude_post_types'] : array();
-        ?>
-        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-settings-form" data-ajax="1">
-            <?php wp_nonce_field( 'brz_smart_linker_save' ); ?>
-            <input type="hidden" name="action" value="brz_smart_linker_save" />
-            <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-smart_linker&tab=exclusions' ) ); ?>" />
+            <h3 style="margin-top:24px;">🚫 موارد مستثنا</h3>
             <table class="form-table" role="presentation">
                 <tbody>
                     <tr>
                         <th scope="row">پست‌تایپ‌ها</th>
                         <td>
-                            <?php foreach ( $post_types as $slug => $label ) : ?>
+                            <?php
+                            $post_types = array(
+                                'post'    => 'نوشته',
+                                'product' => 'محصول',
+                                'page'    => 'برگه',
+                            );
+                            $selected_pt = is_array( $settings['exclude_post_types'] ) ? $settings['exclude_post_types'] : array();
+                            foreach ( $post_types as $slug => $label ) : ?>
                                 <label style="display:block;margin-bottom:6px;">
                                     <input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[exclude_post_types][]" value="<?php echo esc_attr( $slug ); ?>" <?php checked( in_array( $slug, $selected_pt, true ) ); ?> />
                                     <?php echo esc_html( $label ); ?>
@@ -966,6 +1016,7 @@ class BRZ_Smart_Linker {
                     </tr>
                 </tbody>
             </table>
+
             <?php submit_button( 'ذخیره تنظیمات', 'primary', 'submit', false ); ?>
         </form>
         <?php

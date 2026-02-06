@@ -14,7 +14,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 // Get Smart Linker settings
-$smart_linker_settings = get_option( 'brz_smart_linker_options', array() );
+$smart_linker_settings = get_option( 'brz_smart_linker', array() );
 
 // Check if user wants to delete data on uninstall
 if ( ! empty( $smart_linker_settings['delete_data_on_uninstall'] ) ) {
