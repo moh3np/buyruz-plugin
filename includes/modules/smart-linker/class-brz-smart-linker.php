@@ -194,6 +194,18 @@ class BRZ_Smart_Linker {
         if ( $content_exists !== $content_table || $pending_exists !== $pending_table ) {
             BRZ_Smart_Linker_DB::migrate();
         }
+
+        // Ensure content_excerpt column is MEDIUMTEXT (upgrade from TEXT)
+        if ( $content_exists === $content_table ) {
+            $col_type = $wpdb->get_var( $wpdb->prepare(
+                "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'content_excerpt'",
+                DB_NAME,
+                $content_table
+            ) );
+            if ( $col_type && 'mediumtext' !== strtolower( $col_type ) ) {
+                $wpdb->query( "ALTER TABLE {$content_table} MODIFY content_excerpt MEDIUMTEXT NULL" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            }
+        }
         
         // Run health table migration separately
         if ( $health_exists !== $health_table ) {

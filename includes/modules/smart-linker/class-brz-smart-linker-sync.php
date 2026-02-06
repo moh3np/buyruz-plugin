@@ -248,7 +248,7 @@ class BRZ_Smart_Linker_Sync {
             'focus_keyword'      => $focus_keyword,
             'secondary_keywords' => array(),
             'content_excerpt'    => $term->description,
-            'word_count'         => str_word_count( wp_strip_all_tags( $term->description ) ),
+            'word_count'         => empty( trim( $term->description ) ) ? 0 : count( preg_split( '/\s+/u', trim( wp_strip_all_tags( $term->description ) ), -1, PREG_SPLIT_NO_EMPTY ) ),
             'is_linkable'        => $is_linkable,
             'stock_status'       => '',
             'price'              => '',
@@ -393,9 +393,21 @@ class BRZ_Smart_Linker_Sync {
      * @return array
      */
     public static function build_content_data( WP_Post $post, $site_role ) {
-        $content = wp_strip_all_tags( $post->post_content );
-        $word_count = str_word_count( $content );
-        $excerpt = mb_substr( $content, 0, 1000, 'UTF-8' );
+        // Build full HTML: for products, combine short description + full description
+        $full_html = $post->post_content;
+        if ( 'product' === $post->post_type && ! empty( $post->post_excerpt ) ) {
+            $full_html = $post->post_excerpt . "\n\n" . $full_html;
+        }
+
+        // Keep only <a> tags for link visibility, strip everything else
+        $content = wp_kses( $full_html, array( 'a' => array( 'href' => array() ) ) );
+        $content = preg_replace( '/[\r\n]+/', "\n", $content );
+        $content = preg_replace( '/[ \t]+/', ' ', $content );
+        $content = trim( $content );
+
+        // Persian-aware word count (str_word_count doesn't work for Persian)
+        $plain_text = wp_strip_all_tags( $full_html );
+        $word_count = empty( trim( $plain_text ) ) ? 0 : count( preg_split( '/\s+/u', trim( $plain_text ), -1, PREG_SPLIT_NO_EMPTY ) );
 
         // Get categories
         $taxonomy = 'product' === $post->post_type ? 'product_cat' : 'category';
@@ -452,7 +464,7 @@ class BRZ_Smart_Linker_Sync {
             'category_names'     => $cat_names,
             'focus_keyword'      => $focus_keyword,
             'secondary_keywords' => $secondary_keywords,
-            'content_excerpt'    => $excerpt,
+            'content_excerpt'    => $content,
             'word_count'         => $word_count,
             'is_linkable'        => $is_linkable,
             'stock_status'       => $stock_status,
@@ -506,7 +518,7 @@ class BRZ_Smart_Linker_Sync {
                 'focus_keyword'      => '',
                 'secondary_keywords' => array(),
                 'content_excerpt'    => $term->description,
-                'word_count'         => str_word_count( $term->description ),
+                'word_count'         => empty( trim( $term->description ) ) ? 0 : count( preg_split( '/\s+/u', trim( wp_strip_all_tags( $term->description ) ), -1, PREG_SPLIT_NO_EMPTY ) ),
                 'is_linkable'        => $is_linkable,
                 'stock_status'       => '',
                 'price'              => '',

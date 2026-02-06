@@ -213,20 +213,36 @@ class BRZ_Smart_Linker_Exporter {
             }
         }
 
+        // Map to actual site_role
+        static $local_role_term = null;
+        if ( null === $local_role_term ) {
+            $s = BRZ_Smart_Linker::get_settings();
+            $local_role_term = isset( $s['site_role'] ) ? $s['site_role'] : 'shop';
+        }
+
+        // Focus keyword fallback: use term name
+        if ( empty( $focus_keyword ) ) {
+            $focus_keyword = $term->name;
+        }
+
+        // Persian-aware word count
+        $desc_plain = wp_strip_all_tags( $term->description );
+        $wc = empty( trim( $desc_plain ) ) ? 0 : count( preg_split( '/\s+/u', trim( $desc_plain ), -1, PREG_SPLIT_NO_EMPTY ) );
+
         return array(
             'id'                 => (int) $term->term_id,
-            'site'               => 'local',
+            'site'               => $local_role_term,
             'type'               => $type,
             'title'              => $term->name,
             'url'                => $url,
             'categories'         => array( $term->name ),
             'focus_keyword'      => $focus_keyword,
             'secondary_keywords' => array(),
-            'word_count'         => str_word_count( wp_strip_all_tags( $term->description ) ),
+            'word_count'         => $wc,
             'is_linkable'        => $is_linkable,
             'stock_status'       => '',
             'price'              => '',
-            'excerpt'            => mb_substr( wp_strip_all_tags( $term->description ), 0, 1000, 'UTF-8' ),
+            'content'            => $term->description,
         );
     }
     
@@ -265,6 +281,14 @@ class BRZ_Smart_Linker_Exporter {
      * @return array
      */
     private static function format_item_for_export( array $item ) {
+        // Map 'local' site_id to actual site_role for clarity
+        static $local_role = null;
+        if ( null === $local_role ) {
+            $s = BRZ_Smart_Linker::get_settings();
+            $local_role = isset( $s['site_role'] ) ? $s['site_role'] : 'shop';
+        }
+        $site = ( 'local' === $item['site_id'] ) ? $local_role : $item['site_id'];
+
         $categories = $item['category_names'];
         if ( is_string( $categories ) ) {
             $categories = json_decode( $categories, true );
@@ -275,20 +299,26 @@ class BRZ_Smart_Linker_Exporter {
             $secondary = json_decode( $secondary, true );
         }
 
+        // Focus keyword fallback: use cleaned title
+        $focus_keyword = isset( $item['focus_keyword'] ) ? $item['focus_keyword'] : '';
+        if ( empty( $focus_keyword ) && ! empty( $item['title'] ) ) {
+            $focus_keyword = trim( preg_replace( '/[\x{1F600}-\x{1F64F}\x{1F300}-\x{1F5FF}\x{1F680}-\x{1F6FF}\x{1F1E0}-\x{1F1FF}\x{2700}-\x{27BF}]/u', '', $item['title'] ) );
+        }
+
         return array(
             'id'                 => (int) $item['post_id'],
-            'site'               => $item['site_id'],
+            'site'               => $site,
             'type'               => $item['post_type'],
             'title'              => $item['title'],
             'url'                => $item['url'],
             'categories'         => is_array( $categories ) ? $categories : array(),
-            'focus_keyword'      => $item['focus_keyword'],
+            'focus_keyword'      => $focus_keyword,
             'secondary_keywords' => is_array( $secondary ) ? $secondary : array(),
             'word_count'         => (int) $item['word_count'],
             'is_linkable'        => (bool) $item['is_linkable'],
             'stock_status'       => $item['stock_status'],
             'price'              => $item['price'],
-            'excerpt'            => $item['content_excerpt'],
+            'content'            => $item['content_excerpt'],
         );
     }
 
@@ -307,67 +337,132 @@ class BRZ_Smart_Linker_Exporter {
         $site_url = $export['meta']['site_url'];
 
         $prompt = <<<PROMPT
-# 🔗 درخواست لینک‌سازی داخلی هوشمند
+# 🔗 درخواست لینک‌سازی داخلی هوشمند (Smart Internal Linking)
 
-## نقش تو
-متخصص سئو و لینک‌سازی داخلی. تحلیل محتوای دو سایت (فروشگاه + بلاگ) و پیشنهاد لینک‌های بهینه.
+## 🎯 نقش
+تو یک متخصص ارشد سئو هستی با تمرکز بر:
+- **Internal Linking Architecture** (معماری لینک‌سازی داخلی)
+- **GEO (Generative Engine Optimization)** - بهینه‌سازی برای موتورهای مولد (Google AI Overviews, Perplexity, etc.)
+- **Topical Authority** (اقتدار موضوعی) و **E-E-A-T Signals**
 
-## داده‌های ورودی
-**JSON محتوا:** {$counts['products']} محصول | {$counts['posts']} مقاله | {$counts['pages']} صفحه | {$counts['product_categories']} دسته‌بندی محصول | {$counts['tags']} تگ
+## 📊 ساختار سایت
 
-### داده‌های اختیاری (اگر آپلود شدند):
-- **Google Search Console CSV**: اولویت به کلمات با Impression/Click بالا
-- **Google Analytics CSV**: اولویت به صفحات پربازدید برای دریافت لینک
+### دو سایت (یک دامنه):
+| سایت | نقش | URL Pattern | Intent |
+|---|---|---|---|
+| **shop** ({$site_url}) | فروشگاه | `/product/`, `/toys/`, `/product-tag/` | Transactional |
+| **blog** ({$site_url}/mag) | مجله | `/mag/` | Informational / Educational |
+
+### آمار محتوا:
+{$counts['products']} محصول | {$counts['posts']} مقاله | {$counts['pages']} صفحه | {$counts['product_categories']} دسته‌بندی محصول | {$counts['tags']} تگ محصول
+
+### انواع محتوا و Intent:
+| نوع | کلید `type` | سایت | Intent |
+|---|---|---|---|
+| محصول | `product` | shop | Transactional |
+| مقاله | `post` | blog | Informational |
+| صفحه | `page` | shop/blog | Mixed |
+| دسته‌بندی محصول | `term_product_cat` | shop | Navigational/Transactional |
+| تگ محصول | `term_product_tag` | shop | Navigational |
+
+### فیلدهای هر آیتم:
+- `content`: متن کامل با لینک‌های فعلی. **لینک‌های موجود** با `<a href="...">` مشخص‌اند — دوباره پیشنهاد نده.
+- `focus_keyword`: کلمه کلیدی کانونی (از RankMath). اگر خالی بود، مقدار `title` جایگزین شده.
+- `word_count`: تعداد کلمات فارسی.
+- `is_linkable`: آیا index (true) یا noindex (false) است.
+- `stock_status`: وضعیت موجودی محصول (instock/outofstock).
 
 ---
 
-## قوانین لینک‌سازی
+## 📐 قوانین لینک‌سازی
 
-### ✅ مجاز
-| از | به |
+### ✅ ماتریس لینک مجاز:
+| از ↓ به → | محصول | مقاله | صفحه | دسته محصول | تگ محصول |
+|---|---|---|---|---|---|
+| **مقاله** | ✅ اولویت ۱ | ✅ | ✅ | ✅ | ✅ |
+| **محصول** | ✅ مرتبط | ✅ انتهای توضیحات | ❌ | ✅ | ✅ |
+| **صفحه** | ✅ | ✅ | ⚠️ فقط مرتبط | ✅ | ❌ |
+| **دسته محصول** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **تگ محصول** | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+### ❌ قوانین انتقادی:
+1. **`is_linkable: false`** → هرگز به این آیتم لینک نده (noindex)
+2. **`stock_status: "outofstock"`** → لینک نده
+3. **Self-linking** ممنوع (`source_id == target_id` در همان سایت)
+4. **لینک تکراری** ممنوع: یک مقصد فقط یک بار در هر صفحه
+5. **لینک‌های موجود**: اگر `<a href="...">` در `content` مبدأ وجود دارد، به همان مقصد دوباره لینک نده
+6. صفحات **noindex** می‌توانند مبدأ باشند ولی هرگز مقصد نباشند
+
+### 🔤 Anchor Text (متن لنگر) — قانون تنوع:
+**SpamBrain-safe distribution (بسیار مهم):**
+- **۳۰-۴۰٪ Keyword-rich**: از `focus_keyword` مقصد یا تغییرات معنایی (semantic variation)
+- **۴۰-۵۰٪ Descriptive/Contextual**: عبارات طبیعی فارسی که مقصد را در context توصیف می‌کنند
+- **۱۰-۱۵٪ Branded/Navigational**: نام دسته‌بندی، نام بخش
+- **۰٪ Generic**: هرگز «کلیک کنید» یا «اینجا» — بی‌ارزش برای سئو
+
+**نکته**: برای لینک‌سازی داخلی، exact match anchor text بیشتر از external مجاز است ولی باید طبیعی و در context جمله قرار گیرد.
+
+### 📏 تراکم لینک (بر اساس word_count):
+| تعداد کلمات | حداکثر لینک جدید |
 |---|---|
-| مقاله بلاگ | محصول مرتبط (اولویت ۱) |
-| مقاله بلاگ | دسته‌بندی محصولات |
-| محصول | مقاله مرتبط (انتهای توضیحات) |
-| محصول | محصول مرتبط |
-| صفحه | محصول یا مقاله |
+| ≤ 300 | ۱ (قانون حداقل ارزش) |
+| 300 – 1000 | ۲ |
+| 1000 – 2000 | ۴ |
+| 2000 – 3000 | ۶ |
+| 3000+ | ۳ لینک / ۱۰۰۰ کلمه |
 
-### ❌ ممنوع
-- `is_linkable: false` → لینک نده
-- `stock_status: outofstock` → لینک نده  
-- دسته‌بندی بلاگ (noindex) → لینک نده
-- Self-linking → ممنوع
+**قانون حداقل ارزش**: حتی اگر `word_count` کم یا ۰ باشد، اگر `focus_keyword` مقصد در `content` مبدأ وجود دارد، ۱ لینک مجاز است.
 
-### Anchor Text
-1. اول `focus_keyword` (اگر موجود)
-2. سپس عنوان طبیعی فارسی
-3. حداکثر **3 لینک / 1000 کلمه**
+### 🎯 اولویت‌بندی (GEO-Optimized):
+1. **critical**: `focus_keyword` مشترک بین مبدأ و مقصد
+2. **high**: دسته‌بندی مشترک + ارتباط موضوعی قوی
+3. **medium**: Intent complementary (مقاله آموزشی ↔ محصول تراکنشی = پل ارزشمند)
+4. **low**: ارتباط موضوعی ضعیف ولی مفید
 
-### اولویت
-- `high`: focus_keyword مشترک
-- `medium`: دسته مشترک یا صفحه پربازدید (از Analytics)
-- `low`: ارتباط موضوعی
+### 🌐 اصول GEO (Generative Engine Optimization):
+- **Topic Clusters**: مقالات بلاگ = Spoke، صفحات دسته‌بندی = Pillar. لینک‌ها باید خوشه‌های موضوعی بسازند.
+- **Entity Linking**: لینک بر اساس موجودیت‌های مشترک (مثلاً entity «مافیا» بین مقاله و محصول)
+- **Intent Bridge**: مقاله آموزشی → محصول = پل تراکنشی (ارزشمندترین نوع لینک)
+- **Orphan Prevention**: هر صفحه `is_linkable: true` باید حداقل ۱ لینک ورودی داشته باشد
 
 ---
 
-## خروجی
+## 📤 خروجی
 
-**فقط** یک JSON array (بدون توضیح):
+**فقط** یک JSON array خالص (بدون توضیح، بدون markdown):
 
 ```json
 [
   {
     "source_id": 456,
     "source_site": "blog",
-    "keyword": "خرید لپ تاپ ایسوس",
+    "keyword": "بازی فکری مافیا",
     "target_id": 123,
     "target_site": "shop",
-    "target_url": "https://example.com/product/laptop",
-    "priority": "high",
-    "reason": "focus_keyword مشترک"
+    "target_url": "https://example.com/product/mafia-game",
+    "priority": "critical",
+    "anchor_type": "keyword-rich",
+    "reason": "focus_keyword مشترک + intent bridge"
   }
 ]
 ```
+
+### فیلدهای خروجی:
+| فیلد | توضیح |
+|---|---|
+| `source_id` | ID پستی که لینک در آن قرار می‌گیرد |
+| `source_site` | `"shop"` یا `"blog"` |
+| `keyword` | Anchor text (متن لنگر) |
+| `target_id` | ID مقصد |
+| `target_site` | `"shop"` یا `"blog"` |
+| `target_url` | URL کامل مقصد |
+| `priority` | `"critical"` / `"high"` / `"medium"` / `"low"` |
+| `anchor_type` | `"keyword-rich"` / `"descriptive"` / `"navigational"` |
+| `reason` | دلیل کوتاه (برای بررسی انسانی) |
+
+---
+
+**⚡ شروع کن: JSON محتوا را تحلیل کن و لینک‌های پیشنهادی را خروجی بده.**
 
 **توجه:** source_id = پستی که لینک در آن قرار می‌گیرد | target_url = مقصد لینک
 
