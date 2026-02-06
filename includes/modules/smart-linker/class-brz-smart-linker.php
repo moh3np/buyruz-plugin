@@ -156,6 +156,12 @@ class BRZ_Smart_Linker {
             'ai_api_key'     => '',
             'ai_base_url'    => '',
             'ai_model'       => '',
+            // Export filter settings: 'all' = include noindex items, 'index' = only indexed
+            'export_filter_products'           => 'index',
+            'export_filter_posts'              => 'index',
+            'export_filter_pages'              => 'index',
+            'export_filter_product_categories' => 'all',
+            'export_filter_tags'               => 'all',
             // Link Health settings
             'health_scan_enabled'   => 1,
             'health_scan_frequency' => 'weekly', // disabled|daily|weekly
@@ -884,6 +890,32 @@ class BRZ_Smart_Linker {
                             <p class="description" style="color:#059669;">✅ توجه: لینک‌های اعمال‌شده در محتوا حفظ می‌شوند زیرا مستقیماً در post_content ذخیره شده‌اند.</p>
                         </td>
                     </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top:24px;">📤 فیلتر خروجی Export</h3>
+            <p class="description" style="margin-bottom:12px;">مشخص کنید هنگام تولید Export یکپارچه، برای هر نوع محتوا فقط آیتم‌های ایندکس‌شده (index) نمایش داده شوند یا همه آیتم‌ها (شامل noindex).</p>
+            <table class="form-table" role="presentation">
+                <tbody>
+                    <?php
+                    $export_filter_types = array(
+                        'export_filter_products'           => 'محصولات',
+                        'export_filter_posts'              => 'نوشته‌ها (مقالات)',
+                        'export_filter_pages'              => 'صفحات',
+                        'export_filter_product_categories' => 'دسته‌بندی محصولات',
+                        'export_filter_tags'               => 'تگ محصولات',
+                    );
+                    foreach ( $export_filter_types as $key => $label ) :
+                        $current = isset( $settings[ $key ] ) ? $settings[ $key ] : 'all';
+                    ?>
+                    <tr>
+                        <th scope="row"><?php echo esc_html( $label ); ?></th>
+                        <td>
+                            <label style="margin-left:16px;"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $key ); ?>]" value="index" <?php checked( $current, 'index' ); ?> /> فقط ایندکس‌شده</label>
+                            <label style="margin-left:16px;"><input type="radio" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $key ); ?>]" value="all" <?php checked( $current, 'all' ); ?> /> همه (شامل noindex)</label>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
 
@@ -1776,6 +1808,20 @@ class BRZ_Smart_Linker {
         }
         if ( isset( $input['ai_model'] ) ) {
             $cleaned['ai_model'] = sanitize_text_field( $input['ai_model'] );
+        }
+
+        // Export filter settings
+        $export_filter_keys = array(
+            'export_filter_products',
+            'export_filter_posts',
+            'export_filter_pages',
+            'export_filter_product_categories',
+            'export_filter_tags',
+        );
+        foreach ( $export_filter_keys as $efk ) {
+            if ( isset( $input[ $efk ] ) ) {
+                $cleaned[ $efk ] = ( 'all' === $input[ $efk ] ) ? 'all' : 'index';
+            }
         }
 
         // Merge: existing settings first, then overwrite with cleaned input

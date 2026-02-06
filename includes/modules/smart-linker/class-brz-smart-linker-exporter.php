@@ -58,26 +58,36 @@ class BRZ_Smart_Linker_Exporter {
             'tags'               => array(),
         );
 
+        // Read export filter settings
+        $settings     = BRZ_Smart_Linker::get_settings();
+        $filter_map   = array(
+            'product'          => isset( $settings['export_filter_products'] ) ? $settings['export_filter_products'] : 'index',
+            'post'             => isset( $settings['export_filter_posts'] ) ? $settings['export_filter_posts'] : 'index',
+            'page'             => isset( $settings['export_filter_pages'] ) ? $settings['export_filter_pages'] : 'index',
+            'term_product_cat' => isset( $settings['export_filter_product_categories'] ) ? $settings['export_filter_product_categories'] : 'all',
+            'term_product_tag' => isset( $settings['export_filter_tags'] ) ? $settings['export_filter_tags'] : 'all',
+        );
+
         foreach ( $all_content as $item ) {
             $formatted   = self::format_item_for_export( $item );
             $is_linkable = isset( $item['is_linkable'] ) ? (int) $item['is_linkable'] : 1;
             $post_type   = isset( $item['post_type'] ) ? $item['post_type'] : '';
 
+            // Apply export filter: skip noindex items if filter is 'index'
+            $filter = isset( $filter_map[ $post_type ] ) ? $filter_map[ $post_type ] : 'index';
+            if ( 'index' === $filter && ! $is_linkable ) {
+                continue;
+            }
+
             switch ( $post_type ) {
                 case 'product':
-                    if ( $is_linkable ) {
-                        $export['products'][] = $formatted;
-                    }
+                    $export['products'][] = $formatted;
                     break;
                 case 'post':
-                    if ( $is_linkable ) {
-                        $export['posts'][] = $formatted;
-                    }
+                    $export['posts'][] = $formatted;
                     break;
                 case 'page':
-                    if ( $is_linkable ) {
-                        $export['pages'][] = $formatted;
-                    }
+                    $export['pages'][] = $formatted;
                     break;
                 case 'term_product_cat':
                     $export['product_categories'][] = $formatted;
