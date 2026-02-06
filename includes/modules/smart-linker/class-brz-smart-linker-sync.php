@@ -203,18 +203,7 @@ class BRZ_Smart_Linker_Sync {
             }
         }
 
-        // Post tags
-        if ( empty( $existing_types['term_post_tag'] ) && taxonomy_exists( 'post_tag' ) ) {
-            $terms = get_terms( array( 'taxonomy' => 'post_tag', 'hide_empty' => true ) );
-            if ( ! is_wp_error( $terms ) ) {
-                foreach ( $terms as $term ) {
-                    $data = self::build_term_data( $term, 'post_tag' );
-                    if ( $data ) {
-                        $content[] = $data;
-                    }
-                }
-            }
-        }
+
 
         return $content;
     }
@@ -392,8 +381,7 @@ class BRZ_Smart_Linker_Sync {
             self::index_terms( 'product_tag', $site_role );
         }
 
-        // Index post tags
-        self::index_terms( 'post_tag', $site_role );
+
     }
 
     /**

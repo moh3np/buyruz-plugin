@@ -1032,7 +1032,7 @@ class BRZ_Smart_Linker {
                         'page' => 'صفحه',
                         'term_product_cat' => 'دسته محصول',
                         'term_category' => 'دسته مقاله',
-                        'term_post_tag' => 'برچسب',
+                        'term_product_tag' => 'تگ محصول',
                     );
                     $type_label = isset( $type_labels[ $item['post_type'] ] ) ? $type_labels[ $item['post_type'] ] : $item['post_type'];
                 ?>

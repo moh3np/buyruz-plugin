@@ -82,7 +82,6 @@ class BRZ_Smart_Linker_Exporter {
                 case 'term_product_cat':
                     $export['product_categories'][] = $formatted;
                     break;
-                case 'term_post_tag':
                 case 'term_product_tag':
                     $export['tags'][] = $formatted;
                     break;
@@ -114,16 +113,13 @@ class BRZ_Smart_Linker_Exporter {
      * @param array &$export Export data array (modified by reference)
      */
     private static function ensure_taxonomy_terms( array &$export ) {
-        // Detect which tag types already exist in export
+        // Detect if product tags already exist in export
         $has_product_tag = false;
-        $has_post_tag    = false;
         foreach ( $export['tags'] as $tag ) {
             $type = isset( $tag['type'] ) ? $tag['type'] : '';
             if ( 'term_product_tag' === $type ) {
                 $has_product_tag = true;
-            }
-            if ( 'term_post_tag' === $type ) {
-                $has_post_tag = true;
+                break;
             }
         }
 
@@ -173,28 +169,6 @@ class BRZ_Smart_Linker_Exporter {
             }
         }
 
-        // Post tags fallback (checked independently)
-        if ( ! $has_post_tag ) {
-            if ( taxonomy_exists( 'post_tag' ) ) {
-                $post_tags = get_terms( array(
-                    'taxonomy'   => 'post_tag',
-                    'hide_empty' => true,
-                ) );
-                if ( ! is_wp_error( $post_tags ) && ! empty( $post_tags ) ) {
-                    foreach ( $post_tags as $term ) {
-                        $formatted = self::format_term_for_export( $term, 'term_post_tag' );
-                        if ( $formatted ) {
-                            $export['tags'][] = $formatted;
-                        }
-                    }
-                }
-            } else {
-                $db_tags = BRZ_Smart_Linker_DB::get_content_index( null, false, 'term_post_tag' );
-                foreach ( $db_tags as $item ) {
-                    $export['tags'][] = self::format_item_for_export( $item );
-                }
-            }
-        }
 
     }
 
