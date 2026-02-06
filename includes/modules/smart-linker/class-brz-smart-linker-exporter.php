@@ -11,7 +11,9 @@ class BRZ_Smart_Linker_Exporter {
     /**
      * Generate unified JSON export for AI consumption.
      * Automatically fetches from both local and peer sites.
-     * Only includes linkable (index) content - noindex items are excluded.
+     * Uses raw peer API items directly (bypasses DB) for reliability.
+     * Products/posts/pages: only linkable items included.
+     * Terms (categories/tags): all included (AI uses is_linkable flag).
      *
      * @return array
      */
@@ -19,25 +21,24 @@ class BRZ_Smart_Linker_Exporter {
         // Step 1: Refresh local index
         BRZ_Smart_Linker_Sync::refresh_local_index();
 
-        // Step 2: Fetch from peer site (will merge into content_index table)
+        // Step 2: Fetch from peer site (stores in DB + returns raw items)
         $peer_result = BRZ_Smart_Linker_Sync::fetch_peer_and_merge();
         $peer_warning = isset( $peer_result['warning'] ) ? $peer_result['warning'] : null;
-        $peer_count = isset( $peer_result['count'] ) ? $peer_result['count'] : 0;
+        $peer_count   = isset( $peer_result['count'] ) ? $peer_result['count'] : 0;
+        $peer_items   = isset( $peer_result['items'] ) ? $peer_result['items'] : array();
 
-        // Step 3: Get ONLY linkable content (noindex items are excluded)
-        $all_content = BRZ_Smart_Linker_DB::get_content_index( null, true ); // true = only_linkable
-        
-        // Fallback: If content_index is empty, get local content directly from WordPress
-        $local_count = 0;
-        $local_content_from_db = BRZ_Smart_Linker_DB::get_content_index( 'local', true );
-        $local_count = count( $local_content_from_db );
-        
-        if ( empty( $local_content_from_db ) ) {
-            // Table doesn't exist or is empty - get directly from WordPress
+        // Step 3: Get local content from DB (all items, just refreshed in step 1)
+        $local_content = BRZ_Smart_Linker_DB::get_content_index( 'local' );
+        $local_count   = count( $local_content );
+
+        // Fallback: If local content_index is empty, get from WordPress directly
+        if ( empty( $local_content ) ) {
             $local_content = self::get_local_content_fallback();
-            $all_content = array_merge( $all_content, $local_content );
-            $local_count = count( $local_content );
+            $local_count   = count( $local_content );
         }
+
+        // Step 4: Combine local content + raw peer items (bypass DB for peer reliability)
+        $all_content = array_merge( $local_content, $peer_items );
 
         // Organize by type
         $export = array(
@@ -45,7 +46,7 @@ class BRZ_Smart_Linker_Exporter {
                 'exported_at'    => current_time( 'c' ),
                 'plugin_version' => defined( 'BRZ_VERSION' ) ? BRZ_VERSION : '1.0.0',
                 'site_url'       => home_url(),
-                'total_items'    => count( $all_content ),
+                'total_items'    => 0,
                 'local_count'    => $local_count,
                 'peer_count'     => $peer_count,
                 'warning'        => $peer_warning,
@@ -54,34 +55,42 @@ class BRZ_Smart_Linker_Exporter {
             'posts'              => array(),
             'pages'              => array(),
             'product_categories' => array(),
-            'post_categories'    => array(),
             'tags'               => array(),
         );
 
         foreach ( $all_content as $item ) {
-            $formatted = self::format_item_for_export( $item );
+            $formatted   = self::format_item_for_export( $item );
+            $is_linkable = isset( $item['is_linkable'] ) ? (int) $item['is_linkable'] : 1;
+            $post_type   = isset( $item['post_type'] ) ? $item['post_type'] : '';
 
-            switch ( $item['post_type'] ) {
+            switch ( $post_type ) {
                 case 'product':
-                    $export['products'][] = $formatted;
+                    if ( $is_linkable ) {
+                        $export['products'][] = $formatted;
+                    }
                     break;
                 case 'post':
-                    $export['posts'][] = $formatted;
+                    if ( $is_linkable ) {
+                        $export['posts'][] = $formatted;
+                    }
                     break;
                 case 'page':
-                    $export['pages'][] = $formatted;
+                    if ( $is_linkable ) {
+                        $export['pages'][] = $formatted;
+                    }
                     break;
                 case 'term_product_cat':
                     $export['product_categories'][] = $formatted;
                     break;
-                case 'term_category':
-                    $export['post_categories'][] = $formatted;
-                    break;
                 case 'term_post_tag':
+                case 'term_product_tag':
                     $export['tags'][] = $formatted;
                     break;
             }
         }
+
+        // Fallback: ensure taxonomy terms if still missing
+        self::ensure_taxonomy_terms( $export );
 
         // Update counts
         $export['meta']['counts'] = array(
@@ -89,11 +98,152 @@ class BRZ_Smart_Linker_Exporter {
             'posts'              => count( $export['posts'] ),
             'pages'              => count( $export['pages'] ),
             'product_categories' => count( $export['product_categories'] ),
-            'post_categories'    => count( $export['post_categories'] ),
             'tags'               => count( $export['tags'] ),
         );
 
+        $export['meta']['total_items'] = array_sum( $export['meta']['counts'] );
+
         return $export;
+    }
+
+    /**
+     * Ensure taxonomy terms are present in export.
+     * First tries local WordPress taxonomy functions, then falls back to content_index DB
+     * (for peer terms when taxonomy doesn't exist locally, e.g. product_cat on blog site).
+     *
+     * @param array &$export Export data array (modified by reference)
+     */
+    private static function ensure_taxonomy_terms( array &$export ) {
+        // Detect which tag types already exist in export
+        $has_product_tag = false;
+        $has_post_tag    = false;
+        foreach ( $export['tags'] as $tag ) {
+            $type = isset( $tag['type'] ) ? $tag['type'] : '';
+            if ( 'term_product_tag' === $type ) {
+                $has_product_tag = true;
+            }
+            if ( 'term_post_tag' === $type ) {
+                $has_post_tag = true;
+            }
+        }
+
+        // Product categories fallback
+        if ( empty( $export['product_categories'] ) ) {
+            if ( taxonomy_exists( 'product_cat' ) ) {
+                $product_cats = get_terms( array(
+                    'taxonomy'   => 'product_cat',
+                    'hide_empty' => true,
+                ) );
+                if ( ! is_wp_error( $product_cats ) && ! empty( $product_cats ) ) {
+                    foreach ( $product_cats as $term ) {
+                        $formatted = self::format_term_for_export( $term, 'term_product_cat' );
+                        if ( $formatted ) {
+                            $export['product_categories'][] = $formatted;
+                        }
+                    }
+                }
+            } else {
+                $db_terms = BRZ_Smart_Linker_DB::get_content_index( null, false, 'term_product_cat' );
+                foreach ( $db_terms as $item ) {
+                    $export['product_categories'][] = self::format_item_for_export( $item );
+                }
+            }
+        }
+
+        // Product tags fallback (checked independently)
+        if ( ! $has_product_tag ) {
+            if ( taxonomy_exists( 'product_tag' ) ) {
+                $product_tags = get_terms( array(
+                    'taxonomy'   => 'product_tag',
+                    'hide_empty' => true,
+                ) );
+                if ( ! is_wp_error( $product_tags ) && ! empty( $product_tags ) ) {
+                    foreach ( $product_tags as $term ) {
+                        $formatted = self::format_term_for_export( $term, 'term_product_tag' );
+                        if ( $formatted ) {
+                            $export['tags'][] = $formatted;
+                        }
+                    }
+                }
+            } else {
+                $db_tags = BRZ_Smart_Linker_DB::get_content_index( null, false, 'term_product_tag' );
+                foreach ( $db_tags as $item ) {
+                    $export['tags'][] = self::format_item_for_export( $item );
+                }
+            }
+        }
+
+        // Post tags fallback (checked independently)
+        if ( ! $has_post_tag ) {
+            if ( taxonomy_exists( 'post_tag' ) ) {
+                $post_tags = get_terms( array(
+                    'taxonomy'   => 'post_tag',
+                    'hide_empty' => true,
+                ) );
+                if ( ! is_wp_error( $post_tags ) && ! empty( $post_tags ) ) {
+                    foreach ( $post_tags as $term ) {
+                        $formatted = self::format_term_for_export( $term, 'term_post_tag' );
+                        if ( $formatted ) {
+                            $export['tags'][] = $formatted;
+                        }
+                    }
+                }
+            } else {
+                $db_tags = BRZ_Smart_Linker_DB::get_content_index( null, false, 'term_post_tag' );
+                foreach ( $db_tags as $item ) {
+                    $export['tags'][] = self::format_item_for_export( $item );
+                }
+            }
+        }
+
+    }
+
+    /**
+     * Format a WP_Term directly for export (bypassing the DB).
+     *
+     * @param WP_Term $term
+     * @param string  $type The post_type value (e.g. 'term_product_cat')
+     * @return array|null
+     */
+    private static function format_term_for_export( $term, $type ) {
+        $url = get_term_link( $term );
+        if ( is_wp_error( $url ) ) {
+            return null;
+        }
+
+        // Check RankMath noindex
+        $is_linkable = true;
+        if ( class_exists( 'RankMath' ) ) {
+            $robots = get_term_meta( $term->term_id, 'rank_math_robots', true );
+            if ( is_array( $robots ) && in_array( 'noindex', $robots, true ) ) {
+                $is_linkable = false;
+            }
+        }
+
+        // Get focus keyword from RankMath if available
+        $focus_keyword = '';
+        if ( class_exists( 'RankMath' ) ) {
+            $focus_keyword = get_term_meta( $term->term_id, 'rank_math_focus_keyword', true );
+            if ( ! is_string( $focus_keyword ) ) {
+                $focus_keyword = '';
+            }
+        }
+
+        return array(
+            'id'                 => (int) $term->term_id,
+            'site'               => 'local',
+            'type'               => $type,
+            'title'              => $term->name,
+            'url'                => $url,
+            'categories'         => array( $term->name ),
+            'focus_keyword'      => $focus_keyword,
+            'secondary_keywords' => array(),
+            'word_count'         => str_word_count( wp_strip_all_tags( $term->description ) ),
+            'is_linkable'        => $is_linkable,
+            'stock_status'       => '',
+            'price'              => '',
+            'excerpt'            => mb_substr( wp_strip_all_tags( $term->description ), 0, 1000, 'UTF-8' ),
+        );
     }
     
     /**
@@ -179,7 +329,7 @@ class BRZ_Smart_Linker_Exporter {
 متخصص سئو و لینک‌سازی داخلی. تحلیل محتوای دو سایت (فروشگاه + بلاگ) و پیشنهاد لینک‌های بهینه.
 
 ## داده‌های ورودی
-**JSON محتوا:** {$counts['products']} محصول | {$counts['posts']} مقاله | {$counts['pages']} صفحه | {$counts['product_categories']} دسته‌بندی
+**JSON محتوا:** {$counts['products']} محصول | {$counts['posts']} مقاله | {$counts['pages']} صفحه | {$counts['product_categories']} دسته‌بندی محصول | {$counts['tags']} تگ
 
 ### داده‌های اختیاری (اگر آپلود شدند):
 - **Google Search Console CSV**: اولویت به کلمات با Impression/Click بالا

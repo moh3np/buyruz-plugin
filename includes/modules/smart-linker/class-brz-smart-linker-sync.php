@@ -86,6 +86,9 @@ class BRZ_Smart_Linker_Sync {
         // Get local content
         $content = BRZ_Smart_Linker_DB::get_content_index( 'local' );
 
+        // Ensure taxonomy terms are included (fallback if DB didn't store them)
+        $content = self::ensure_terms_in_content( $content, $site_role );
+
         return rest_ensure_response( array(
             'success'   => true,
             'site_role' => $site_role,
@@ -116,6 +119,9 @@ class BRZ_Smart_Linker_Sync {
         if ( empty( $content ) ) {
             $content = self::get_posts_fallback( $site_role );
         }
+
+        // Ensure taxonomy terms are included in inventory (fallback if DB didn't store them)
+        $content = self::ensure_terms_in_content( $content, $site_role );
 
         return rest_ensure_response( array(
             'success'   => true,
@@ -150,6 +156,114 @@ class BRZ_Smart_Linker_Sync {
         }
         
         return $items;
+    }
+
+    /**
+     * Ensure taxonomy terms are included in content array.
+     * If terms are missing from the DB content_index, fetch directly from WordPress.
+     *
+     * @param array  $content Existing content items
+     * @param string $site_role
+     * @return array Content with terms included
+     */
+    private static function ensure_terms_in_content( array $content, $site_role ) {
+        // Build a set of existing post_types for quick lookup
+        $existing_types = array();
+        foreach ( $content as $item ) {
+            $type = isset( $item['post_type'] ) ? $item['post_type'] : '';
+            if ( ! isset( $existing_types[ $type ] ) ) {
+                $existing_types[ $type ] = 0;
+            }
+            $existing_types[ $type ]++;
+        }
+
+        // Product categories
+        if ( 'shop' === $site_role && empty( $existing_types['term_product_cat'] ) && taxonomy_exists( 'product_cat' ) ) {
+            $terms = get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => true ) );
+            if ( ! is_wp_error( $terms ) ) {
+                foreach ( $terms as $term ) {
+                    $data = self::build_term_data( $term, 'product_cat' );
+                    if ( $data ) {
+                        $content[] = $data;
+                    }
+                }
+            }
+        }
+
+        // Product tags
+        if ( 'shop' === $site_role && empty( $existing_types['term_product_tag'] ) && taxonomy_exists( 'product_tag' ) ) {
+            $terms = get_terms( array( 'taxonomy' => 'product_tag', 'hide_empty' => true ) );
+            if ( ! is_wp_error( $terms ) ) {
+                foreach ( $terms as $term ) {
+                    $data = self::build_term_data( $term, 'product_tag' );
+                    if ( $data ) {
+                        $content[] = $data;
+                    }
+                }
+            }
+        }
+
+        // Post tags
+        if ( empty( $existing_types['term_post_tag'] ) && taxonomy_exists( 'post_tag' ) ) {
+            $terms = get_terms( array( 'taxonomy' => 'post_tag', 'hide_empty' => true ) );
+            if ( ! is_wp_error( $terms ) ) {
+                foreach ( $terms as $term ) {
+                    $data = self::build_term_data( $term, 'post_tag' );
+                    if ( $data ) {
+                        $content[] = $data;
+                    }
+                }
+            }
+        }
+
+        return $content;
+    }
+
+    /**
+     * Build content data array from a taxonomy term.
+     *
+     * @param WP_Term $term
+     * @param string  $taxonomy
+     * @return array|null
+     */
+    private static function build_term_data( $term, $taxonomy ) {
+        $url = get_term_link( $term );
+        if ( is_wp_error( $url ) ) {
+            return null;
+        }
+
+        $is_linkable = 1;
+        if ( class_exists( 'RankMath' ) ) {
+            $robots = get_term_meta( $term->term_id, 'rank_math_robots', true );
+            if ( is_array( $robots ) && in_array( 'noindex', $robots, true ) ) {
+                $is_linkable = 0;
+            }
+        }
+
+        $focus_keyword = '';
+        if ( class_exists( 'RankMath' ) ) {
+            $fk = get_term_meta( $term->term_id, 'rank_math_focus_keyword', true );
+            if ( is_string( $fk ) ) {
+                $focus_keyword = $fk;
+            }
+        }
+
+        return array(
+            'site_id'            => 'local',
+            'post_id'            => $term->term_id,
+            'post_type'          => 'term_' . $taxonomy,
+            'title'              => $term->name,
+            'url'                => $url,
+            'category_ids'       => array( $term->term_id ),
+            'category_names'     => array( $term->name ),
+            'focus_keyword'      => $focus_keyword,
+            'secondary_keywords' => array(),
+            'content_excerpt'    => $term->description,
+            'word_count'         => str_word_count( wp_strip_all_tags( $term->description ) ),
+            'is_linkable'        => $is_linkable,
+            'stock_status'       => '',
+            'price'              => '',
+        );
     }
 
     /**
@@ -273,6 +387,11 @@ class BRZ_Smart_Linker_Sync {
             self::index_terms( 'product_cat', $site_role );
         }
 
+        // Index product tags if shop
+        if ( 'shop' === $site_role && taxonomy_exists( 'product_tag' ) ) {
+            self::index_terms( 'product_tag', $site_role );
+        }
+
         // Index post tags
         self::index_terms( 'post_tag', $site_role );
     }
@@ -383,12 +502,17 @@ class BRZ_Smart_Linker_Sync {
                 }
             }
 
+            $term_url = get_term_link( $term );
+            if ( is_wp_error( $term_url ) ) {
+                continue;
+            }
+
             $data = array(
                 'site_id'            => 'local',
                 'post_id'            => $term->term_id,
                 'post_type'          => 'term_' . $taxonomy,
                 'title'              => $term->name,
-                'url'                => get_term_link( $term ),
+                'url'                => $term_url,
                 'category_ids'       => array( $term->term_id ),
                 'category_names'     => array( $term->name ),
                 'focus_keyword'      => '',
@@ -501,6 +625,7 @@ class BRZ_Smart_Linker_Sync {
                 'count'   => 0,
                 'site_id' => null,
                 'warning' => 'تنظیمات سایت همتا انجام نشده. فقط داده‌های محلی صادر می‌شود.',
+                'items'   => array(),
             );
         }
 
@@ -530,6 +655,7 @@ class BRZ_Smart_Linker_Sync {
                 'count'   => 0,
                 'site_id' => null,
                 'warning' => 'اتصال به سایت همتا ناموفق: ' . $response->get_error_message(),
+                'items'   => array(),
             );
         }
 
@@ -545,6 +671,7 @@ class BRZ_Smart_Linker_Sync {
                         'خطای HTTP 404: Endpoint در سایت همتا یافت نشد. مطمئن شوید افزونه در سایت همتا فعال و به‌روز است. (URL: %s)',
                         esc_url( $url )
                     ),
+                    'items'   => array(),
                 );
             }
             // Detailed error for 401/403 (API key issues)
@@ -557,6 +684,7 @@ class BRZ_Smart_Linker_Sync {
                         'خطای احراز هویت (%d): کلید API اشتباه است. مطمئن شوید «کلید API سایت همتا» در این سایت با «کلید API محلی» در سایت مقصد یکسان است.',
                         $code
                     ),
+                    'items'   => array(),
                 );
             }
             return array(
@@ -564,6 +692,7 @@ class BRZ_Smart_Linker_Sync {
                 'count'   => 0,
                 'site_id' => null,
                 'warning' => sprintf( 'خطای HTTP %d از سایت همتا', $code ),
+                'items'   => array(),
             );
         }
 
@@ -576,6 +705,7 @@ class BRZ_Smart_Linker_Sync {
                 'count'   => 0,
                 'site_id' => null,
                 'warning' => 'خطا از سایت همتا: ' . $msg,
+                'items'   => array(),
             );
         }
 
@@ -586,6 +716,7 @@ class BRZ_Smart_Linker_Sync {
                 'count'   => 0,
                 'site_id' => isset( $body['site_role'] ) ? $body['site_role'] : 'peer',
                 'warning' => 'سایت همتا محتوایی ندارد.',
+                'items'   => array(),
             );
         }
 
@@ -594,9 +725,11 @@ class BRZ_Smart_Linker_Sync {
         // Clear old peer data and insert new
         BRZ_Smart_Linker_DB::clear_content_index( $site_id );
 
+        $prepared_items = array();
         $count = 0;
         foreach ( $items as $item ) {
             $item['site_id'] = $site_id;
+            $prepared_items[] = $item;
             if ( BRZ_Smart_Linker_DB::upsert_content( $item ) ) {
                 $count++;
             }
@@ -607,6 +740,7 @@ class BRZ_Smart_Linker_Sync {
             'count'   => $count,
             'site_id' => $site_id,
             'warning' => null,
+            'items'   => $prepared_items,
         );
     }
 }

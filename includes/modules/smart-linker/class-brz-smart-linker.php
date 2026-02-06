@@ -692,9 +692,6 @@ class BRZ_Smart_Linker {
                         if (c.posts > 0) {
                             statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.posts+'</strong><span>مقالات</span></div>';
                         }
-                        if (c.post_categories > 0) {
-                            statsHtml += '<div class="brz-sl-stat-item"><strong>'+c.post_categories+'</strong><span>دسته‌بندی مقالات</span></div>';
-                        }
                         document.getElementById('brz-sl-export-stats').innerHTML = statsHtml;
                         
                         // Show success or warning message
@@ -719,7 +716,7 @@ class BRZ_Smart_Linker {
                 if(!j) { alert('ابتدا Export تولید کنید'); return; }
                 var a = document.createElement('a'); 
                 a.href = URL.createObjectURL(new Blob([j],{type:'application/json'}));
-                a.download = 'smart-linker-export.json'; 
+                a.download = isShop ? 'brz-shop-links.json' : 'brz-blog-links.json'; 
                 a.click();
             };
         })();
