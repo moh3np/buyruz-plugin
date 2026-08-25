@@ -55,6 +55,20 @@ function wp_parse_url( string $url, int $component = -1 ) {
     return parse_url( $url, $component );
 }
 
+function wp_parse_args( $args, $defaults = array() ): array {
+    if ( is_object( $args ) ) {
+        $r = get_object_vars( $args );
+    } elseif ( is_array( $args ) ) {
+        $r = &$args;
+    } else {
+        wp_parse_str( (string) $args, $r );
+    }
+    if ( is_array( $defaults ) ) {
+        return array_merge( $defaults, $r );
+    }
+    return (array) $r;
+}
+
 function sanitize_text_field( $str ) {
     return trim( strip_tags( (string) $str ) );
 }

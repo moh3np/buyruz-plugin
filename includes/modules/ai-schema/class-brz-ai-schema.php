@@ -620,7 +620,7 @@ class BRZ_AI_Schema {
      * @param mixed $jsonld The Rank Math JsonLD instance.
      * @return array Modified data.
      */
-    public static function inject_into_rankmath_jsonld( $data, $jsonld ) {
+    public static function inject_into_rankmath_jsonld( $data, $jsonld = null ) {
         // Skip if WooCommerce already handled injection.
         if ( self::$injected ) {
             return $data;

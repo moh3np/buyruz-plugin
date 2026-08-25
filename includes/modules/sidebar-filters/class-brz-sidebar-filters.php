@@ -621,23 +621,19 @@ class BRZ_Sidebar_Filters {
                 $.post(ajaxurl, data, function(res) {
                     btn.prop('disabled', false).text('ذخیره تنظیمات فیلتر');
                     if (res.success) {
-                        alert(res.data.message);
+                        if (window.brzToast) window.brzToast(res.data.message || 'تنظیمات ذخیره شد.', 'success');
                     } else {
-                        alert('خطا: ' + (res.data.message || 'مشکلی رخ داده است.'));
+                        if (window.brzToast) window.brzToast('خطا: ' + (res.data.message || 'مشکلی رخ داده است.'), 'error');
                     }
                 }).fail(function() {
                     btn.prop('disabled', false).text('ذخیره تنظیمات فیلتر');
-                    alert('خطای شبکه.');
+                    if (window.brzToast) window.brzToast('خطای ارتباط با سرور.', 'error');
                 });
             });
 
             // Rebuild Lookup Table
             $('#brz-btn-rebuild-lookup').on('click', function() {
                 const btn = $(this);
-                if (!confirm('آیا مایل به بازسازی جدول جستجوی فیلترها هستید؟ این کار ممکن است چند لحظه طول بکشد.')) {
-                    return;
-                }
-
                 btn.prop('disabled', true).text('در حال آماده‌سازی...');
                 const progressWrapper = $('#brz-rebuild-progress-wrapper');
                 const progressBar = $('#brz-rebuild-progress-bar');
@@ -672,18 +668,18 @@ class BRZ_Sidebar_Filters {
                                 } else {
                                     btn.prop('disabled', false).text('شروع بازسازی جدول فیلترها');
                                     statusMsg.text('عملیات بازسازی با موفقیت پایان یافت.');
-                                    alert('جدول جستجوی فیلترها با موفقیت بازسازی شد.');
+                                    if (window.brzToast) window.brzToast('جدول جستجوی فیلترها با موفقیت بازسازی شد.', 'success');
                                 }
                             } else {
                                 btn.prop('disabled', false).text('شروع بازسازی جدول فیلترها');
                                 statusMsg.text('خطا: ' + res.data.message);
-                                alert('خطا در بازسازی: ' + res.data.message);
+                                if (window.brzToast) window.brzToast('خطا در بازسازی: ' + res.data.message, 'error');
                             }
                         },
                         error: function() {
                             btn.prop('disabled', false).text('شروع بازسازی جدول فیلترها');
                             statusMsg.text('خطای ارتباط با سرور.');
-                            alert('خطای شبکه.');
+                            if (window.brzToast) window.brzToast('خطای شبکه در ارتباط با سرور.', 'error');
                         }
                     });
                 }

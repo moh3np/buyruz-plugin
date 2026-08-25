@@ -140,26 +140,9 @@ class BRZ_WC_Shortcodes {
     }
 
     public static function prime_global_post_content() {
-        if ( self::$primed ) {
-            return;
-        }
-
-        $post = get_post();
-        if ( ! $post ) {
-            return;
-        }
-
-        $post_id   = $post->ID;
-        $post_type = $post->post_type;
-
-        if ( ! self::should_run( $post_id, $post_type ) ) {
-            return;
-        }
-
-        $post->post_content = self::process_value( $post->post_content ?? '', $post_id, 'content' );
-        $post->post_excerpt = self::process_value( $post->post_excerpt ?? '', $post_id, 'excerpt' );
-
-        self::$primed = true;
+        // Do not execute do_shortcode prematurely during early 'wp' action hook on single products.
+        // Shortcodes will be safely processed in 'the_content' / 'woocommerce_short_description' filters.
+        return;
     }
 
     private static function process_value( $content, $post_id, $context ) {

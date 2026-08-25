@@ -228,6 +228,68 @@ class BRZ_SSO_Portal {
             'callback'            => array( __CLASS__, 'rest_bridge' ),
             'permission_callback' => '__return_true',
         ) );
+
+        register_rest_route( 'buyruz/v1', '/titles', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array( __CLASS__, 'rest_get_titles' ),
+            'permission_callback' => '__return_true',
+        ) );
+    }
+
+    /**
+     * API Titles Endpoint — Returns all published product, page, and category titles for the panel.
+     */
+    public static function rest_get_titles( WP_REST_Request $request ): WP_REST_Response {
+        global $wpdb;
+        $titles = array();
+
+        if ( isset( $wpdb ) && $wpdb instanceof wpdb ) {
+            $posts = $wpdb->get_results( "
+                SELECT post_name, post_title, post_type 
+                FROM {$wpdb->posts} 
+                WHERE post_status = 'publish' 
+                  AND post_type NOT IN ('revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request')
+                  AND post_name != '' 
+                  AND post_title != ''
+            ", ARRAY_A );
+
+            if ( ! empty( $posts ) ) {
+                foreach ( $posts as $p ) {
+                    $slug = (string) $p['post_name'];
+                    $title = html_entity_decode( (string) $p['post_title'], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+                    $titles[ $slug ] = $title;
+                    $decodedSlug = urldecode( $slug );
+                    if ( $decodedSlug !== $slug ) {
+                        $titles[ $decodedSlug ] = $title;
+                    }
+                }
+            }
+
+            $terms = $wpdb->get_results( "
+                SELECT t.slug, t.name 
+                FROM {$wpdb->terms} t 
+                INNER JOIN {$wpdb->term_taxonomy} tt ON t.term_id = tt.term_id 
+                WHERE t.slug != '' AND t.name != ''
+            ", ARRAY_A );
+
+            if ( ! empty( $terms ) ) {
+                foreach ( $terms as $t ) {
+                    $slug = (string) $t['slug'];
+                    $name = html_entity_decode( (string) $t['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+                    $titles[ $slug ] = $name;
+                    $decodedSlug = urldecode( $slug );
+                    if ( $decodedSlug !== $slug ) {
+                        $titles[ $decodedSlug ] = $name;
+                    }
+                }
+            }
+        }
+
+        return new WP_REST_Response( array(
+            'ok'     => true,
+            'count'  => count( $titles ),
+            'titles' => $titles,
+        ), 200 );
     }
 
     /**

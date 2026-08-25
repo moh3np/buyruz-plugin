@@ -526,6 +526,10 @@ class BRZ_Settings {
                 'title'       => 'ویژگی‌های هسته‌ای ووکامرس',
                 'description' => 'تنظیمات نمایش و اسکیما مشخصات فیزیکی (وزن، ابعاد) و شناسه جهانی بارکد محصول.',
             ),
+            'buyruz-module-llms_optimizer' => array(
+                'title'       => 'بهینه‌ساز llms.txt',
+                'description' => 'مدیریت استاندارد فایل llms.txt، سیستم پرامپت هوش مصنوعی، رفع خطاهای CORS و تزریق تگ Discovery.',
+            ),
         );
 
         return isset( $meta[ $active_slug ] ) ? $meta[ $active_slug ] : array(
@@ -606,48 +610,82 @@ class BRZ_Settings {
     private static function render_dashboard() {
         $modules = BRZ_Modules::registry();
         $states  = BRZ_Modules::get_states();
+        $badge   = BRZ_Profile::get_profile_badge();
 
-        self::render_shell( self::PARENT_SLUG, function() use ( $modules, $states ) {
+        self::render_shell( self::PARENT_SLUG, function() use ( $modules, $states, $badge ) {
             self::render_notices();
             ?>
+            <div class="brz-profile-banner" style="background:#fff;border:1px solid #e1e4e8;border-right:5px solid <?php echo esc_attr( $badge['color'] ); ?>;border-radius:12px;padding:16px 20px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h3 style="margin:0 0 6px 0;font-size:16px;color:#1a1a1a;font-weight:700;display:flex;align-items:center;gap:8px;">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<?php echo esc_attr( $badge['color'] ); ?>;"></span>
+                        <?php echo esc_html( $badge['label'] ); ?>
+                    </h3>
+                    <p style="margin:0;color:#555;font-size:13px;"><?php echo esc_html( $badge['description'] ); ?></p>
+                </div>
+                <a href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>" class="button button-secondary" style="font-size:12px;">تغییر حالت سایت ←</a>
+            </div>
+
             <div class="brz-section-header brz-section-header--modules">
                 <div>
                     <h2>پیشخوان ماژول‌ها</h2>
-                    <p>شبکهٔ مدرن و واکنش‌گرا برای کنترل سریع ماژول‌ها.</p>
+                    <p>شبکهٔ مدرن و واکنش‌گرا برای کنترل سریع ماژول‌ها متناسب با محیط فروشگاه و مجله خبری.</p>
                 </div>
             </div>
 
             <div class="brz-module-grid">
                         <?php foreach ( $modules as $slug => $meta ) : ?>
-                            <?php $enabled = ! empty( $states[ $slug ] ); ?>
-                            <?php $icon = self::module_icon_letter( $meta ); ?>
-                            <div class="brz-module-card <?php echo $enabled ? 'is-active' : 'is-inactive'; ?>" data-module="<?php echo esc_attr( $slug ); ?>">
-                                <div class="brz-module-card__badge">ماژول</div>
+                            <?php
+                            $enabled     = ! empty( $states[ $slug ] );
+                            $icon        = self::module_icon_letter( $meta );
+                            $category    = isset( $meta['category'] ) ? $meta['category'] : 'universal';
+                            $requires_wc = ! empty( $meta['requires_wc'] );
+                            $wc_active   = BRZ_Profile::is_woocommerce_active();
+                            $disabled_wc = $requires_wc && ! $wc_active;
+
+                            $cat_label = 'عمومی';
+                            $cat_color = '#64748b';
+                            if ( 'shop' === $category ) {
+                                $cat_label = 'فروشگاه';
+                                $cat_color = '#1a73e8';
+                            } elseif ( 'magazine' === $category ) {
+                                $cat_label = 'مجله خبری';
+                                $cat_color = '#00875a';
+                            }
+                            ?>
+                            <div class="brz-module-card <?php echo $enabled && ! $disabled_wc ? 'is-active' : 'is-inactive'; ?>" data-module="<?php echo esc_attr( $slug ); ?>">
+                                <div class="brz-module-card__badge" style="background:<?php echo esc_attr( $cat_color ); ?>20;color:<?php echo esc_attr( $cat_color ); ?>;border:1px solid <?php echo esc_attr( $cat_color ); ?>40;">
+                                    <?php echo esc_html( $cat_label ); ?>
+                                </div>
                                 <div class="brz-module-card__icon" aria-hidden="true"><?php echo esc_html( $icon ); ?></div>
                                 <h3 class="brz-module-card__title"><?php echo esc_html( $meta['label'] ); ?></h3>
                                 <?php if ( ! empty( $meta['description'] ) ) : ?>
                                     <p class="brz-module-card__desc"><?php echo esc_html( $meta['description'] ); ?></p>
                                 <?php endif; ?>
                                 <?php
-                                if ( 'faq_rankmath' === $slug && ! class_exists( '\RankMath\Schema\DB' ) ) {
-                                    echo '<p class="brz-warning">برای استفاده، افزونه Rank Math باید فعال باشد.</p>';
+                                if ( $disabled_wc ) {
+                                    echo '<p class="brz-warning" style="font-size:12px;color:#d97706;">غیرفعال خودکار در محیط مجله (نیازمند ووکامرس).</p>';
                                 }
                                 ?>
                                 <div class="brz-module-card__footer">
                                     <div class="brz-toggle-wrap">
-                                        <span class="brz-toggle-label"><?php echo $enabled ? 'روشن' : 'خاموش'; ?></span>
-                                        <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form" data-module="<?php echo esc_attr( $slug ); ?>" data-label="<?php echo esc_attr( $meta['label'] ); ?>">
-                                            <?php wp_nonce_field( 'brz_toggle_module_' . $slug ); ?>
-                                            <input type="hidden" name="action" value="brz_toggle_module" />
-                                            <input type="hidden" name="module" value="<?php echo esc_attr( $slug ); ?>" />
-                                            <input type="hidden" name="state" value="<?php echo $enabled ? '0' : '1'; ?>" />
-                                            <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>" />
-                                            <button type="submit" class="brz-toggle-switch <?php echo $enabled ? 'is-on' : 'is-off'; ?>">
-                                                <span class="screen-reader-text"><?php echo $enabled ? 'غیرفعال کردن ماژول' : 'فعال کردن ماژول'; ?></span>
-                                            </button>
-                                        </form>
+                                        <span class="brz-toggle-label"><?php echo $enabled && ! $disabled_wc ? 'روشن' : 'خاموش'; ?></span>
+                                        <?php if ( ! $disabled_wc ) : ?>
+                                            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="brz-toggle-form" data-module="<?php echo esc_attr( $slug ); ?>" data-label="<?php echo esc_attr( $meta['label'] ); ?>">
+                                                <?php wp_nonce_field( 'brz_toggle_module_' . $slug ); ?>
+                                                <input type="hidden" name="action" value="brz_toggle_module" />
+                                                <input type="hidden" name="module" value="<?php echo esc_attr( $slug ); ?>" />
+                                                <input type="hidden" name="state" value="<?php echo $enabled ? '0' : '1'; ?>" />
+                                                <input type="hidden" name="redirect" value="<?php echo esc_url( admin_url( 'admin.php?page=' . self::PARENT_SLUG ) ); ?>" />
+                                                <button type="submit" class="brz-toggle-switch <?php echo $enabled ? 'is-on' : 'is-off'; ?>">
+                                                    <span class="screen-reader-text"><?php echo $enabled ? 'غیرفعال کردن ماژول' : 'فعال کردن ماژول'; ?></span>
+                                                </button>
+                                            </form>
+                                        <?php else : ?>
+                                            <span style="font-size:11px;color:#999;">غیرفعال</span>
+                                        <?php endif; ?>
                                     </div>
-                                    <?php if ( $enabled ) : ?>
+                                    <?php if ( $enabled && ! $disabled_wc ) : ?>
                                         <a class="brz-link" href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-module-' . $slug ) ); ?>">تنظیمات</a>
                                     <?php else : ?>
                                         <span class="brz-link" style="opacity: 0.5; cursor: not-allowed; text-decoration: none;" title="برای دسترسی به تنظیمات ابتدا ماژول را روشن کنید.">تنظیمات</span>
@@ -663,10 +701,95 @@ class BRZ_Settings {
     private static function render_general_settings() {
         self::render_shell( 'buyruz-general', function() {
             self::render_notices();
+            $configured_mode = BRZ_Profile::get_configured_mode();
+            $effective_mode  = BRZ_Profile::get_effective_mode();
+            $opts            = get_option( BRZ_OPTION, array() );
+            $cross_bridge    = isset( $opts['cross_bridge'] ) && is_array( $opts['cross_bridge'] ) ? $opts['cross_bridge'] : array();
+            $mag_tools       = isset( $opts['mag_tools'] ) && is_array( $opts['mag_tools'] ) ? $opts['mag_tools'] : array();
+
+            $mag_url         = ! empty( $cross_bridge['mag_url'] ) ? $cross_bridge['mag_url'] : BRZ_Cross_Bridge::DEFAULT_MAG_URL;
+            $shop_url        = ! empty( $cross_bridge['shop_url'] ) ? $cross_bridge['shop_url'] : BRZ_Cross_Bridge::DEFAULT_SHOP_URL;
+            $bakala_inject   = isset( $cross_bridge['bakala_inject'] ) ? ! empty( $cross_bridge['bakala_inject'] ) : true;
+            $auto_rt         = ! empty( $mag_tools['auto_reading_time'] );
             ?>
 
-
             <div class="brz-single-column">
+                <div class="brz-card">
+                    <div class="brz-card__header">
+                        <h3>پروفایل محیطی سایت (Site Profile Mode)</h3>
+                    </div>
+                    <div class="brz-card__body">
+                        <p>تعیین حالت عملکردی افزونه متناسب با نصب در فروشگاه اصلی یا مجله خبری بایروز.</p>
+                        <form method="post" action="options.php" class="brz-settings-form" data-context="site-profile">
+                            <?php settings_fields( 'brz_group' ); ?>
+                            <input type="hidden" name="<?php echo BRZ_OPTION; ?>[brz_form_context]" value="site_profile" />
+                            <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:15px;">
+                                <label>
+                                    <input type="radio" name="<?php echo BRZ_OPTION; ?>[site_mode]" value="auto" <?php checked( 'auto', $configured_mode ); ?> />
+                                    <strong>تشخیص خودکار و هوشمند (پیش‌نهادی)</strong>
+                                    <span style="display:block;color:#666;font-size:12px;margin-right:24px;">حالت سایت را بر اساس ووکامرس یا تم‌های فعال به صورت خودکار شناسایی می‌کند. (حالت شناسایی‌شده فعلی: <?php echo $effective_mode === 'shop' ? 'فروشگاه' : 'مجله خبری'; ?>)</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="<?php echo BRZ_OPTION; ?>[site_mode]" value="shop" <?php checked( 'shop', $configured_mode ); ?> />
+                                    <strong>فروشگاه بایروز (Shop Mode)</strong>
+                                    <span style="display:block;color:#666;font-size:12px;margin-right:24px;">فعال‌سازی ماژول‌های ووکامرس، مشخصات، فیلترها، جداول و ویجت المنتور مقالات.</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="<?php echo BRZ_OPTION; ?>[site_mode]" value="magazine" <?php checked( 'magazine', $configured_mode ); ?> />
+                                    <strong>مجله خبری بایروز (Magazine Mode)</strong>
+                                    <span style="display:block;color:#666;font-size:12px;margin-right:24px;">بهینه‌سازی برای گوتنبرگ و GeneratePress، بلوک‌های معرفی محصول و ابزارهای سئو و زمان مطالعه.</span>
+                                </label>
+                            </div>
+                            <div class="brz-save-bar">
+                                <?php submit_button( 'ذخیره پروفایل', 'primary', 'submit', false ); ?>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="brz-card">
+                    <div class="brz-card__header">
+                        <h3>پل ارتباطی مجله خبری و فروشگاه (Cross Bridge)</h3>
+                    </div>
+                    <div class="brz-card__body">
+                        <p>مدیریت آدرس‌ها و تبادل خودکار داده‌های مقالات و محصولات بین دو سایت.</p>
+                        <form method="post" action="options.php" class="brz-settings-form" data-context="cross-bridge">
+                            <?php settings_fields( 'brz_group' ); ?>
+                            <input type="hidden" name="<?php echo BRZ_OPTION; ?>[brz_form_context]" value="cross_bridge" />
+
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+                                <div>
+                                    <label style="display:block;font-weight:600;margin-bottom:5px;">آدرس مجله خبری بایروز:</label>
+                                    <input type="url" name="<?php echo BRZ_OPTION; ?>[cross_bridge][mag_url]" value="<?php echo esc_attr( $mag_url ); ?>" class="regular-text" style="width:100%;" dir="ltr" />
+                                    <p class="description">آدرس پایه مجله (مثلاً https://buyruz.com/mag)</p>
+                                </div>
+                                <div>
+                                    <label style="display:block;font-weight:600;margin-bottom:5px;">آدرس فروشگاه بایروز:</label>
+                                    <input type="url" name="<?php echo BRZ_OPTION; ?>[cross_bridge][shop_url]" value="<?php echo esc_attr( $shop_url ); ?>" class="regular-text" style="width:100%;" dir="ltr" />
+                                    <p class="description">آدرس پایه فروشگاه اصلی (مثلاً https://buyruz.com)</p>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:15px;display:flex;flex-direction:column;gap:10px;">
+                                <label>
+                                    <input type="checkbox" name="<?php echo BRZ_OPTION; ?>[cross_bridge][bakala_inject]" value="1" <?php checked( true, $bakala_inject ); ?> />
+                                    <strong>تزریق خودکار مقالات مجله به المان‌های اسلایدر باکالا در فروشگاه</strong>
+                                    <span style="display:block;color:#666;font-size:12px;margin-right:24px;">بدون نیاز به ویرایش قالب، مقالات سایت مجله مستقیماً داخل المان اسلایدر مقالات باکالا در صفحه اصلی نمایش داده می‌شوند.</span>
+                                </label>
+                                <label>
+                                    <input type="checkbox" name="<?php echo BRZ_OPTION; ?>[mag_tools][auto_reading_time]" value="1" <?php checked( true, $auto_rt ); ?> />
+                                    <strong>درج خودکار نشان زمان مطالعه در بالای مقالات مجله</strong>
+                                    <span style="display:block;color:#666;font-size:12px;margin-right:24px;">محاسبه و نمایش خودکار برچسب تخمین زمان مطالعه در ابتدای متن تک‌مقالات.</span>
+                                </label>
+                            </div>
+
+                            <div class="brz-save-bar">
+                                <?php submit_button( 'ذخیره تنظیمات پل ارتباطی', 'primary', 'submit', false ); ?>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="brz-card">
                     <div class="brz-card__header">
                         <h3>پردازش شورت‌کد در توضیحات محصول</h3>
@@ -789,6 +912,84 @@ class BRZ_Settings {
 
             if ( 'specs_exporter' === $module_slug && $active ) {
                 BRZ_Specs_Exporter::render_admin_page();
+                return;
+            }
+
+            if ( 'llms_optimizer' === $module_slug && $active ) {
+                BRZ_LLMS_Optimizer::render_admin_page();
+                return;
+            }
+
+            if ( 'mag_tools' === $module_slug && $active ) {
+                ?>
+                <div class="brz-single-column">
+                    <div class="brz-card">
+                        <div class="brz-card__header">
+                            <h3>ابزارهای تخصصی مجله خبری بایروز</h3>
+                        </div>
+                        <div class="brz-card__body">
+                            <p>این ماژول قابلیت‌های تخصصی برای غنی‌سازی مقالات مجله خبری بایروز (گوتنبرگ و قالب GeneratePress) را ارائه می‌دهد.</p>
+
+                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:15px 0;">
+                                <h4 style="margin:0 0 8px 0;color:#1a73e8;">⏱️ محاسبه زمان مطالعه (Reading Time)</h4>
+                                <p style="margin:0 0 10px 0;font-size:13px;color:#475569;">تخمین دقیق زمان مطالعه متون فارسی بر اساس استاندارد ۲۰۰ کلمه در دقیقه با پشتیبانی کامل از اعراب و کاراکترهای فارسی.</p>
+                                <code style="display:inline-block;direction:ltr;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;">[brz_reading_time]</code>
+                                <span style="font-size:12px;color:#64748b;margin-right:8px;">← درج نشان زمان مطالعه در هر بخش از متن مقاله</span>
+                            </div>
+
+                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:15px 0;">
+                                <h4 style="margin:0 0 8px 0;color:#1a73e8;">📑 فهرست خودکار سرفصل‌ها (Table of Contents)</h4>
+                                <p style="margin:0 0 10px 0;font-size:13px;color:#475569;">ایجاد فهرست سبک و تمیز بر اساس تگ‌های H2 و H3 مقاله بدون کدهای جاوااسکریپت سنگین.</p>
+                                <code style="display:inline-block;direction:ltr;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;">[brz_toc]</code>
+                                <span style="font-size:12px;color:#64748b;margin-right:8px;">← درج جعبه سرفصل‌ها در ابتدای مقاله</span>
+                            </div>
+
+                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:15px 0;">
+                                <h4 style="margin:0 0 8px 0;color:#1a73e8;">🛍️ بلوک گوتنبرگ معرفی محصولات فروشگاه</h4>
+                                <p style="margin:0 0 10px 0;font-size:13px;color:#475569;">در ویرایشگر گوتنبرگ با جستجوی «محصولات پیشنهادی بایروز» یا استفاده از شورت‌کد زیر، کارت‌های زنده محصول را در مقالات قرار دهید:</p>
+                                <code style="display:inline-block;direction:ltr;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;">[brz_shop_products category="air-fryer" count="3" columns="3"]</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php
+                return;
+            }
+
+            if ( 'cross_bridge' === $module_slug && $active ) {
+                ?>
+                <div class="brz-single-column">
+                    <div class="brz-card">
+                        <div class="brz-card__header">
+                            <h3>پل ارتباطی دوطرفه فروشگاه و مجله (Cross Bridge)</h3>
+                        </div>
+                        <div class="brz-card__body">
+                            <p>این ماژول ارتباط داده‌ای مستقیم بین دو پایگاه‌داده و دو وردپرس مجله و فروشگاه را مدیریت می‌کند.</p>
+
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:15px 0;">
+                                <div style="background:#f0f7ff;border:1px solid #c8e1ff;border-radius:10px;padding:16px;">
+                                    <h4 style="margin:0 0 8px 0;color:#0366d6;">🟢 در سایت مجله (buyruz.com/mag)</h4>
+                                    <ul style="margin:0;padding-right:18px;font-size:13px;color:#333;line-height:1.7;">
+                                        <li>ارائه اندپوینت REST <code>/wp-json/buyruz/v1/mag-posts</code></li>
+                                        <li>بلوک گوتنبرگ <strong>Buyruz Product Showcase</strong></li>
+                                        <li>شورت‌کد <code>[brz_shop_products]</code></li>
+                                    </ul>
+                                </div>
+                                <div style="background:#f0fff4;border:1px solid #bcf0da;border-radius:10px;padding:16px;">
+                                    <h4 style="margin:0 0 8px 0;color:#0e9f6e;">🔵 در سایت فروشگاه (buyruz.com)</h4>
+                                    <ul style="margin:0;padding-right:18px;font-size:13px;color:#333;line-height:1.7;">
+                                        <li>ارائه اندپوینت REST <code>/wp-json/buyruz/v1/shop-products</code></li>
+                                        <li>تزریق خودکار به المان‌های اسلایدر مقالات باکالا</li>
+                                        <li>ویجت اختصاصی المنتور <strong>اسلایدر مقالات مجله بایروز</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <p style="font-size:13px;color:#555;">برای پیکربندی آدرس‌ها و تنظیمات تزریق، به برگه <a href="<?php echo esc_url( admin_url( 'admin.php?page=buyruz-general' ) ); ?>">تنظیمات عمومی</a> مراجعه نمایید.</p>
+                        </div>
+                    </div>
+                </div>
+                <?php
                 return;
             }
 
@@ -1424,6 +1625,37 @@ class BRZ_Settings {
         }
 
 
+
+        // Site Profile settings.
+        if ( 'site_profile' === $context || isset( $input['site_mode'] ) ) {
+            if ( isset( $input['site_mode'] ) ) {
+                $allowed_modes = array( 'auto', 'shop', 'magazine', 'custom' );
+                $mode = sanitize_key( $input['site_mode'] );
+                $output['site_mode'] = in_array( $mode, $allowed_modes, true ) ? $mode : 'auto';
+                unset( $input['site_mode'] );
+            }
+        }
+
+        // Cross Bridge & Mag Tools settings.
+        if ( 'cross_bridge' === $context || isset( $input['cross_bridge'] ) || isset( $input['mag_tools'] ) ) {
+            if ( isset( $input['cross_bridge'] ) && is_array( $input['cross_bridge'] ) ) {
+                $cb = $input['cross_bridge'];
+                $output['cross_bridge'] = array(
+                    'mag_url'       => ! empty( $cb['mag_url'] ) ? esc_url_raw( trim( (string) $cb['mag_url'] ) ) : BRZ_Cross_Bridge::DEFAULT_MAG_URL,
+                    'shop_url'      => ! empty( $cb['shop_url'] ) ? esc_url_raw( trim( (string) $cb['shop_url'] ) ) : BRZ_Cross_Bridge::DEFAULT_SHOP_URL,
+                    'bakala_inject' => ! empty( $cb['bakala_inject'] ) ? 1 : 0,
+                );
+                unset( $input['cross_bridge'] );
+            }
+
+            if ( isset( $input['mag_tools'] ) && is_array( $input['mag_tools'] ) ) {
+                $mt = $input['mag_tools'];
+                $output['mag_tools'] = array(
+                    'auto_reading_time' => ! empty( $mt['auto_reading_time'] ) ? 1 : 0,
+                );
+                unset( $input['mag_tools'] );
+            }
+        }
 
         // Any remaining string values.
         foreach ( $input as $key => $value ) {

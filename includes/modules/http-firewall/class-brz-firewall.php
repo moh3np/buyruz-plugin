@@ -18,6 +18,7 @@ class BRZ_Firewall {
      */
     public static function init(): void {
         add_filter( 'pre_http_request', array( __CLASS__, 'filter_request' ), 5, 3 );
+        add_filter( 'http_response', array( __CLASS__, 'suppress_update_warnings' ), 10, 3 );
 
         add_action( 'wp_ajax_brz_firewall_switch_mode', array( __CLASS__, 'ajax_switch_mode' ) );
         add_action( 'wp_ajax_brz_firewall_add_domain', array( __CLASS__, 'ajax_add_domain' ) );
@@ -234,6 +235,12 @@ class BRZ_Firewall {
         }
 
         $host     = strtolower( $parsed['host'] );
+
+        // Always bypass official WordPress update & core API hosts to prevent admin warnings
+        if ( 'wordpress.org' === $host || str_ends_with( $host, '.wordpress.org' ) || str_ends_with( $host, '.wp.org' ) ) {
+            return false;
+        }
+
         $settings = self::get_settings();
         $mode     = $settings['active_mode'];
         $domains  = $settings[ $mode ];
@@ -256,6 +263,30 @@ class BRZ_Firewall {
         }
 
         return false;
+    }
+
+    /**
+     * Suppress core update check warnings if WordPress.org is unreachable on host network.
+     *
+     * @param mixed  $response    HTTP response or WP_Error.
+     * @param array  $parsed_args HTTP arguments.
+     * @param string $url         Request URL.
+     * @return mixed
+     */
+    public static function suppress_update_warnings( $response, array $parsed_args, string $url ) {
+        if ( is_wp_error( $response ) && ( str_contains( $url, 'api.wordpress.org/plugins/update-check' ) || str_contains( $url, 'api.wordpress.org/themes/update-check' ) ) ) {
+            return array(
+                'headers'  => array(),
+                'body'     => json_encode( array( 'plugins' => array(), 'themes' => array(), 'translations' => array(), 'no_update' => array() ) ),
+                'response' => array(
+                    'code'    => 200,
+                    'message' => 'OK',
+                ),
+                'cookies'  => array(),
+                'filename' => null,
+            );
+        }
+        return $response;
     }
 
     /**

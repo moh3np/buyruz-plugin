@@ -775,7 +775,7 @@ class BRZ_Smart_Linker {
             
             document.getElementById('brz-sl-download-json').onclick = function() {
                 var j = document.getElementById('brz-sl-json').value; 
-                if(!j) { alert('ابتدا Export تولید کنید'); return; }
+                if(!j) { if (window.brzToast) window.brzToast('ابتدا Export تولید کنید', 'warning'); return; }
                 var a = document.createElement('a'); 
                 a.href = URL.createObjectURL(new Blob([j],{type:'application/json'}));
                 a.download = isShop ? 'brz-shop-links.json' : 'brz-blog-links.json'; 
@@ -852,8 +852,8 @@ class BRZ_Smart_Linker {
             function upd(ids,s,cb){jQuery.post(ajaxurl,{action:'brz_smart_linker_update_status',_ajax_nonce:n,ids:ids,status:s},cb);}
             document.querySelectorAll('.brz-sl-action-btn--approve').forEach(function(b){b.onclick=function(){upd([this.dataset.id],'approved',function(){location.reload();});}});
             document.querySelectorAll('.brz-sl-action-btn--reject').forEach(function(b){b.onclick=function(){upd([this.dataset.id],'rejected',function(){location.reload();});}});
-            document.getElementById('brz-sl-approve-all')?.addEventListener('click',function(){var ids=[];document.querySelectorAll('tr[data-id]').forEach(function(r){ids.push(r.dataset.id);});if(ids.length&&confirm('تأیید '+ids.length+' لینک?'))upd(ids,'approved',function(){location.reload();});});
-            document.getElementById('brz-sl-apply-approved')?.addEventListener('click',function(){if(!confirm('اعمال لینک‌ها?'))return;this.disabled=true;this.textContent='⏳...';jQuery.post(ajaxurl,{action:'brz_smart_linker_apply_links',_ajax_nonce:an},function(r){alert(r.success?r.data.message:r.data.message);location.reload();});});
+            document.getElementById('brz-sl-approve-all')?.addEventListener('click',function(){var ids=[];document.querySelectorAll('tr[data-id]').forEach(function(r){ids.push(r.dataset.id);});if(ids.length)upd(ids,'approved',function(){location.reload();});});
+            document.getElementById('brz-sl-apply-approved')?.addEventListener('click',function(){this.disabled=true;this.textContent='⏳...';jQuery.post(ajaxurl,{action:'brz_smart_linker_apply_links',_ajax_nonce:an},function(r){if(window.brzToast){window.brzToast(r.data?.message||'اعمال شد','success');}setTimeout(()=>location.reload(),1000);});});
         })();
         </script>
         <?php
@@ -1960,7 +1960,7 @@ class BRZ_Smart_Linker {
                             }
                         })
                         .catch(function(){
-                            alert('ذخیره انجام نشد. دوباره تلاش کنید.');
+                            if (window.brzToast) window.brzToast('ذخیره انجام نشد. دوباره تلاش کنید.', 'error');
                         })
                         .finally(function(){
                             if (btn) { btn.disabled = false; btn.classList.remove('is-loading'); }
@@ -2054,7 +2054,7 @@ class BRZ_Smart_Linker {
             if (analyzeBtn) {
                 analyzeBtn.addEventListener('click', function(){
                     var select = document.getElementById('brz-sl-workbench-post');
-                    if (!select || !select.value) { alert('یک پست/محصول انتخاب کنید'); return; }
+                    if (!select || !select.value) { if (window.brzToast) window.brzToast('یک پست/محصول انتخاب کنید', 'warning'); return; }
                     var statusEl = document.getElementById('brz-sl-analyze-status');
                     if (statusEl) statusEl.textContent = 'در حال تحلیل...';
                     var data = new FormData();
@@ -2080,6 +2080,7 @@ class BRZ_Smart_Linker {
                     if (!ta) return;
                     ta.select();
                     document.execCommand('copy');
+                    if (window.brzToast) window.brzToast('پرامپت کپی شد.', 'success');
                 });
             }
 
@@ -2089,7 +2090,7 @@ class BRZ_Smart_Linker {
                 applyBtn.addEventListener('click', function(){
                     var ta = document.getElementById('brz-sl-response');
                     var statusEl = document.getElementById('brz-sl-apply-status');
-                    if (!ta || !ta.value) { alert('ابتدا JSON را وارد کنید'); return; }
+                    if (!ta || !ta.value) { if (window.brzToast) window.brzToast('ابتدا JSON را وارد کنید', 'warning'); return; }
                     if (statusEl) statusEl.textContent = 'در حال اعمال...';
                     var data = new FormData();
                     data.append('action','brz_smart_linker_apply');

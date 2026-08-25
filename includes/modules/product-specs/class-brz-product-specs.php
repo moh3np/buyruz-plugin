@@ -1677,7 +1677,7 @@ class BRZ_Product_Specs {
                 $('#brz-layout-apply-btn').on('click', function() {
                     const text = $.trim($('#brz-layout-paste-input').val());
                     if (text === '') {
-                        alert('لطفاً ابتدا چیدمان جدید دریافتی را در کادر پیست کنید.');
+                        showSnackbar('لطفاً ابتدا چیدمان جدید دریافتی را در کادر پیست کنید.', 'warning');
                         return;
                     }
 
@@ -1699,7 +1699,7 @@ class BRZ_Product_Specs {
                     });
 
                     if (ordered.length === 0) {
-                        alert('هیچ شناسه معتبری در متن وارد شده یافت نشد. لطفاً ساختار کپی شده از چت ایجنت را چک کنید.');
+                        showSnackbar('هیچ شناسه معتبری در متن وارد شده یافت نشد. لطفاً ساختار کپی شده از چت ایجنت را چک کنید.', 'warning');
                         return;
                     }
 

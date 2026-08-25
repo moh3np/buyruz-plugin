@@ -19,7 +19,12 @@
   var toastTimer;
 
   function showToast(message, type) {
-    if (!toast) return;
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'brz-snackbar';
+      toast.className = 'brz-snackbar';
+      document.body.appendChild(toast);
+    }
 
     toast.textContent = message;
     toast.classList.remove('is-error', 'is-success');
@@ -28,6 +33,8 @@
       toast.style.background = '#d93025';
     } else if (type === 'success') {
       toast.style.background = '#1e8e3e';
+    } else if (type === 'warning') {
+      toast.style.background = '#f59e0b';
     } else {
       toast.style.background = '#202124';
     }
@@ -36,8 +43,13 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () {
       toast.classList.remove('is-visible');
-    }, 3000);
+    }, 3500);
   }
+
+  window.brzToast = showToast;
+  window.alert = function (msg) {
+    showToast(msg, 'info');
+  };
 
   /* ==========================================================================
      2. BRAND COLOR SYSTEM

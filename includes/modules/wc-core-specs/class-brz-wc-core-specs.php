@@ -155,7 +155,7 @@ class BRZ_WC_Core_Specs {
      * @param mixed $jsonld The Rank Math JsonLD instance.
      * @return array Modified data.
      */
-    public static function inject_into_rankmath_jsonld( array $data, $jsonld ): array {
+    public static function inject_into_rankmath_jsonld( array $data, $jsonld = null ): array {
         if ( self::$injected ) {
             return $data;
         }
@@ -310,7 +310,7 @@ class BRZ_WC_Core_Specs {
      * @param object $jsonld The JSON-LD provider instance.
      * @return array Modified entity schema.
      */
-    public static function enrich_rankmath_schema( array $entity, $jsonld ): array {
+    public static function enrich_rankmath_schema( array $entity, $jsonld = null ): array {
         if ( self::$injected ) {
             return $entity;
         }
@@ -335,7 +335,7 @@ class BRZ_WC_Core_Specs {
             $gtin = $product->get_global_unique_id();
         }
         if ( empty( $gtin ) ) {
-            $gtin = $product->get_meta( '_global_unique_id' );
+            $gtin = get_post_meta( $product->get_id(), '_global_unique_id', true );
         }
         if ( empty( $gtin ) ) {
             $gtin = $product->get_meta( '_rank_math_gtin_code' );
@@ -343,7 +343,7 @@ class BRZ_WC_Core_Specs {
         if ( empty( $gtin ) ) {
             $gtin = $product->get_meta( 'gtin' );
         }
-        return trim( $gtin );
+        return trim( (string) $gtin );
     }
 
 

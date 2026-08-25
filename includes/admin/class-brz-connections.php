@@ -310,8 +310,12 @@ class BRZ_Connections {
                     data.append('_wpnonce','<?php echo esc_js( $nonce ); ?>');
                     fetch(ajaxurl,{method:'POST',credentials:'same-origin',body:data})
                         .then(r=>r.json()).then(json=>{
-                            alert(json && json.success ? 'ذخیره شد' : 'خطا در ذخیره');
-                        }).catch(()=>alert('خطا در ذخیره'));
+                            if (window.brzToast) {
+                                window.brzToast(json && json.success ? 'تنظیمات ذخیره شد.' : 'خطا در ذخیره‌سازی.', json && json.success ? 'success' : 'error');
+                            }
+                        }).catch(()=>{
+                            if (window.brzToast) window.brzToast('خطا در برقراری ارتباط با سرور.', 'error');
+                        });
                 });
             });
 
