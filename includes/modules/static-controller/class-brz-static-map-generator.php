@@ -188,6 +188,37 @@ class BRZ_Static_Map_Generator {
                 ];
 
                 $pages[] = $entry;
+
+                // Also generate paginated entries for archive terms if total items > posts_per_page
+                $term_obj = get_term( $id, $taxonomy );
+                if ( $term_obj && ! is_wp_error( $term_obj ) && ! empty( $term_obj->count ) && (int) $term_obj->count > 0 ) {
+                    $posts_per_page = (int) get_option( 'posts_per_page', 12 );
+                    if ( function_exists( 'wc_get_default_products_per_row' ) ) {
+                        $wc_per_page = (int) apply_filters( 'loop_shop_per_page', wc_get_default_products_per_row() * wc_get_default_product_rows_per_page() );
+                        if ( $wc_per_page > 0 ) {
+                            $posts_per_page = $wc_per_page;
+                        }
+                    }
+                    $total_pages = (int) ceil( (int) $term_obj->count / max( 1, $posts_per_page ) );
+                    if ( $total_pages >= 2 ) {
+                        for ( $p = 2; $p <= $total_pages; $p++ ) {
+                            $paginated_url = trailingslashit( $url ) . 'page/' . $p . '/';
+                            $pages[] = [
+                                'url'          => $paginated_url,
+                                'page_type'    => $page_type,
+                                'page_source'  => $page_source,
+                                'page_status'  => $page_status,
+                                'lastmod'      => $lastmod,
+                                'error_count'  => $error_count,
+                                'content_hash' => $content_hash,
+                                'modal'        => $modal,
+                            ];
+                            if ( $page_status === 'pending' || ( $page_status === 'error' && $error_count < 3 ) ) {
+                                $pending_pages[] = $paginated_url;
+                            }
+                        }
+                    }
+                }
             } else {
                 // type === 'post'
                 $post = get_post( $id );
@@ -218,6 +249,46 @@ class BRZ_Static_Map_Generator {
                 ];
 
                 $pages[] = $entry;
+
+                // If it's WooCommerce Shop page or Blog page with pagination:
+                $is_shop_page = function_exists( 'wc_get_page_id' ) && (int) wc_get_page_id( 'shop' ) === $id;
+                $is_blog_page = (int) get_option( 'page_for_posts' ) === $id;
+                if ( $is_shop_page || $is_blog_page ) {
+                    $total_items = 0;
+                    $posts_per_page = (int) get_option( 'posts_per_page', 12 );
+                    if ( $is_shop_page ) {
+                        if ( function_exists( 'wc_get_default_products_per_row' ) ) {
+                            $wc_per_page = (int) apply_filters( 'loop_shop_per_page', wc_get_default_products_per_row() * wc_get_default_product_rows_per_page() );
+                            if ( $wc_per_page > 0 ) {
+                                $posts_per_page = $wc_per_page;
+                            }
+                        }
+                        $count_obj = wp_count_posts( 'product' );
+                        $total_items = (int) ( $count_obj->publish ?? 0 );
+                    } elseif ( $is_blog_page ) {
+                        $count_obj = wp_count_posts( 'post' );
+                        $total_items = (int) ( $count_obj->publish ?? 0 );
+                    }
+                    $total_pages = (int) ceil( $total_items / max( 1, $posts_per_page ) );
+                    if ( $total_pages >= 2 ) {
+                        for ( $p = 2; $p <= $total_pages; $p++ ) {
+                            $paginated_url = trailingslashit( $url ) . 'page/' . $p . '/';
+                            $pages[] = [
+                                'url'          => $paginated_url,
+                                'page_type'    => $page_type,
+                                'page_source'  => $page_source,
+                                'page_status'  => $page_status,
+                                'lastmod'      => $lastmod,
+                                'error_count'  => $error_count,
+                                'content_hash' => $content_hash,
+                                'modal'        => $modal,
+                            ];
+                            if ( $page_status === 'pending' || ( $page_status === 'error' && $error_count < 3 ) ) {
+                                $pending_pages[] = $paginated_url;
+                            }
+                        }
+                    }
+                }
             }
 
             // Collect pending pages: status "pending" OR (status "error" AND error_count < 3).

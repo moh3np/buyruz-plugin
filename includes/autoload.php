@@ -71,6 +71,7 @@ spl_autoload_register( function( $class ) {
         'BRZ_Gutenberg_Product_Block'    => 'integration/class-brz-gutenberg-product-block.php',
         'BRZ_Mag_Tools'                  => 'modules/mag-tools/class-brz-mag-tools.php',
         'BRZ_Cross_Bridge_Module'        => 'modules/cross-bridge/class-brz-cross-bridge-module.php',
+        'BRZ_Web_Manifest'               => 'modules/web-manifest/class-brz-web-manifest.php',
     );
 
     $map = apply_filters( 'brz/autoload_map', $map );

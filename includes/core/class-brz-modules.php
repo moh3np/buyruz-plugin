@@ -152,6 +152,13 @@ class BRZ_Modules {
                 'category'    => 'universal',
                 'requires_wc' => false,
             ),
+            'web_manifest' => array(
+                'label'       => 'مانیفست PWA و فاوآیکون',
+                'description' => 'تولید خودکار مانیفست وب‌اپلیکیشن (PWA)، همگام‌سازی فاوآیکون استاندارد ریشه، و تزریق هدرهای موبایل.',
+                'class'       => 'BRZ_Web_Manifest',
+                'category'    => 'universal',
+                'requires_wc' => false,
+            ),
         );
     }
 

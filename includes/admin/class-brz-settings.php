@@ -920,6 +920,11 @@ class BRZ_Settings {
                 return;
             }
 
+            if ( 'web_manifest' === $module_slug && $active ) {
+                BRZ_Web_Manifest::render_admin_page();
+                return;
+            }
+
             if ( 'mag_tools' === $module_slug && $active ) {
                 ?>
                 <div class="brz-single-column">
