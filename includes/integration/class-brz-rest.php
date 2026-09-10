@@ -195,7 +195,8 @@ class BRZ_Rest {
             $target = trim( $row['url_to'] ?? '' );
             $code = (int) ( $row['header_code'] ?? 301 );
 
-            if ( empty( $target ) ) {
+            // Status codes 410 (Gone) and 451 (Unavailable) legitimately have no destination URL
+            if ( $code !== 410 && $code !== 451 && empty( $target ) ) {
                 continue;
             }
 

@@ -290,6 +290,9 @@ class BRZ_Static_Manual_Page_Manager {
         }
 
         $options[ BRZ_Static_Controller::OPTION_KEY ] = $settings;
-        update_option( 'brz_options', $options );
+        update_option( 'brz_options', $options, false );
+        if ( function_exists( 'wp_set_option_autoload' ) ) {
+            @wp_set_option_autoload( 'brz_options', 'no' );
+        }
     }
 }

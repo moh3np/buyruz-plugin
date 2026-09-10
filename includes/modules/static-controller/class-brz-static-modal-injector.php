@@ -186,6 +186,9 @@ class BRZ_Static_Modal_Injector {
             : [];
 
         $options[ self::OPTION_KEY ] = array_merge( $existing, $settings );
-        update_option( 'brz_options', $options );
+        update_option( 'brz_options', $options, false );
+        if ( function_exists( 'wp_set_option_autoload' ) ) {
+            @wp_set_option_autoload( 'brz_options', 'no' );
+        }
     }
 }

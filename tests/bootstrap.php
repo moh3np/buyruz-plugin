@@ -15,6 +15,10 @@ if ( ! defined( 'BRZ_VERSION' ) ) {
     define( 'BRZ_VERSION', '1.0.0-test' );
 }
 
+if ( ! defined( 'BRZ_OPTION' ) ) {
+    define( 'BRZ_OPTION', 'brz_options' );
+}
+
 // ─── In-memory options store ───────────────────────────────────────────────────
 
 global $wp_options;
@@ -55,6 +59,36 @@ function wp_parse_url( string $url, int $component = -1 ) {
     return parse_url( $url, $component );
 }
 
+if ( ! function_exists( 'absint' ) ) {
+    function absint( $maybeint ): int {
+        return abs( (int) $maybeint );
+    }
+}
+
+if ( ! function_exists( 'get_post_meta' ) ) {
+    function get_post_meta( int $post_id, string $key = '', bool $single = false ) {
+        global $wp_test_postmeta, $wp_test_post_meta;
+        if ( isset( $wp_test_post_meta[ $post_id ][ $key ] ) ) {
+            return $wp_test_post_meta[ $post_id ][ $key ];
+        }
+        if ( empty( $key ) ) {
+            return $wp_test_postmeta[ $post_id ] ?? [];
+        }
+        return $wp_test_postmeta[ $post_id ][ $key ] ?? ( $single ? '' : [] );
+    }
+}
+
+if ( ! function_exists( 'update_post_meta' ) ) {
+    function update_post_meta( int $post_id, string $key, $value ) {
+        global $wp_test_postmeta;
+        if ( ! isset( $wp_test_postmeta[ $post_id ] ) ) {
+            $wp_test_postmeta[ $post_id ] = [];
+        }
+        $wp_test_postmeta[ $post_id ][ $key ] = $value;
+        return true;
+    }
+}
+
 function wp_parse_args( $args, $defaults = array() ): array {
     if ( is_object( $args ) ) {
         $r = get_object_vars( $args );
@@ -73,12 +107,29 @@ function sanitize_text_field( $str ) {
     return trim( strip_tags( (string) $str ) );
 }
 
+if ( ! function_exists( 'sanitize_key' ) ) {
+    function sanitize_key( $key ) {
+        $raw_key = $key;
+        $key = strtolower( (string) $key );
+        $key = preg_replace( '/[^a-z0-9_\-]/', '', $key );
+        return $key;
+    }
+}
+
 function wp_unslash( $value ) {
     return is_string( $value ) ? stripslashes( $value ) : $value;
 }
 
 function is_wp_error( $thing ): bool {
     return $thing instanceof WP_Error;
+}
+
+function get_term( $term, string $taxonomy = '', string $output = 'OBJECT', string $filter = 'raw' ) {
+    global $wp_test_terms;
+    if ( isset( $wp_test_terms[ $term ] ) ) {
+        return (object) $wp_test_terms[ $term ];
+    }
+    return null;
 }
 
 function esc_html( string $text ): string {
@@ -129,6 +180,23 @@ class WP_Ajax_Response_Exception extends \Exception {
     public function __construct( array $response ) {
         $this->response = $response;
         parent::__construct( 'AJAX response sent' );
+    }
+}
+
+if ( ! class_exists( 'WP_Post' ) ) {
+    class WP_Post {
+        public $ID = 0;
+        public $post_title = '';
+        public $post_content = '';
+        public $post_excerpt = '';
+        public $post_status = '';
+        public $post_type = '';
+        public $post_parent = 0;
+        public function __construct( $data = [] ) {
+            foreach ( (array) $data as $k => $v ) {
+                $this->$k = $v;
+            }
+        }
     }
 }
 
@@ -205,6 +273,91 @@ if ( ! class_exists( 'WP_Error' ) ) {
 
         public function get_error_data() {
             return $this->data;
+        }
+    }
+}
+
+// ─── WC_Product class mock ─────────────────────────────────────────────────────
+
+if ( ! class_exists( 'WC_Product' ) ) {
+    class WC_Product {
+        public $id;
+        public $data = array();
+        public $meta = array();
+        public $category_ids = array();
+        public $tag_ids = array();
+        public $attributes = array();
+        public $image_id;
+        public $gallery_image_ids = array();
+
+        public function __construct( $id = 0, $price = 0, $date_created = null, $date_on_sale_from = null ) {
+            $this->id = $id;
+            if ( $price > 0 ) {
+                $this->data['price'] = $price;
+                $this->data['regular_price'] = $price;
+            }
+            if ( $date_created ) {
+                $this->data['date_created'] = $date_created;
+            }
+            if ( $date_on_sale_from ) {
+                $this->data['date_on_sale_from'] = $date_on_sale_from;
+            }
+        }
+
+        public function get_id() { return $this->id; }
+        public function get_name( $context = 'view' ) { return $this->data['name'] ?? ''; }
+        public function get_sku( $context = 'view' ) { return $this->data['sku'] ?? ''; }
+        public function get_slug( $context = 'view' ) { return $this->data['slug'] ?? ''; }
+        public function get_status( $context = 'view' ) { return $this->data['status'] ?? ''; }
+        public function get_price( $context = 'view' ) { return $this->data['price'] ?? $this->data['regular_price'] ?? 0; }
+        public function get_regular_price( $context = 'view' ) { return $this->data['regular_price'] ?? ''; }
+        public function get_sale_price( $context = 'view' ) { return $this->data['sale_price'] ?? ''; }
+        public function is_on_sale( $context = 'view' ) { return ! empty( $this->data['sale_price'] ) || ! empty( $this->data['date_on_sale_from'] ); }
+        public function get_date_created( $context = 'view' ) { return $this->data['date_created'] ?? new DateTime( '2025-01-15' ); }
+        public function get_date_on_sale_from( $context = 'view' ) { return $this->data['date_on_sale_from'] ?? null; }
+        public function get_date_on_sale_to( $context = 'view' ) { return $this->data['date_on_sale_to'] ?? null; }
+        public function get_manage_stock( $context = 'view' ) { return $this->data['manage_stock'] ?? false; }
+        public function get_stock_quantity( $context = 'view' ) { return $this->data['stock_quantity'] ?? 0; }
+        public function get_stock_status( $context = 'view' ) { return $this->data['stock_status'] ?? 'instock'; }
+        public function get_weight( $context = 'view' ) { return $this->data['weight'] ?? ''; }
+        public function get_length( $context = 'view' ) { return $this->data['length'] ?? ''; }
+        public function get_width( $context = 'view' ) { return $this->data['width'] ?? ''; }
+        public function get_height( $context = 'view' ) { return $this->data['height'] ?? ''; }
+        public function get_attribute( $key ) { return $this->attributes[ $key ] ?? ''; }
+
+        public function set_name( $name ) { $this->data['name'] = $name; }
+        public function set_slug( $slug ) { $this->data['slug'] = $slug; }
+        public function set_status( $status ) { $this->data['status'] = $status; }
+        public function set_price( $price ) { $this->data['price'] = $price; }
+        public function set_regular_price( $price ) { $this->data['regular_price'] = $price; }
+        public function set_sale_price( $price ) { $this->data['sale_price'] = $price; }
+        public function set_date_on_sale_from( $date ) { $this->data['date_on_sale_from'] = $date; }
+        public function set_date_on_sale_to( $date ) { $this->data['date_on_sale_to'] = $date; }
+        public function set_manage_stock( $manage ) { $this->data['manage_stock'] = $manage; }
+        public function set_stock_quantity( $qty ) { $this->data['stock_quantity'] = $qty; }
+        public function set_stock_status( $status ) { $this->data['stock_status'] = $status; }
+        public function set_sku( $sku ) { $this->data['sku'] = $sku; }
+        public function set_weight( $weight ) { $this->data['weight'] = $weight; }
+        public function set_length( $length ) { $this->data['length'] = $length; }
+        public function set_width( $width ) { $this->data['width'] = $width; }
+        public function set_height( $height ) { $this->data['height'] = $height; }
+
+        public function set_category_ids( $ids ) { $this->category_ids = $ids; }
+        public function set_tag_ids( $ids ) { $this->tag_ids = $ids; }
+        public function set_image_id( $id ) { $this->image_id = $id; }
+        public function set_gallery_image_ids( $ids ) { $this->gallery_image_ids = $ids; }
+        public function set_attributes( $attributes ) { $this->attributes = $attributes; }
+
+        public function set_global_unique_id( $id ) {
+            $this->meta['_global_unique_id'] = $id;
+        }
+
+        public function update_meta_data( $key, $value ) {
+            $this->meta[ $key ] = $value;
+        }
+
+        public function save() {
+            return true;
         }
     }
 }

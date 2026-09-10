@@ -512,6 +512,55 @@ class BRZ_Offline_Bridge {
                 }
             }
 
+            if ( ! empty( $items['specs'] ) && is_array( $items['specs'] ) && class_exists( '\BRZ_Product_Specs' ) ) {
+                $existing_fields = get_option( 'brz_product_specs_fields', array() );
+                if ( ! is_array( $existing_fields ) ) {
+                    $existing_fields = array();
+                }
+
+                $fields_map = array();
+                foreach ( $existing_fields as $f ) {
+                    if ( isset( $f['key'] ) ) {
+                        $fields_map[ $f['key'] ] = $f;
+                    }
+                }
+
+                $dependency_ids['new_specs'] = array();
+
+                foreach ( $items['specs'] as $raw ) {
+                    $key = isset( $raw['key'] ) ? sanitize_key( $raw['key'] ) : '';
+                    if ( empty( $key ) ) {
+                        continue;
+                    }
+
+                    $allowed_types = array( 'boolean', 'integer', 'decimal', 'range', 'array', 'string', 'text' );
+                    $type          = isset( $raw['type'] ) ? sanitize_key( $raw['type'] ) : 'boolean';
+                    if ( ! in_array( $type, $allowed_types, true ) ) {
+                        $type = 'boolean';
+                    }
+
+                    $label = sanitize_text_field( isset( $raw['label'] ) ? $raw['label'] : ( isset( $raw['name'] ) ? $raw['name'] : '' ) );
+
+                    $fields_map[ $key ] = array(
+                        'key'     => $key,
+                        'label'   => $label,
+                        'type'    => $type,
+                        'prefix'  => sanitize_text_field( isset( $raw['prefix'] ) ? $raw['prefix'] : '' ),
+                        'suffix'  => sanitize_text_field( isset( $raw['suffix'] ) ? $raw['suffix'] : '' ),
+                        'options' => sanitize_text_field( isset( $raw['options'] ) ? $raw['options'] : '' ),
+                    );
+
+                    $dependency_ids['new_specs'][] = array(
+                        'key'    => $key,
+                        'label'  => $label,
+                        'type'   => $type,
+                        'status' => 'OK'
+                    );
+                }
+
+                update_option( 'brz_product_specs_fields', array_values( $fields_map ) );
+            }
+
             // Clean up empty categories
             foreach ( $dependency_ids as $key => $val ) {
                 if ( empty( $val ) ) {

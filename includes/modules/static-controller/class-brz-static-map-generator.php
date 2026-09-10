@@ -95,6 +95,48 @@ class BRZ_Static_Map_Generator {
      * @param string $content The content to write.
      * @return bool|\WP_Error True on success, WP_Error on failure.
      */
+    /**
+     * Acquire exclusive lock for map generation to prevent concurrency race conditions.
+     *
+     * @param string $output_path Target file path.
+     * @return resource|false File handle or false.
+     */
+    public static function acquire_map_lock( string $output_path ) {
+        $lock_file = $output_path . '.lock';
+        $lock_dir  = dirname( $lock_file );
+        if ( ! is_dir( $lock_dir ) ) {
+            @mkdir( $lock_dir, 0755, true );
+        }
+        $fp = @fopen( $lock_file, 'c+' );
+        if ( $fp ) {
+            @flock( $fp, LOCK_EX );
+        }
+        return $fp;
+    }
+
+    /**
+     * Release exclusive lock for map generation.
+     *
+     * @param mixed $lock_fp File handle resource.
+     */
+    public static function release_map_lock( mixed $lock_fp ): void {
+        if ( is_resource( $lock_fp ) ) {
+            @flock( $lock_fp, LOCK_UN );
+            @fclose( $lock_fp );
+        }
+    }
+
+    /**
+     * Write content to a file atomically using a temporary file and rename.
+     *
+     * Ensures the Processing Engine never reads a partially written file.
+     * Keeps a backup copy (.bak) before replacing the target file.
+     * Uses LOCK_EX for exclusive file locking during write.
+     *
+     * @param string $path    The final destination file path.
+     * @param string $content The content to write.
+     * @return bool|\WP_Error True on success, WP_Error on failure.
+     */
     private static function atomic_write( string $path, string $content ): bool|\WP_Error {
         $dir      = dirname( $path );
         $tmp_path = $dir . '/.urls-map-' . uniqid() . '.tmp';
@@ -110,6 +152,11 @@ class BRZ_Static_Map_Generator {
 
         chmod( $tmp_path, 0644 );
 
+        // Maintain backup copy before replacing destination
+        if ( file_exists( $path ) && filesize( $path ) > 0 ) {
+            @copy( $path, $path . '.bak' );
+        }
+
         if ( ! rename( $tmp_path, $path ) ) {
             @unlink( $tmp_path );
 
@@ -120,6 +167,97 @@ class BRZ_Static_Map_Generator {
         }
 
         return true;
+    }
+
+    /**
+     * Merge existing external site pages into current map pages.
+     *
+     * Prevents Shop (buyruz.com) and Magazine (buyruz.com/mag) from overwriting
+     * each other's entries in the shared urls-map.json file.
+     *
+     * @param array  $current_pages Current site's processed pages.
+     * @param string $output_path   Target JSON file path.
+     * @return array Merged array of page entries.
+     */
+    public static function merge_external_pages( array $current_pages, string $output_path ): array {
+        try {
+            $raw_content = '';
+            if ( file_exists( $output_path ) && is_readable( $output_path ) ) {
+                $raw_content = (string) @file_get_contents( $output_path );
+            }
+
+            // Fallback to backup file if primary is missing or empty
+            $backup_path = $output_path . '.bak';
+            if ( empty( $raw_content ) && file_exists( $backup_path ) && is_readable( $backup_path ) ) {
+                $raw_content = (string) @file_get_contents( $backup_path );
+            }
+
+            if ( empty( $raw_content ) ) {
+                return $current_pages;
+            }
+
+            $existing_data = json_decode( $raw_content, true );
+            if ( ( ! is_array( $existing_data ) || empty( $existing_data['pages'] ) || ! is_array( $existing_data['pages'] ) ) && file_exists( $backup_path ) && is_readable( $backup_path ) ) {
+                $backup_content = (string) @file_get_contents( $backup_path );
+                $existing_data  = json_decode( $backup_content, true );
+            }
+
+            if ( ! is_array( $existing_data ) || empty( $existing_data['pages'] ) || ! is_array( $existing_data['pages'] ) ) {
+                return $current_pages;
+            }
+
+            // Index existing pages by URL
+            $existing_by_url = [];
+            foreach ( $existing_data['pages'] as $old_page ) {
+                if ( ! empty( $old_page['url'] ) ) {
+                    $existing_by_url[ $old_page['url'] ] = $old_page;
+                }
+            }
+
+            // Index current pages by URL, preserving 'done' status if content/lastmod hasn't changed
+            $merged = [];
+            foreach ( $current_pages as $page ) {
+                if ( empty( $page['url'] ) ) {
+                    continue;
+                }
+                $url = $page['url'];
+                if ( isset( $existing_by_url[ $url ] ) ) {
+                    $prev = $existing_by_url[ $url ];
+                    // If previously marked 'done', check if it actually changed
+                    if ( ( $prev['page_status'] ?? '' ) === 'done' ) {
+                        $curr_lastmod = $page['lastmod'] ?? null;
+                        $prev_lastmod = $prev['lastmod'] ?? null;
+                        $curr_hash    = $page['content_hash'] ?? null;
+                        $prev_hash    = $prev['content_hash'] ?? null;
+
+                        $has_changed = false;
+                        if ( ! empty( $curr_lastmod ) && ! empty( $prev_lastmod ) && $curr_lastmod !== $prev_lastmod ) {
+                            $has_changed = true;
+                        }
+                        if ( ! empty( $curr_hash ) && ! empty( $prev_hash ) && $curr_hash !== $prev_hash ) {
+                            $has_changed = true;
+                        }
+
+                        // If neither hash nor lastmod changed, preserve the 'done' status so the panel doesn't rebuild unchanged pages!
+                        if ( ! $has_changed && ( $page['page_status'] ?? '' ) === 'pending' ) {
+                            $page['page_status'] = 'done';
+                        }
+                    }
+                }
+                $merged[ $url ] = $page;
+            }
+
+            // Preserve ALL pages from the other site (Magazine, custom pages, etc.)
+            foreach ( $existing_by_url as $old_url => $old_page ) {
+                if ( ! isset( $merged[ $old_url ] ) ) {
+                    $merged[ $old_url ] = $old_page;
+                }
+            }
+
+            return array_values( $merged );
+        } catch ( \Throwable ) {
+            return $current_pages;
+        }
     }
 
     /**
@@ -190,7 +328,7 @@ class BRZ_Static_Map_Generator {
                 $pages[] = $entry;
 
                 // Also generate paginated entries for archive terms if total items > posts_per_page
-                $term_obj = get_term( $id, $taxonomy );
+                $term_obj = function_exists( 'get_term' ) ? get_term( $id, $taxonomy ) : null;
                 if ( $term_obj && ! is_wp_error( $term_obj ) && ! empty( $term_obj->count ) && (int) $term_obj->count > 0 ) {
                     $posts_per_page = (int) get_option( 'posts_per_page', 12 );
                     if ( function_exists( 'wc_get_default_products_per_row' ) ) {
@@ -295,6 +433,10 @@ class BRZ_Static_Map_Generator {
             if ( $page_status === 'pending' || ( $page_status === 'error' && $error_count < 3 ) ) {
                 $pending_pages[] = $url;
             }
+
+            if ( function_exists( 'clean_post_cache' ) && $id > 0 ) {
+                clean_post_cache( $id );
+            }
         }
 
         $metadata = [
@@ -307,8 +449,13 @@ class BRZ_Static_Map_Generator {
         ];
 
         return [
-            'metadata' => $metadata,
-            'pages'    => $pages,
+            'contract_version'     => self::CONTRACT_VERSION,
+            'generation_timestamp' => gmdate( 'c' ),
+            'total_count'          => count( $pages ),
+            'pending_count'        => count( $pending_pages ),
+            'plugin_version'       => defined( 'BRZ_VERSION' ) ? BRZ_VERSION : '1.0.0',
+            'metadata'             => $metadata,
+            'pages'                => $pages,
         ];
     }
 
@@ -339,45 +486,66 @@ class BRZ_Static_Map_Generator {
             return true;
         }
 
-        // Build map data for all selected pages.
-        $map_data = self::build_map_data( $selected_pages );
+        $lock_fp = self::acquire_map_lock( $output_path );
+        try {
+            // Build map data for all selected pages.
+            $map_data = self::build_map_data( $selected_pages );
+            $map_data['pages'] = self::merge_external_pages( $map_data['pages'], $output_path );
 
-        $json = json_encode(
-            $map_data,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        );
+            // Recalculate pending pages and counts from merged list
+            $merged_pending = [];
+            foreach ( $map_data['pages'] as $page ) {
+                $status      = $page['page_status'] ?? 'pending';
+                $error_count = (int) ( $page['error_count'] ?? 0 );
+                if ( $status === 'pending' || ( $status === 'error' && $error_count < 3 ) ) {
+                    $merged_pending[] = $page['url'];
+                }
+            }
+            $map_data['metadata']['pending_pages'] = $merged_pending;
+            $map_data['metadata']['pending_count'] = count( $merged_pending );
+            $map_data['metadata']['total_count']   = count( $map_data['pages'] );
+            $map_data['total_count']               = count( $map_data['pages'] );
+            $map_data['pending_count']             = count( $merged_pending );
 
-        if ( $json === false ) {
-            self::update_generation_status( 'error' );
-
-            return new \WP_Error(
-                'json_encode_failed',
-                'خطا در تبدیل داده‌ها به JSON.'
+            $json = json_encode(
+                $map_data,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
             );
+
+            if ( $json === false ) {
+                self::update_generation_status( 'error' );
+
+                return new \WP_Error(
+                    'json_encode_failed',
+                    'خطا در تبدیل داده‌ها به JSON.'
+                );
+            }
+
+            // Ensure output directory exists.
+            $dir_result = self::ensure_directory( $output_path );
+
+            if ( is_wp_error( $dir_result ) ) {
+                self::update_generation_status( 'error' );
+
+                return $dir_result;
+            }
+
+            // Atomic write to output path.
+            $write_result = self::atomic_write( $output_path, $json );
+
+            if ( is_wp_error( $write_result ) ) {
+                self::update_generation_status( 'error' );
+
+                return $write_result;
+            }
+
+            // Update settings with success status.
+            self::update_generation_status( 'success', gmdate( 'c' ) );
+
+            return true;
+        } finally {
+            self::release_map_lock( $lock_fp );
         }
-
-        // Ensure output directory exists.
-        $dir_result = self::ensure_directory( $output_path );
-
-        if ( is_wp_error( $dir_result ) ) {
-            self::update_generation_status( 'error' );
-
-            return $dir_result;
-        }
-
-        // Atomic write to output path.
-        $write_result = self::atomic_write( $output_path, $json );
-
-        if ( is_wp_error( $write_result ) ) {
-            self::update_generation_status( 'error' );
-
-            return $write_result;
-        }
-
-        // Update settings with success status.
-        self::update_generation_status( 'success', gmdate( 'c' ) );
-
-        return true;
     }
 
     /**
@@ -418,72 +586,78 @@ class BRZ_Static_Map_Generator {
 
         // Check if this is the last batch.
         if ( $next_offset >= $total_pages ) {
-            // Merge all batches and write final output.
-            $all_pages = self::merge_batch_results( $total_pages, $limit );
+            $lock_fp = self::acquire_map_lock( $output_path );
+            try {
+                // Merge all batches and write final output.
+                $all_pages = self::merge_batch_results( $total_pages, $limit );
+                $all_pages = self::merge_external_pages( $all_pages, $output_path );
 
-            // Compute pending_pages from merged results.
-            $pending_pages = [];
-            foreach ( $all_pages as $page ) {
-                $status      = $page['page_status'] ?? 'pending';
-                $error_count = (int) ( $page['error_count'] ?? 0 );
+                // Compute pending_pages from merged results.
+                $pending_pages = [];
+                foreach ( $all_pages as $page ) {
+                    $status      = $page['page_status'] ?? 'pending';
+                    $error_count = (int) ( $page['error_count'] ?? 0 );
 
-                if ( $status === 'pending' || ( $status === 'error' && $error_count < 3 ) ) {
-                    $pending_pages[] = $page['url'];
+                    if ( $status === 'pending' || ( $status === 'error' && $error_count < 3 ) ) {
+                        $pending_pages[] = $page['url'];
+                    }
                 }
-            }
 
-            $final_data = [
-                'metadata' => [
-                    'contract_version'     => self::CONTRACT_VERSION,
-                    'generation_timestamp' => gmdate( 'c' ),
-                    'total_count'          => count( $all_pages ),
-                    'pending_count'        => count( $pending_pages ),
-                    'plugin_version'       => defined( 'BRZ_VERSION' ) ? BRZ_VERSION : '1.0.0',
-                    'pending_pages'        => $pending_pages,
-                ],
-                'pages' => $all_pages,
-            ];
+                $final_data = [
+                    'metadata' => [
+                        'contract_version'     => self::CONTRACT_VERSION,
+                        'generation_timestamp' => gmdate( 'c' ),
+                        'total_count'          => count( $all_pages ),
+                        'pending_count'        => count( $pending_pages ),
+                        'plugin_version'       => defined( 'BRZ_VERSION' ) ? BRZ_VERSION : '1.0.0',
+                        'pending_pages'        => $pending_pages,
+                    ],
+                    'pages' => $all_pages,
+                ];
 
-            $json = json_encode(
-                $final_data,
-                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-            );
-
-            if ( $json === false ) {
-                self::update_generation_status( 'error' );
-                self::cleanup_batch_transients( $total_pages, $limit );
-
-                return new \WP_Error(
-                    'json_encode_failed',
-                    'خطا در تبدیل داده‌ها به JSON.'
+                $json = json_encode(
+                    $final_data,
+                    JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
                 );
-            }
 
-            // Ensure output directory exists.
-            $dir_result = self::ensure_directory( $output_path );
+                if ( $json === false ) {
+                    self::update_generation_status( 'error' );
+                    self::cleanup_batch_transients( $total_pages, $limit );
 
-            if ( is_wp_error( $dir_result ) ) {
-                self::update_generation_status( 'error' );
+                    return new \WP_Error(
+                        'json_encode_failed',
+                        'خطا در تبدیل داده‌ها به JSON.'
+                    );
+                }
+
+                // Ensure output directory exists.
+                $dir_result = self::ensure_directory( $output_path );
+
+                if ( is_wp_error( $dir_result ) ) {
+                    self::update_generation_status( 'error' );
+                    self::cleanup_batch_transients( $total_pages, $limit );
+
+                    return $dir_result;
+                }
+
+                // Atomic write.
+                $write_result = self::atomic_write( $output_path, $json );
+
+                if ( is_wp_error( $write_result ) ) {
+                    self::update_generation_status( 'error' );
+                    self::cleanup_batch_transients( $total_pages, $limit );
+
+                    return $write_result;
+                }
+
+                // Cleanup batch transients and update status.
                 self::cleanup_batch_transients( $total_pages, $limit );
+                self::update_generation_status( 'success', gmdate( 'c' ) );
 
-                return $dir_result;
+                return true;
+            } finally {
+                self::release_map_lock( $lock_fp );
             }
-
-            // Atomic write.
-            $write_result = self::atomic_write( $output_path, $json );
-
-            if ( is_wp_error( $write_result ) ) {
-                self::update_generation_status( 'error' );
-                self::cleanup_batch_transients( $total_pages, $limit );
-
-                return $write_result;
-            }
-
-            // Cleanup batch transients and update status.
-            self::cleanup_batch_transients( $total_pages, $limit );
-            self::update_generation_status( 'success', gmdate( 'c' ) );
-
-            return true;
         }
 
         // Not the last batch — schedule next batch with 60s delay.
@@ -553,7 +727,10 @@ class BRZ_Static_Map_Generator {
         }
 
         $options[ self::OPTION_KEY ] = $settings;
-        update_option( 'brz_options', $options );
+        update_option( 'brz_options', $options, false );
+        if ( function_exists( 'wp_set_option_autoload' ) ) {
+            @wp_set_option_autoload( 'brz_options', 'no' );
+        }
     }
 
     /**
@@ -596,7 +773,10 @@ class BRZ_Static_Map_Generator {
         }
 
         $options[ self::OPTION_KEY ] = $settings;
-        update_option( 'brz_options', $options );
+        update_option( 'brz_options', $options, false );
+        if ( function_exists( 'wp_set_option_autoload' ) ) {
+            @wp_set_option_autoload( 'brz_options', 'no' );
+        }
     }
 
     /**
@@ -655,62 +835,74 @@ class BRZ_Static_Map_Generator {
         // Update status to generating.
         self::update_generation_status( 'generating' );
 
-        // Build the full map data — this resolves URLs correctly for all entry types.
-        $map_data = self::build_map_data( $selected_pages );
+        $lock_fp = self::acquire_map_lock( $output_path );
+        try {
+            // Build the full map data — this resolves URLs correctly for all entry types.
+            $map_data = self::build_map_data( $selected_pages );
+            $map_data['pages'] = self::merge_external_pages( $map_data['pages'], $output_path );
+            $map_data['metadata']['total_count'] = count( $map_data['pages'] );
 
-        // Derive pending_urls from the BUILT map (URLs are resolved here, not from raw entries).
-        $pending_urls = [];
-        foreach ( $map_data['pages'] ?? [] as $built_page ) {
-            $status      = $built_page['page_status'] ?? 'pending';
-            $error_count = (int) ( $built_page['error_count'] ?? 0 );
-            $url         = $built_page['url'] ?? '';
-            if ( ! empty( $url ) && ( 'pending' === $status || ( 'error' === $status && $error_count < self::MAX_ERROR_COUNT ) ) ) {
-                $pending_urls[] = $url;
+            // Derive pending_urls from the BUILT map (URLs are resolved here, not from raw entries).
+            $pending_urls = [];
+            foreach ( $map_data['pages'] ?? [] as $built_page ) {
+                $status      = $built_page['page_status'] ?? 'pending';
+                $error_count = (int) ( $built_page['error_count'] ?? 0 );
+                $url         = $built_page['url'] ?? '';
+                if ( ! empty( $url ) && ( 'pending' === $status || ( 'error' === $status && $error_count < self::MAX_ERROR_COUNT ) ) ) {
+                    $pending_urls[] = $url;
+                }
             }
-        }
 
-        $json = json_encode(
-            $map_data,
-            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-        );
+            $map_data['metadata']['pending_pages'] = $pending_urls;
+            $map_data['metadata']['pending_count'] = count( $pending_urls );
+            $map_data['total_count']               = count( $map_data['pages'] );
+            $map_data['pending_count']             = count( $pending_urls );
 
-        if ( $json === false ) {
-            self::update_generation_status( 'error' );
-            self::handle_generation_failure( $pending_urls );
-
-            return new \WP_Error(
-                'json_encode_failed',
-                'خطا در تبدیل داده‌ها به JSON.'
+            $json = json_encode(
+                $map_data,
+                JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
             );
+
+            if ( $json === false ) {
+                self::update_generation_status( 'error' );
+                self::handle_generation_failure( $pending_urls );
+
+                return new \WP_Error(
+                    'json_encode_failed',
+                    'خطا در تبدیل داده‌ها به JSON.'
+                );
+            }
+
+            // Ensure output directory exists.
+            $dir_result = self::ensure_directory( $output_path );
+
+            if ( is_wp_error( $dir_result ) ) {
+                self::update_generation_status( 'error' );
+                self::handle_generation_failure( $pending_urls );
+
+                return $dir_result;
+            }
+
+            // Atomic write to output path.
+            $write_result = self::atomic_write( $output_path, $json );
+
+            if ( is_wp_error( $write_result ) ) {
+                self::update_generation_status( 'error' );
+                self::handle_generation_failure( $pending_urls );
+
+                return $write_result;
+            }
+
+            // Success: mark pending pages as synced.
+            self::mark_pages_synced( $pending_urls );
+
+            // Update generation status.
+            self::update_generation_status( 'success', gmdate( 'c' ) );
+
+            return count( $pending_urls );
+        } finally {
+            self::release_map_lock( $lock_fp );
         }
-
-        // Ensure output directory exists.
-        $dir_result = self::ensure_directory( $output_path );
-
-        if ( is_wp_error( $dir_result ) ) {
-            self::update_generation_status( 'error' );
-            self::handle_generation_failure( $pending_urls );
-
-            return $dir_result;
-        }
-
-        // Atomic write to output path.
-        $write_result = self::atomic_write( $output_path, $json );
-
-        if ( is_wp_error( $write_result ) ) {
-            self::update_generation_status( 'error' );
-            self::handle_generation_failure( $pending_urls );
-
-            return $write_result;
-        }
-
-        // Success: mark pending pages as synced.
-        self::mark_pages_synced( $pending_urls );
-
-        // Update generation status.
-        self::update_generation_status( 'success', gmdate( 'c' ) );
-
-        return count( $pending_urls );
     }
 
     /**
@@ -747,7 +939,10 @@ class BRZ_Static_Map_Generator {
         }
 
         $options[ self::OPTION_KEY ] = $settings;
-        update_option( 'brz_options', $options );
+        update_option( 'brz_options', $options, false );
+        if ( function_exists( 'wp_set_option_autoload' ) ) {
+            @wp_set_option_autoload( 'brz_options', 'no' );
+        }
     }
 
     /**
@@ -802,6 +997,9 @@ class BRZ_Static_Map_Generator {
         }
 
         $options[ self::OPTION_KEY ] = $settings;
-        update_option( 'brz_options', $options );
+        update_option( 'brz_options', $options, false );
+        if ( function_exists( 'wp_set_option_autoload' ) ) {
+            @wp_set_option_autoload( 'brz_options', 'no' );
+        }
     }
 }

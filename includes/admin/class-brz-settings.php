@@ -926,33 +926,69 @@ class BRZ_Settings {
             }
 
             if ( 'mag_tools' === $module_slug && $active ) {
+                $mag_tools = isset( $opts['mag_tools'] ) && is_array( $opts['mag_tools'] ) ? $opts['mag_tools'] : array();
+                $auto_hero   = ! isset( $mag_tools['auto_article_hero'] ) || ! empty( $mag_tools['auto_article_hero'] );
+                $auto_author = ! isset( $mag_tools['auto_author_box'] ) || ! empty( $mag_tools['auto_author_box'] );
+                $local_av    = ! isset( $mag_tools['native_local_avatar'] ) || ! empty( $mag_tools['native_local_avatar'] );
+                $show_count  = ! isset( $mag_tools['show_author_post_count'] ) || ! empty( $mag_tools['show_author_post_count'] );
+                $source_rel  = ! empty( $mag_tools['default_source_rel'] ) ? $mag_tools['default_source_rel'] : 'nofollow';
                 ?>
                 <div class="brz-single-column">
                     <div class="brz-card">
                         <div class="brz-card__header">
-                            <h3>ابزارهای تخصصی مجله خبری بایروز</h3>
+                            <h3>🖋️ ماژول تحریریه هوشمند، سربرگ متادیتا و باکس نویسنده بایروز</h3>
                         </div>
                         <div class="brz-card__body">
-                            <p>این ماژول قابلیت‌های تخصصی برای غنی‌سازی مقالات مجله خبری بایروز (گوتنبرگ و قالب GeneratePress) را ارائه می‌دهد.</p>
+                            <p>این ماژول ساختار سربرگ، متادیتای مقالات، باکس چندنقشی نویسنده (تألیف/ترجمه/بازبینی/مهمان) و آواتار محلی بدون گراواتار را به صورت کاملاً بومی و منطبق با Rank Math SEO PRO مدیریت می‌کند.</p>
 
-                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:15px 0;">
-                                <h4 style="margin:0 0 8px 0;color:#1a73e8;">⏱️ محاسبه زمان مطالعه (Reading Time)</h4>
-                                <p style="margin:0 0 10px 0;font-size:13px;color:#475569;">تخمین دقیق زمان مطالعه متون فارسی بر اساس استاندارد ۲۰۰ کلمه در دقیقه با پشتیبانی کامل از اعراب و کاراکترهای فارسی.</p>
-                                <code style="display:inline-block;direction:ltr;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;">[brz_reading_time]</code>
-                                <span style="font-size:12px;color:#64748b;margin-right:8px;">← درج نشان زمان مطالعه در هر بخش از متن مقاله</span>
-                            </div>
+                            <form method="post" action="options.php" class="brz-settings-form" data-context="editorial-settings">
+                                <?php settings_fields( 'brz_group' ); ?>
+                                <input type="hidden" name="<?php echo BRZ_OPTION; ?>[brz_form_context]" value="editorial_settings" />
 
-                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:15px 0;">
-                                <h4 style="margin:0 0 8px 0;color:#1a73e8;">📑 فهرست خودکار سرفصل‌ها (Table of Contents)</h4>
-                                <p style="margin:0 0 10px 0;font-size:13px;color:#475569;">ایجاد فهرست سبک و تمیز بر اساس تگ‌های H2 و H3 مقاله بدون کدهای جاوااسکریپت سنگین.</p>
-                                <code style="display:inline-block;direction:ltr;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;">[brz_toc]</code>
-                                <span style="font-size:12px;color:#64748b;margin-right:8px;">← درج جعبه سرفصل‌ها در ابتدای مقاله</span>
-                            </div>
+                                <div style="display:flex;flex-direction:column;gap:12px;margin:15px 0;background:#f8fafc;padding:15px;border-radius:10px;border:1px solid #e2e8f0;">
+                                    <label>
+                                        <input type="checkbox" name="<?php echo BRZ_OPTION; ?>[mag_tools][auto_article_hero]" value="1" <?php checked( true, $auto_hero ); ?> />
+                                        <strong>تزریق خودکار سربرگ متادیتای بالای مقاله (Page Hero)</strong>
+                                        <span style="display:block;color:#64748b;font-size:12px;margin-right:24px;">شامل آواتار محلی، نام مؤلف/مترجم/ویراستار، تاریخ شمسی، زمان مطالعه و مسیر راهنما (Breadcrumbs).</span>
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="<?php echo BRZ_OPTION; ?>[mag_tools][auto_author_box]" value="1" <?php checked( true, $auto_author ); ?> />
+                                        <strong>تزریق خودکار باکس نویسنده در انتهای مقاله (Author Card)</strong>
+                                        <span style="display:block;color:#64748b;font-size:12px;margin-right:24px;">طراحی فوق‌العاده سبک Mobile-First بر اساس پالت سبز جنگلی بایروز با نشان تایید رسمی و دکمه آرشیو مقالات.</span>
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="<?php echo BRZ_OPTION; ?>[mag_tools][native_local_avatar]" value="1" <?php checked( true, $local_av ); ?> />
+                                        <strong>موتور آواتار محلی بومی و مسدودسازی ۱۰۰٪ گراواتار خارجی</strong>
+                                        <span style="display:block;color:#64748b;font-size:12px;margin-right:24px;">امکان انتخاب عکس پروفایل از رسانه وردپرس در شناسنامه کاربر و قطع کامل اتصالات سنگین گراواتار جهت سرعت حداکثری در هاست ایران.</span>
+                                    </label>
+                                    <label>
+                                        <input type="checkbox" name="<?php echo BRZ_OPTION; ?>[mag_tools][show_author_post_count]" value="1" <?php checked( true, $show_count ); ?> />
+                                        <strong>نمایش شمارنده تعداد مقالات نویسنده در دکمه آرشیو</strong>
+                                        <span style="display:block;color:#64748b;font-size:12px;margin-right:24px;">نمایش تعداد نوشته‌ها (مثلاً «(۱۲ نوشته)») در دکمه مشاهده همه مقالات.</span>
+                                    </label>
+                                </div>
 
-                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:15px 0;">
-                                <h4 style="margin:0 0 8px 0;color:#1a73e8;">🛍️ بلوک گوتنبرگ معرفی محصولات فروشگاه</h4>
-                                <p style="margin:0 0 10px 0;font-size:13px;color:#475569;">در ویرایشگر گوتنبرگ با جستجوی «محصولات پیشنهادی بایروز» یا استفاده از شورت‌کد زیر، کارت‌های زنده محصول را در مقالات قرار دهید:</p>
-                                <code style="display:inline-block;direction:ltr;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid #cbd5e1;">[brz_shop_products category="air-fryer" count="3" columns="3"]</code>
+                                <div style="margin-bottom:15px;">
+                                    <label style="display:block;font-weight:600;margin-bottom:5px;">نوع پیش‌فرض پیوند منابع در مقالات ترجمه‌ای:</label>
+                                    <select name="<?php echo BRZ_OPTION; ?>[mag_tools][default_source_rel]" style="min-width:200px;">
+                                        <option value="nofollow" <?php selected( 'nofollow', $source_rel ); ?>>nofollow (پیشنهادی جهت حفظ اعتبار سئو)</option>
+                                        <option value="dofollow" <?php selected( 'dofollow', $source_rel ); ?>>dofollow</option>
+                                    </select>
+                                </div>
+
+                                <div class="brz-save-bar">
+                                    <?php submit_button( 'ذخیره تنظیمات تحریریه و نویسندگان', 'primary', 'submit', false ); ?>
+                                </div>
+                            </form>
+
+                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:20px 0;">
+                                <h4 style="margin:0 0 8px 0;color:#05593D;">⏱️ شورت‌کدهای اختصاصی در دسترس:</h4>
+                                <p style="margin:0 0 10px 0;font-size:13px;color:#475569;">جهت قرار دادن دستی المان‌ها در هر کجای دلخواه یا برگه‌سازها می‌توانید از شورت‌کدهای زیر استفاده کنید:</p>
+                                <div style="display:flex;flex-direction:column;gap:8px;">
+                                    <div><code style="direction:ltr;display:inline-block;background:#fff;padding:3px 8px;border:1px solid #cbd5e1;border-radius:4px;">[brz_article_hero]</code> <span style="font-size:12px;color:#64748b;">← درج سربرگ متادیتای مقاله</span></div>
+                                    <div><code style="direction:ltr;display:inline-block;background:#fff;padding:3px 8px;border:1px solid #cbd5e1;border-radius:4px;">[brz_author_box]</code> <span style="font-size:12px;color:#64748b;">← درج کارت نویسنده</span></div>
+                                    <div><code style="direction:ltr;display:inline-block;background:#fff;padding:3px 8px;border:1px solid #cbd5e1;border-radius:4px;">[brz_reading_time]</code> <span style="font-size:12px;color:#64748b;">← درج نشان زمان مطالعه</span></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1655,9 +1691,15 @@ class BRZ_Settings {
 
             if ( isset( $input['mag_tools'] ) && is_array( $input['mag_tools'] ) ) {
                 $mt = $input['mag_tools'];
-                $output['mag_tools'] = array(
-                    'auto_reading_time' => ! empty( $mt['auto_reading_time'] ) ? 1 : 0,
-                );
+                $prev_mt = isset( $output['mag_tools'] ) && is_array( $output['mag_tools'] ) ? $output['mag_tools'] : array();
+                $output['mag_tools'] = array_merge( $prev_mt, array(
+                    'auto_reading_time'      => ! empty( $mt['auto_reading_time'] ) ? 1 : 0,
+                    'auto_article_hero'      => ! empty( $mt['auto_article_hero'] ) ? 1 : 0,
+                    'auto_author_box'        => ! empty( $mt['auto_author_box'] ) ? 1 : 0,
+                    'native_local_avatar'    => ! empty( $mt['native_local_avatar'] ) ? 1 : 0,
+                    'show_author_post_count' => ! empty( $mt['show_author_post_count'] ) ? 1 : 0,
+                    'default_source_rel'     => ! empty( $mt['default_source_rel'] ) && 'dofollow' === $mt['default_source_rel'] ? 'dofollow' : 'nofollow',
+                ) );
                 unset( $input['mag_tools'] );
             }
         }

@@ -249,7 +249,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   4. Mobile View (< 769px: Masterpiece High-CRO Cards, Zero Clipping)
+   4. Mobile View (< 769px: Refined Vertical Product Cards, Zero Clipping & 100% Theme Isolation)
    -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
   .buyruz-table-container {
@@ -267,25 +267,16 @@
     width: 100% !important;
   }
 
+  /* پنهان‌سازی هوشمند کپسول تکراری عنوان در موبایل جهت جلوگیری از تکرار با H2 صفحه */
   .buyruz-table-wrap .buyruz-table-title {
-    display: block !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    font-size: 0.95rem !important;
-    font-weight: 800 !important;
-    padding: 12px 16px !important;
-    border-radius: 12px !important;
-    margin-bottom: 14px !important;
-    border: none !important;
-    box-shadow: 0 2px 8px rgba(5, 89, 61, 0.15) !important;
-    text-align: center !important;
+    display: none !important;
   }
 
   .buyruz-table-wrap .buyruz-table thead {
     display: none !important;
   }
 
-  /* Full block card reset */
+  /* ایزولاسیون کامل در برابر استایل‌های مخرب قالب باکالا (قفل ارتفاع 50px و 45px) */
   .buyruz-table-wrap .buyruz-table,
   .buyruz-table-wrap .buyruz-table tbody,
   .buyruz-table-wrap .buyruz-table tr,
@@ -294,30 +285,45 @@
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
+    height: auto !important;
+    min-height: unset !important;
+    max-height: none !important;
     box-sizing: border-box !important;
     float: none !important;
     background: transparent;
+    line-height: normal;
   }
 
-  /* Card Container */
-  .buyruz-table-wrap .buyruz-table tr {
+  /* کارت‌های محصول و خنثی‌سازی کامل باگ‌های ارتفاع و پس‌زمینه قالب */
+  .buyruz-table-wrap .buyruz-table tr,
+  .buyruz-table-wrap .buyruz-table tr:first-child,
+  .buyruz-table-wrap .buyruz-table tr:nth-child(even),
+  .buyruz-table-wrap .buyruz-table tr:nth-child(odd) {
     background: #FFFFFF !important;
     border: 1px solid var(--brz-ct-border) !important;
     border-radius: 14px !important;
     margin-bottom: 14px !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     padding: 0 !important;
+    height: auto !important;
+    min-height: unset !important;
+    max-height: none !important;
   }
 
-  /* Current Product Hero Card */
-  .buyruz-table-wrap .buyruz-table tr.buyruz-row-current {
+  /* کارت برجسته محصول فعلی (Hero Card) */
+  .buyruz-table-wrap .buyruz-table tr.buyruz-row-current,
+  .buyruz-table-wrap .buyruz-table tr.buyruz-row-current:first-child {
     border: 2px solid var(--brz-ct-primary) !important;
     box-shadow: 0 4px 16px rgba(5, 89, 61, 0.12) !important;
     background: #FFFFFF !important;
+    height: auto !important;
+    min-height: unset !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
-  /* Card Header: Product Title */
+  /* هدر کارت: عنوان محصول */
   .buyruz-table-wrap .buyruz-table th,
   .buyruz-table-wrap .buyruz-table th[scope="row"] {
     display: flex !important;
@@ -328,12 +334,16 @@
     background-color: var(--brz-ct-bg-header) !important;
     border: none !important;
     border-bottom: 1px solid var(--brz-ct-border) !important;
+    border-top-left-radius: 13px !important;
+    border-top-right-radius: 13px !important;
     font-size: 0.9rem !important;
     font-weight: 800 !important;
     color: var(--brz-ct-text-title) !important;
     line-height: 1.5 !important;
     text-align: right !important;
     min-width: unset !important;
+    height: auto !important;
+    min-height: unset !important;
   }
 
   .buyruz-table-wrap .buyruz-table th::before {
@@ -346,20 +356,24 @@
     justify-content: space-between !important;
     align-items: center !important;
     width: 100% !important;
+    gap: 8px !important;
   }
 
   .buyruz-table-wrap .buyruz-table .buyruz-table-name {
     font-size: 0.9rem !important;
     font-weight: 800 !important;
     color: var(--brz-ct-text-title) !important;
+    line-height: 1.5 !important;
   }
 
-  /* Card Header for Current Product */
+  /* هدر کارت برای محصول فعلی */
   .buyruz-table-wrap .buyruz-table tr.buyruz-row-current th,
   .buyruz-table-wrap .buyruz-table tr.buyruz-row-current th[scope="row"] {
     background-color: var(--brz-ct-primary) !important;
     color: #FFFFFF !important;
     border-bottom: 1px solid var(--brz-ct-primary-dark) !important;
+    border-top-left-radius: 12px !important;
+    border-top-right-radius: 12px !important;
   }
 
   .buyruz-table-wrap .buyruz-table tr.buyruz-row-current th a,
@@ -371,26 +385,33 @@
 
   .buyruz-table-wrap .buyruz-table tr.buyruz-row-current .buyruz-badge-current {
     background-color: var(--brz-ct-accent) !important;
-    color: #0F172A !important;
+    color: #111827 !important;
     font-weight: 800 !important;
     border: none !important;
     padding: 3px 8px !important;
     border-radius: 6px !important;
     font-size: 0.725rem !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   }
 
-  /* Card Data Cells (td) — simple block, inner handles layout */
-  .buyruz-table-wrap .buyruz-table td {
+  /* خانه‌های مشخصات (td) در کارت‌های موبایل */
+  .buyruz-table-wrap .buyruz-table td,
+  .buyruz-table-wrap .buyruz-table tr td,
+  .buyruz-table-wrap .buyruz-table tr:first-child td {
     display: block !important;
-    padding: 10px 16px !important;
+    padding: 12px 16px !important;
     border: none !important;
     border-bottom: 1px solid var(--brz-ct-border-subtle) !important;
     background: transparent !important;
     box-sizing: border-box !important;
     width: 100% !important;
+    height: auto !important;
+    min-height: unset !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
-  /* Kill ::before on td — we have real HTML label spans */
   .buyruz-table-wrap .buyruz-table td::before {
     display: none !important;
     content: '' !important;
@@ -398,22 +419,26 @@
 
   .buyruz-table-wrap .buyruz-table tr td:last-child {
     border-bottom: none !important;
+    border-bottom-left-radius: 13px !important;
+    border-bottom-right-radius: 13px !important;
   }
 
-  /* .buyruz-cell-inner: stack label then value */
+  /* محتوای داخلی هر خانه مشخصات */
   .buyruz-table-wrap .buyruz-table .buyruz-cell-inner {
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-    gap: 3px !important;
+    gap: 4px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  /* Field Label — only the HTML span */
+  /* عنوان ویژگی */
   .buyruz-table-wrap .buyruz-table .buyruz-cell-label {
     display: block !important;
-    font-size: 0.725rem !important;
+    font-size: 0.75rem !important;
     font-weight: 700 !important;
     color: var(--brz-ct-text-muted) !important;
     line-height: 1.4 !important;
@@ -422,23 +447,33 @@
     margin-bottom: 2px !important;
   }
 
-  /* Field Value */
+  /* مقدار ویژگی با ارتفاع سطر استاندارد و خوانایی کامل */
   .buyruz-table-wrap .buyruz-table .buyruz-cell-value {
     display: block !important;
-    font-size: 0.825rem !important;
+    font-size: 0.85rem !important;
     font-weight: 500 !important;
     color: var(--brz-ct-text-title) !important;
-    line-height: 1.7 !important;
+    line-height: 1.75 !important;
     width: 100% !important;
     word-break: break-word !important;
     white-space: normal !important;
     text-align: right !important;
     margin: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  /* Current Product Data Rows */
-  .buyruz-table-wrap .buyruz-table tr.buyruz-row-current td {
-    background-color: #FFFFFF !important;
+  /* داده‌های کارت محصول فعلی */
+  .buyruz-table-wrap .buyruz-table tr.buyruz-row-current td,
+  .buyruz-table-wrap .buyruz-table tr.buyruz-row-current:first-child td {
+    background-color: var(--brz-ct-current-bg) !important;
+    border-bottom-color: var(--brz-ct-current-border) !important;
+  }
+
+  .buyruz-table-wrap .buyruz-table tr.buyruz-row-current td:last-child {
+    border-bottom: none !important;
+    border-bottom-left-radius: 12px !important;
+    border-bottom-right-radius: 12px !important;
   }
 
   .buyruz-table-wrap .buyruz-table tr.buyruz-row-current .buyruz-cell-label {
@@ -449,5 +484,6 @@
   .buyruz-table-wrap .buyruz-table tr.buyruz-row-current .buyruz-cell-value {
     color: var(--brz-ct-text-title) !important;
     font-weight: 600 !important;
+    line-height: 1.75 !important;
   }
 }

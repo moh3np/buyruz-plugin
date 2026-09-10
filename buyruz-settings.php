@@ -3,7 +3,7 @@
  * Plugin Name: تنظیمات بایروز
  * Plugin URI: https://github.com/Codruz/buyruz-plugin.git
  * Description: تنظیمات بایروز، مرکز مدیریت و هماهنگ‌سازی قابلیت‌ها و تنظیمات اختصاصی بایروز در سایت شماست. از این صفحه می‌توانید رفتار افزونه‌های بایروز را یکپارچه کنترل کنید.
- * Version: 5.39.1
+ * Version: 5.40.32
  * Author: کُدروز
  * Author URI: https://codruz.ir
  * License: Proprietary
@@ -21,10 +21,17 @@ $plugin_header = get_file_data(
         'Version' => 'Version',
     )
 );
-define( 'BRZ_VERSION', '5.39.1' );
+define( 'BRZ_VERSION', '5.40.32' );
 define( 'BRZ_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BRZ_URL', plugin_dir_url( __FILE__ ) );
 define( 'BRZ_OPTION', 'brz_options' );
+
+// اعلام سازگاری رسمی با WooCommerce High-Performance Order Storage (HPOS)
+add_action( 'before_woocommerce_init', function() {
+    if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+    }
+} );
 
 require_once BRZ_PATH . 'includes/autoload.php';
 BRZ_Plugin::init();

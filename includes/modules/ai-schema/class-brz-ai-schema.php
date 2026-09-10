@@ -1,6 +1,6 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) { exit; }
-// هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید.
+// هشدار: پیش از هر تغییر، حتماً فایل CONTRIBUTING.md را با دقت کامل بخوانید و بی‌قید و شرط اجرا کنید و پس از اتمام کار تطابق را دوباره چک کنید؛ این جمله باید در تمام فایل‌ها (جدید و موجود) بدون استثنا افزوده و حفظ شود.
 
 /**
  * AI Schema Manager module.
@@ -65,8 +65,11 @@ class BRZ_AI_Schema {
      * The page renders inside the Buyruz shell (provided by BRZ_Settings::render_module_settings()).
      */
     public static function render_admin_page(): void {
-        $properties     = self::get_properties();
-        $item_condition = self::get_item_condition();
+        $properties        = self::get_properties();
+        $item_condition    = self::get_item_condition();
+        $shipping_settings = self::get_shipping_settings();
+        $return_settings   = self::get_return_policy_settings();
+        $valid_from_on     = self::get_valid_from_enabled();
 
         // Fetch WooCommerce Global Attributes
         $wc_attributes = array();
@@ -129,8 +132,8 @@ class BRZ_AI_Schema {
             }
             .brz-ai-schema-row input[type="text"]:focus {
                 outline: none;
-                border-color: var(--brz-brand, #1a73e8);
-                box-shadow: 0 0 0 2px rgba(26,115,232,.15);
+                border-color: var(--brz-brand, #05593D);
+                box-shadow: 0 0 0 2px rgba(5,89,61,.15);
             }
             .brz-ai-schema-row input.brz-field-error {
                 border-color: #d32f2f;
@@ -273,6 +276,122 @@ class BRZ_AI_Schema {
                     </div>
                 </div>
 
+                <!-- Shipping Details Card (OfferShippingDetails) -->
+                <div class="brz-card" style="margin-top:var(--md-space-lg);">
+                    <div class="brz-card__header">
+                        <h3>اطلاعات و هزینه ارسال کالا (OfferShippingDetails)</h3>
+                    </div>
+                    <div class="brz-card__body">
+                        <label style="display:flex;align-items:center;gap:var(--md-space-sm);cursor:pointer;margin-bottom:var(--md-space-md);">
+                            <input type="checkbox" id="brz-ai-schema-shipping-enabled" value="1" <?php checked( ! empty( $shipping_settings['enabled'] ) ); ?> />
+                            <span style="font-weight:600;">فعال‌سازی اطلاعات ارسال و تحویل در اسکیما</span>
+                        </label>
+                        <p class="description" style="margin-bottom:var(--md-space-md);color:var(--md-on-surface-variant,#666);">
+                            تنظیم مشخصات و زمان ارسال کالا جهت رفع کامل هشدار <code>shippingDetails</code> در گوگل سرچ کنسول و احراز صلاحیت نشان «ارسال رایگان» گوگل.
+                        </p>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--md-space-md);">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">هزینه پایه پست پیشتاز (ریال):</label>
+                                <input type="number" id="brz-ai-schema-shipping-base-rate" value="<?php echo esc_attr( $shipping_settings['base_rate'] ); ?>" style="width:100%;padding:8px 12px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" min="0" step="10000" />
+                                <span style="font-size:11px;color:#777;">نرخ پیش‌فرض سفارش‌های زیر سقف ارسال رایگان (مثال: ۵۵۰۰۰۰ ریال)</span>
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">آستانه خرید برای ارسال رایگان (ریال):</label>
+                                <input type="number" id="brz-ai-schema-shipping-threshold" value="<?php echo esc_attr( $shipping_settings['free_shipping_threshold'] ); ?>" style="width:100%;padding:8px 12px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" min="0" step="100000" />
+                                <span style="font-size:11px;color:#777;">محصولات بالای این مبلغ، ارسال رایگان (۰ ریال) می‌گیرند (مثال: ۲۰۰۰۰۰۰۰ ریال)</span>
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">حداقل/حداکثر زمان پردازش انبار (روز):</label>
+                                <div style="display:flex;gap:8px;">
+                                    <input type="number" id="brz-ai-schema-shipping-handling-min" value="<?php echo esc_attr( $shipping_settings['handling_min'] ); ?>" style="width:50%;padding:8px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" min="0" placeholder="حداقل" />
+                                    <input type="number" id="brz-ai-schema-shipping-handling-max" value="<?php echo esc_attr( $shipping_settings['handling_max'] ); ?>" style="width:50%;padding:8px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" min="0" placeholder="حداکثر" />
+                                </div>
+                                <span style="font-size:11px;color:#777;">بازه زمان آماده‌سازی بسته در انبار مرکزی بایروز</span>
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">حداقل/حداکثر زمان ترانزیت پست (روز):</label>
+                                <div style="display:flex;gap:8px;">
+                                    <input type="number" id="brz-ai-schema-shipping-transit-min" value="<?php echo esc_attr( $shipping_settings['transit_min'] ); ?>" style="width:50%;padding:8px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" min="1" placeholder="حداقل" />
+                                    <input type="number" id="brz-ai-schema-shipping-transit-max" value="<?php echo esc_attr( $shipping_settings['transit_max'] ); ?>" style="width:50%;padding:8px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" min="1" placeholder="حداکثر" />
+                                </div>
+                                <span style="font-size:11px;color:#777;">مدت زمان رسیدن مرسوله از طریق پست پیشتاز</span>
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">کد کشور مقصد (ISO):</label>
+                                <input type="text" id="brz-ai-schema-shipping-country" value="<?php echo esc_attr( $shipping_settings['destination_country'] ); ?>" style="width:100%;padding:8px 12px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" maxlength="2" />
+                                <span style="font-size:11px;color:#777;">کد دوحرفی کشور (پیش‌فرض IR برای ایران)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Return Policy Card (MerchantReturnPolicy) -->
+                <div class="brz-card" style="margin-top:var(--md-space-lg);">
+                    <div class="brz-card__header">
+                        <h3>قوانین بازگشت کالا (MerchantReturnPolicy)</h3>
+                    </div>
+                    <div class="brz-card__body">
+                        <label style="display:flex;align-items:center;gap:var(--md-space-sm);cursor:pointer;margin-bottom:var(--md-space-md);">
+                            <input type="checkbox" id="brz-ai-schema-return-enabled" value="1" <?php checked( ! empty( $return_settings['enabled'] ) ); ?> />
+                            <span style="font-weight:600;">فعال‌سازی قوانین بازگشت کالا در اسکیما</span>
+                        </label>
+                        <p class="description" style="margin-bottom:var(--md-space-md);color:var(--md-on-surface-variant,#666);">
+                            تنظیم شرایط مرجوعی کالا منطبق با قانون تجارت الکترونیک جهت رفع کامل هشدار <code>hasMerchantReturnPolicy</code> در گوگل سرچ کنسول.
+                        </p>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:var(--md-space-md);">
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">برگه رویه‌های بازگرداندن کالا:</label>
+                                <?php
+                                if ( function_exists( 'wp_dropdown_pages' ) ) {
+                                    wp_dropdown_pages( array(
+                                        'name'              => 'brz_return_policy_page_id',
+                                        'id'                => 'brz-return-policy-page-id',
+                                        'selected'          => (int) ( $return_settings['page_id'] ?? 0 ),
+                                        'show_option_none'  => '— تشخیص خودکار (برگه return-policy) —',
+                                        'option_none_value' => '0',
+                                        'class'             => 'brz-select',
+                                    ) );
+                                }
+                                ?>
+                                <span style="font-size:11px;color:#777;display:block;margin-top:4px;">لینک این برگه به صورت داینامیک در اسکیما تزریق می‌شود.</span>
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">مهلت تست و بازگشت کالا (روز):</label>
+                                <input type="number" id="brz-ai-schema-return-days" value="<?php echo esc_attr( $return_settings['return_days'] ); ?>" style="width:100%;padding:8px 12px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" min="1" max="90" />
+                                <span style="font-size:11px;color:#777;">استاندارد قانون تجارت الکترونیک (۷ روز کاری)</span>
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:4px;font-size:13px;font-weight:500;">کد کشور مرجوعی (ISO):</label>
+                                <input type="text" id="brz-ai-schema-return-country" value="<?php echo esc_attr( $return_settings['country'] ); ?>" style="width:100%;padding:8px 12px;border:1px solid var(--md-outline-variant,#ccc);border-radius:6px;" maxlength="2" />
+                                <span style="font-size:11px;color:#777;">کد دوحرفی کشور مبدا مرجوعی (پیش‌فرض IR)</span>
+                            </div>
+                        </div>
+                        <div style="margin-top:var(--md-space-md);padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;color:#475569;line-height:1.7;">
+                            <strong>قوانین هوشمند ثبت‌شده در اسکیما:</strong><br>
+                            • شرط پذیرش مرجوعی: حفظ کامل پلمپ و سلفون اورجینال جعبه (<code>NewCondition</code>)<br>
+                            • در صورت نقص فنی یا آسیب‌دیدگی ارسال: بازگشت کاملاً رایگان با بایروز (<code>FreeReturn</code>)<br>
+                            • در صورت انصراف سلیقه‌ای خریدار در مهلت ۷ روزه: هزینه بازگشت بر عهده مشتری (<code>ReturnFeesCustomerResponsibility</code>)<br>
+                            • روش استرداد: بازپرداخت کامل وجه نقدی به حساب خریدار (<code>FullRefund</code>)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- validFrom Card (Offer Price Validity) -->
+                <div class="brz-card" style="margin-top:var(--md-space-lg);">
+                    <div class="brz-card__header">
+                        <h3>تاریخ شروع اعتبار قیمت (validFrom)</h3>
+                    </div>
+                    <div class="brz-card__body">
+                        <label style="display:flex;align-items:center;gap:var(--md-space-sm);cursor:pointer;">
+                            <input type="checkbox" id="brz-ai-schema-valid-from" value="1" <?php checked( $valid_from_on ); ?> />
+                            <span style="font-weight:600;">تکمیل خودکار تاریخ اعتبار قیمت (validFrom)</span>
+                        </label>
+                        <p class="description" style="margin-top:var(--md-space-sm);color:var(--md-on-surface-variant,#666);">
+                            با فعال‌سازی این گزینه، تاریخ ایجاد محصول یا تاریخ شروع فروش ویژه به عنوان تاریخ مبدا قیمت در بخش offers و priceSpecification درج می‌شود و هشدار <code>validFrom</code> در گوگل سرچ کنسول برطرف می‌گردد.
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Save Bar -->
                 <div class="brz-save-bar" style="margin-top:var(--md-space-lg);">
                     <button type="button" id="brz-ai-schema-save" class="brz-button brz-button--primary">ذخیره تغییرات</button>
@@ -399,7 +518,20 @@ class BRZ_AI_Schema {
                         _wpnonce: $('#_wpnonce').val(),
                         properties: properties,
                         item_condition: $('#brz-ai-schema-condition').is(':checked') ? 1 : 0,
-                        enabled_attributes: enabled_attributes
+                        enabled_attributes: enabled_attributes,
+                        shipping_enabled: $('#brz-ai-schema-shipping-enabled').is(':checked') ? 1 : 0,
+                        shipping_base_rate: $('#brz-ai-schema-shipping-base-rate').val(),
+                        shipping_free_threshold: $('#brz-ai-schema-shipping-threshold').val(),
+                        shipping_handling_min: $('#brz-ai-schema-shipping-handling-min').val(),
+                        shipping_handling_max: $('#brz-ai-schema-shipping-handling-max').val(),
+                        shipping_transit_min: $('#brz-ai-schema-shipping-transit-min').val(),
+                        shipping_transit_max: $('#brz-ai-schema-shipping-transit-max').val(),
+                        shipping_country: $('#brz-ai-schema-shipping-country').val(),
+                        return_enabled: $('#brz-ai-schema-return-enabled').is(':checked') ? 1 : 0,
+                        return_page_id: $('#brz-return-policy-page-id').val(),
+                        return_days: $('#brz-ai-schema-return-days').val(),
+                        return_country: $('#brz-ai-schema-return-country').val(),
+                        valid_from_enabled: $('#brz-ai-schema-valid-from').is(':checked') ? 1 : 0
                     },
                     success: function(res) {
                         if (res.success) {
@@ -455,6 +587,25 @@ class BRZ_AI_Schema {
             $enabled_attrs[] = sanitize_key( $attr );
         }
 
+        // Read and sanitize shipping settings.
+        $shipping_enabled   = isset( $_POST['shipping_enabled'] ) ? absint( $_POST['shipping_enabled'] ) : 0;
+        $base_rate          = isset( $_POST['shipping_base_rate'] ) ? absint( $_POST['shipping_base_rate'] ) : 550000;
+        $free_threshold     = isset( $_POST['shipping_free_threshold'] ) ? absint( $_POST['shipping_free_threshold'] ) : 20000000;
+        $handling_min       = isset( $_POST['shipping_handling_min'] ) ? absint( $_POST['shipping_handling_min'] ) : 0;
+        $handling_max       = isset( $_POST['shipping_handling_max'] ) ? absint( $_POST['shipping_handling_max'] ) : 1;
+        $transit_min        = isset( $_POST['shipping_transit_min'] ) ? absint( $_POST['shipping_transit_min'] ) : 1;
+        $transit_max        = isset( $_POST['shipping_transit_max'] ) ? absint( $_POST['shipping_transit_max'] ) : 3;
+        $shipping_country   = isset( $_POST['shipping_country'] ) ? sanitize_text_field( $_POST['shipping_country'] ) : 'IR';
+
+        // Read and sanitize return policy settings.
+        $return_enabled     = isset( $_POST['return_enabled'] ) ? absint( $_POST['return_enabled'] ) : 0;
+        $return_page_id     = isset( $_POST['return_page_id'] ) ? absint( $_POST['return_page_id'] ) : 0;
+        $return_days        = isset( $_POST['return_days'] ) ? absint( $_POST['return_days'] ) : 7;
+        $return_country     = isset( $_POST['return_country'] ) ? sanitize_text_field( $_POST['return_country'] ) : 'IR';
+
+        // Read valid_from toggle.
+        $valid_from_enabled = isset( $_POST['valid_from_enabled'] ) ? absint( $_POST['valid_from_enabled'] ) : 0;
+
         // Get current options and update AI Schema keys.
         $opts = get_option( BRZ_OPTION, array() );
         if ( ! is_array( $opts ) ) {
@@ -463,6 +614,23 @@ class BRZ_AI_Schema {
         $opts['ai_schema_properties']         = $properties;
         $opts['ai_schema_item_condition']     = $item_condition;
         $opts['ai_schema_enabled_attributes'] = $enabled_attrs;
+        $opts['ai_schema_shipping']           = array(
+            'enabled'                 => $shipping_enabled ? 1 : 0,
+            'base_rate'               => $base_rate,
+            'free_shipping_threshold' => $free_threshold,
+            'handling_min'            => $handling_min,
+            'handling_max'            => $handling_max,
+            'transit_min'             => $transit_min,
+            'transit_max'             => $transit_max,
+            'destination_country'     => ! empty( $shipping_country ) ? substr( $shipping_country, 0, 2 ) : 'IR',
+        );
+        $opts['ai_schema_return_policy']      = array(
+            'enabled'     => $return_enabled ? 1 : 0,
+            'page_id'     => $return_page_id,
+            'return_days' => $return_days > 0 ? $return_days : 7,
+            'country'     => ! empty( $return_country ) ? substr( $return_country, 0, 2 ) : 'IR',
+        );
+        $opts['ai_schema_valid_from']         = $valid_from_enabled ? 1 : 0;
 
         // Persist with autoload disabled (consistent with existing plugin pattern).
         update_option( BRZ_OPTION, $opts, false );
@@ -546,13 +714,20 @@ class BRZ_AI_Schema {
     }
 
     /**
-     * Apply PropertyValues and itemCondition to a Product entity array.
+     * Apply PropertyValues, itemCondition, shippingDetails, hasMerchantReturnPolicy, and validFrom to a Product entity.
      *
      * @param array           $entity  The Product schema array (associative).
      * @param WC_Product|null $product Optional WC_Product for auto-properties.
      * @return array Modified entity.
      */
     private static function apply_to_entity( array $entity, $product = null ): array {
+        if ( ! $product && function_exists( 'wc_get_product' ) ) {
+            global $post;
+            if ( $post && isset( $post->ID ) ) {
+                $product = wc_get_product( $post->ID );
+            }
+        }
+
         $all_to_inject  = self::build_property_values( $product );
         $item_condition = self::get_item_condition();
 
@@ -567,21 +742,154 @@ class BRZ_AI_Schema {
             }
         }
 
-        // Inject itemCondition into offers.
-        if ( $item_condition && isset( $entity['offers'] ) ) {
-            // WooCommerce may output offers as an indexed array of Offer objects.
+        // Prepare Merchant Listing enrichments (shipping, return policy, validFrom)
+        $shipping_settings = self::get_shipping_settings();
+        $return_settings   = self::get_return_policy_settings();
+        $valid_from_on     = self::get_valid_from_enabled();
+
+        $product_price = 0.0;
+        if ( $product && is_a( $product, 'WC_Product' ) ) {
+            $product_price = (float) $product->get_price();
+        }
+
+        // Build shippingDetails
+        $shipping_details = null;
+        if ( ! empty( $shipping_settings['enabled'] ) ) {
+            $threshold = (float) ( $shipping_settings['free_shipping_threshold'] ?? 0 );
+            $base_rate = (float) ( $shipping_settings['base_rate'] ?? 0 );
+
+            // If product price meets or exceeds threshold, shipping is free.
+            $rate_value = ( $threshold > 0 && $product_price >= $threshold ) ? 0 : $base_rate;
+
+            $shipping_details = array(
+                '@type'               => 'OfferShippingDetails',
+                'shippingRate'        => array(
+                    '@type'    => 'MonetaryAmount',
+                    'value'    => $rate_value,
+                    'currency' => 'IRR',
+                ),
+                'shippingDestination' => array(
+                    '@type'          => 'DefinedRegion',
+                    'addressCountry' => ! empty( $shipping_settings['destination_country'] ) ? $shipping_settings['destination_country'] : 'IR',
+                ),
+                'deliveryTime'        => array(
+                    '@type'        => 'ShippingDeliveryTime',
+                    'handlingTime' => array(
+                        '@type'    => 'QuantitativeValue',
+                        'minValue' => (int) ( $shipping_settings['handling_min'] ?? 0 ),
+                        'maxValue' => (int) ( $shipping_settings['handling_max'] ?? 1 ),
+                        'unitCode' => 'DAY',
+                    ),
+                    'transitTime'  => array(
+                        '@type'    => 'QuantitativeValue',
+                        'minValue' => (int) ( $shipping_settings['transit_min'] ?? 1 ),
+                        'maxValue' => (int) ( $shipping_settings['transit_max'] ?? 3 ),
+                        'unitCode' => 'DAY',
+                    ),
+                ),
+            );
+
+            if ( $threshold > 0 ) {
+                $shipping_details['freeShippingThreshold'] = array(
+                    '@type'    => 'MonetaryAmount',
+                    'value'    => $threshold,
+                    'currency' => 'IRR',
+                );
+            }
+        }
+
+        // Build hasMerchantReturnPolicy
+        $return_policy = null;
+        if ( ! empty( $return_settings['enabled'] ) ) {
+            $return_policy = array(
+                '@type'                     => 'MerchantReturnPolicy',
+                'applicableCountry'         => ! empty( $return_settings['country'] ) ? $return_settings['country'] : 'IR',
+                'returnPolicyCategory'      => 'https://schema.org/MerchantReturnFiniteReturnWindow',
+                'merchantReturnDays'        => (int) ( $return_settings['return_days'] ?? 7 ),
+                'returnMethod'              => 'https://schema.org/ReturnByMail',
+                'itemDefectReturnFees'      => 'https://schema.org/FreeReturn',
+                'customerRemorseReturnFees' => 'https://schema.org/ReturnFeesCustomerResponsibility',
+                'returnFees'                => 'https://schema.org/ReturnFeesCustomerResponsibility',
+                'refundType'                => 'https://schema.org/FullRefund',
+                'itemCondition'             => 'https://schema.org/NewCondition',
+            );
+
+            // Dynamic page link resolution
+            $return_url = '';
+            $page_id    = (int) ( $return_settings['page_id'] ?? 0 );
+            if ( $page_id > 0 && function_exists( 'get_permalink' ) ) {
+                $return_url = get_permalink( $page_id );
+            }
+            if ( empty( $return_url ) && function_exists( 'get_page_by_path' ) ) {
+                $page = get_page_by_path( 'return-policy' );
+                if ( $page ) {
+                    $return_url = get_permalink( $page->ID );
+                }
+            }
+            if ( ! empty( $return_url ) ) {
+                $return_policy['merchantReturnLink'] = esc_url( $return_url );
+            }
+        }
+
+        // Determine validFrom date
+        $valid_from = null;
+        if ( $valid_from_on ) {
+            if ( $product && is_a( $product, 'WC_Product' ) ) {
+                if ( $product->is_on_sale() && $product->get_date_on_sale_from() ) {
+                    $valid_from = date( 'Y-m-d', $product->get_date_on_sale_from()->getTimestamp() );
+                } elseif ( $product->get_date_created() ) {
+                    $valid_from = date( 'Y-m-d', $product->get_date_created()->getTimestamp() );
+                }
+            }
+            if ( empty( $valid_from ) ) {
+                global $post;
+                if ( $post && isset( $post->post_date ) ) {
+                    $valid_from = date( 'Y-m-d', strtotime( $post->post_date ) );
+                } else {
+                    $valid_from = date( 'Y-01-01' );
+                }
+            }
+        }
+
+        // Helper to enrich a single offer array
+        $enrich_offer = function( array &$offer ) use ( $item_condition, $shipping_details, $return_policy, $valid_from ) {
+            if ( $item_condition ) {
+                $offer['itemCondition'] = 'https://schema.org/NewCondition';
+            }
+            if ( $shipping_details ) {
+                $offer['shippingDetails'] = $shipping_details;
+            }
+            if ( $return_policy ) {
+                $offer['hasMerchantReturnPolicy'] = $return_policy;
+            }
+            if ( $valid_from ) {
+                $offer['validFrom'] = $valid_from;
+                if ( isset( $offer['priceSpecification'] ) && is_array( $offer['priceSpecification'] ) ) {
+                    if ( isset( $offer['priceSpecification'][0] ) && is_array( $offer['priceSpecification'][0] ) ) {
+                        foreach ( $offer['priceSpecification'] as &$spec ) {
+                            if ( is_array( $spec ) ) {
+                                $spec['validFrom'] = $valid_from;
+                            }
+                        }
+                        unset( $spec );
+                    } elseif ( ! isset( $offer['priceSpecification'][0] ) ) {
+                        $offer['priceSpecification']['validFrom'] = $valid_from;
+                    }
+                }
+            }
+        };
+
+        // Inject into offers.
+        if ( isset( $entity['offers'] ) ) {
             if ( isset( $entity['offers'][0] ) && is_array( $entity['offers'][0] ) ) {
                 foreach ( $entity['offers'] as &$offer ) {
                     if ( is_array( $offer ) ) {
-                        $offer['itemCondition'] = 'https://schema.org/NewCondition';
+                        $enrich_offer( $offer );
                     }
                 }
                 unset( $offer );
-            } else {
-                // Single Offer object (Rank Math style).
-                if ( is_array( $entity['offers'] ) ) {
-                    $entity['offers']['itemCondition'] = 'https://schema.org/NewCondition';
-                }
+            } elseif ( is_array( $entity['offers'] ) ) {
+                $enrich_offer( $entity['offers'] );
             }
         }
 
@@ -702,6 +1010,55 @@ class BRZ_AI_Schema {
             return false;
         }
 
+        return (bool) (int) $value;
+    }
+
+    /**
+     * Get shipping details schema settings with smart defaults.
+     *
+     * @return array
+     */
+    public static function get_shipping_settings(): array {
+        $defaults = array(
+            'enabled'                 => 1,
+            'base_rate'               => 550000,   // 55,000 Tomans in IRR
+            'free_shipping_threshold' => 20000000, // 2,000,000 Tomans in IRR
+            'handling_min'            => 0,
+            'handling_max'            => 1,
+            'transit_min'             => 1,
+            'transit_max'             => 3,
+            'destination_country'     => 'IR',
+        );
+        $saved = BRZ_Settings::get( 'ai_schema_shipping', array() );
+        return wp_parse_args( is_array( $saved ) ? $saved : array(), $defaults );
+    }
+
+    /**
+     * Get merchant return policy schema settings with smart defaults.
+     *
+     * @return array
+     */
+    public static function get_return_policy_settings(): array {
+        $defaults = array(
+            'enabled'     => 1,
+            'page_id'     => 0,
+            'return_days' => 7,
+            'country'     => 'IR',
+        );
+        $saved = BRZ_Settings::get( 'ai_schema_return_policy', array() );
+        return wp_parse_args( is_array( $saved ) ? $saved : array(), $defaults );
+    }
+
+    /**
+     * Check if automatic validFrom schema injection is enabled.
+     *
+     * @return bool
+     */
+    public static function get_valid_from_enabled(): bool {
+        $value = BRZ_Settings::get( 'ai_schema_valid_from', 1 );
+        if ( ! is_numeric( $value ) ) {
+            return true;
+        }
         return (bool) (int) $value;
     }
 

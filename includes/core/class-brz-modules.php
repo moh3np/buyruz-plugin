@@ -33,6 +33,13 @@ class BRZ_Modules {
                 'category'    => 'universal',
                 'requires_wc' => false,
             ),
+            'static_controller' => array(
+                'label'       => 'کنترلر استاتیک',
+                'description' => 'تولید و مدیریت کش استاتیک صفحات، همگام‌سازی سایت‌مپ و بازسازی خودکار.',
+                'class'       => 'BRZ_Static_Controller',
+                'category'    => 'universal',
+                'requires_wc' => false,
+            ),
             'order_processor' => array(
                 'label'       => 'پردازش سفارش',
                 'description' => 'REST API پردازش سفارشات از گوگل شیت',
@@ -65,6 +72,13 @@ class BRZ_Modules {
                 'label'       => 'تب ضمانت محصول',
                 'description' => 'تب آکاردئونی ضمانت، ارسال و پشتیبانی در صفحه محصول ووکامرس.',
                 'class'       => 'BRZ_Product_Guarantee_Tab',
+                'category'    => 'shop',
+                'requires_wc' => true,
+            ),
+            'product_audio' => array(
+                'label'       => 'صوت و پادکست محصول',
+                'description' => 'متاباکس اختصاصی و پلیر هوشمند صوت معرفی محصول، سازگار با آروان کلود، اسکیما AudioObject و رنک‌مث پرو.',
+                'class'       => 'BRZ_Product_Audio',
                 'category'    => 'shop',
                 'requires_wc' => true,
             ),
@@ -159,6 +173,13 @@ class BRZ_Modules {
                 'category'    => 'universal',
                 'requires_wc' => false,
             ),
+            'editorial' => array(
+                'label'       => 'ماژول تحریریه و نویسندگان',
+                'description' => 'مدیریت هوشمند نقش‌های محتوایی (تألیف، ترجمه، بازبینی، مهمان)، سربرگ متادیتا، باکس نویسنده و آواتار محلی.',
+                'class'       => 'BRZ_Editorial',
+                'category'    => 'universal',
+                'requires_wc' => false,
+            ),
         );
     }
 
@@ -223,6 +244,10 @@ class BRZ_Modules {
             $opts = array();
         }
         $states = isset( $opts['modules'] ) && is_array( $opts['modules'] ) ? $opts['modules'] : array();
+        // Default static_controller to enabled if not explicitly set
+        if ( ! array_key_exists( 'static_controller', $states ) ) {
+            $states['static_controller'] = 1;
+        }
         return wp_parse_args( $states, self::default_states() );
     }
 }

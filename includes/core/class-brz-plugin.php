@@ -76,9 +76,16 @@ class BRZ_Plugin {
             BRZ_Media_Placeholder_Cleaner::init();
         }
 
+        if ( class_exists( 'BRZ_Static_Controller' ) && BRZ_Modules::is_enabled( 'static_controller' ) ) {
+            BRZ_Static_Controller::init();
+        }
+
         // Dynamic modules (only active ones)
         $active = BRZ_Modules::active_classes();
         foreach ( $active as $class ) {
+            if ( 'BRZ_Static_Controller' === $class ) {
+                continue;
+            }
             if ( class_exists( $class ) && method_exists( $class, 'init' ) ) {
                 call_user_func( array( $class, 'init' ) );
             }
@@ -128,20 +135,23 @@ class BRZ_Plugin {
             }
         }
 
-        // Migrate old module slugs to new ones (4.1.3+)
+        // Preserve and normalize module states across upgrades (strictly zero resets)
         $opts = get_option( BRZ_OPTION, array() );
-        if ( isset( $opts['modules'] ) && is_array( $opts['modules'] ) ) {
-            $slug_renames = array(
-                'urlgen'      => 'static_controller',
-                'page_mapper' => 'static_controller',
-                'price_queue' => 'offline_bridge',
-            );
+        if ( is_array( $opts ) ) {
             $changed = false;
-            foreach ( $slug_renames as $old => $new ) {
-                if ( isset( $opts['modules'][ $old ] ) ) {
-                    $opts['modules'][ $new ] = $opts['modules'][ $old ];
-                    unset( $opts['modules'][ $old ] );
+            if ( isset( $opts['modules'] ) && is_array( $opts['modules'] ) ) {
+                // If static_controller was turned off due to legacy migration bug, heal it to active
+                if ( empty( $opts['modules']['static_controller'] ) && ! empty( $opts['static_controller'] ) ) {
+                    $opts['modules']['static_controller'] = 1;
                     $changed = true;
+                }
+                // Safely prune obsolete legacy keys without ever overwriting active module states
+                $obsolete_slugs = array( 'urlgen', 'page_mapper', 'price_queue' );
+                foreach ( $obsolete_slugs as $old_slug ) {
+                    if ( isset( $opts['modules'][ $old_slug ] ) ) {
+                        unset( $opts['modules'][ $old_slug ] );
+                        $changed = true;
+                    }
                 }
             }
             if ( $changed ) {

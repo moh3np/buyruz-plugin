@@ -146,6 +146,12 @@ namespace {
         }
     }
 
+    if ( ! function_exists( 'wp_verify_nonce' ) ) {
+        function wp_verify_nonce( $nonce, $action = -1 ) {
+            return true;
+        }
+    }
+
     // Stub wpdb class
     if ( ! class_exists( 'MockWpdb' ) ) {
         class MockWpdb {
@@ -260,6 +266,50 @@ namespace Tests\Unit {
             $this->assertEquals( '1234567890123', $product->meta['_global_unique_id'] );
             $this->assertEquals( '1234567890123', $product->meta['_rank_math_gtin_code'] );
             $this->assertEquals( 'هشدار خرید', $product->meta['_bakala_ab_content'] );
+        }
+
+        public function test_create_dependencies_with_specs() {
+            global $wp_test_options;
+
+            $payload = array(
+                'create_dependencies' => true,
+                'specs' => array(
+                    array(
+                        'key' => 'battery_type',
+                        'label' => 'نوع باتری',
+                        'type' => 'text',
+                        'prefix' => '',
+                        'suffix' => '',
+                        'options' => ''
+                    )
+                )
+            );
+
+            // Mock $_POST and $_REQUEST for ajax_apply
+            $_POST['items'] = json_encode( $payload, JSON_UNESCAPED_UNICODE );
+            $_REQUEST['_nonce'] = 'valid_nonce';
+
+            ob_start();
+            try {
+                \BRZ_Offline_Bridge::ajax_apply();
+            } catch ( \WP_Ajax_Response_Exception $e ) {
+                // Expected exit from wp_send_json_success
+            } finally {
+                ob_end_clean();
+            }
+
+            $fields = get_option( 'brz_product_specs_fields', array() );
+            $this->assertNotEmpty( $fields );
+            $found = false;
+            foreach ( $fields as $f ) {
+                if ( isset( $f['key'] ) && $f['key'] === 'battery_type' ) {
+                    $found = true;
+                    $this->assertEquals( 'نوع باتری', $f['label'] );
+                    $this->assertEquals( 'text', $f['type'] );
+                    break;
+                }
+            }
+            $this->assertTrue( $found, 'فیلد battery_type باید به brz_product_specs_fields اضافه شده باشد.' );
         }
     }
 }

@@ -311,9 +311,10 @@
     // Determine if it's a Dependency Object Payload or a Product Array Payload
     var isDependencyPayload = !Array.isArray(items) && items.create_dependencies === true;
     var isSpecsPayload = !Array.isArray(items) && items.create_specs === true;
+    var isAddSpecsPayload = !Array.isArray(items) && items.add_specs === true;
     var isDeletePayload = !Array.isArray(items) && items.delete_dependencies === true;
     var isMigratePayload = !Array.isArray(items) && items.migrate_attributes === true;
-    if (!isDependencyPayload && !isSpecsPayload && !isDeletePayload && !isMigratePayload && (!Array.isArray(items) || items.length === 0)) {
+    if (!isDependencyPayload && !isSpecsPayload && !isAddSpecsPayload && !isDeletePayload && !isMigratePayload && (!Array.isArray(items) || items.length === 0)) {
       showError(i18n.invalidArray || 'آرایه خالی یا نامعتبر.');
       return;
     }
@@ -328,7 +329,7 @@
 
     var BATCH_SIZE = 50;
     var chunks = [];
-    if (isDependencyPayload || isSpecsPayload || isDeletePayload || isMigratePayload) {
+    if (isDependencyPayload || isSpecsPayload || isAddSpecsPayload || isDeletePayload || isMigratePayload) {
       chunks.push(items);
     } else {
       for (var i = 0; i < items.length; i += BATCH_SIZE) {
@@ -482,7 +483,7 @@
           }
         } else if (isDependencyPayload) {
             showSnackbar('هیچ وابستگی جدید یا موجودی یافت نشد. لطفاً لاگ سرور را بررسی کنید.', 8000);
-        } else if (isSpecsPayload) {
+        } else if (isSpecsPayload || isAddSpecsPayload) {
             showSnackbar('مشخصات فنی با موفقیت تعریف و ذخیره شدند.', 5000);
             if (inputEl) {
               inputEl.value = '';
@@ -513,7 +514,7 @@
             }
         }
 
-        if (!isDependencyPayload && !isSpecsPayload && !isDeletePayload && !isMigratePayload) {
+        if (!isDependencyPayload && !isSpecsPayload && !isAddSpecsPayload && !isDeletePayload && !isMigratePayload) {
             renderStats({ total: items.length, success_count: totalSuccessCount, failed_count: totalFailedCount });
             if (allResults.length) renderResults(allResults);
         }
@@ -522,7 +523,7 @@
 
       var currentChunk = chunks[batchIndex];
 
-      if (progressContainer && !isDependencyPayload && !isSpecsPayload && !isDeletePayload && !isMigratePayload) {
+      if (progressContainer && !isDependencyPayload && !isSpecsPayload && !isAddSpecsPayload && !isDeletePayload && !isMigratePayload) {
         progressContainer.style.display = 'block';
         var pct = Math.round((processedCount / items.length) * 100);
         if (progressBar) progressBar.style.width = pct + '%';
@@ -547,7 +548,7 @@
             if (data.results) allResults = allResults.concat(data.results);
             totalSuccessCount += (data.success_count || 0);
             totalFailedCount += (data.failed_count || 0);
-            processedCount += (isDependencyPayload || isSpecsPayload || isDeletePayload || isMigratePayload) ? 1 : currentChunk.length;
+            processedCount += (isDependencyPayload || isSpecsPayload || isAddSpecsPayload || isDeletePayload || isMigratePayload) ? 1 : currentChunk.length;
 
             if (data.dependency_ids) {
                 if (!allDependencyIds) allDependencyIds = {};
@@ -555,6 +556,7 @@
                 if (deps.new_brands) allDependencyIds.new_brands = (allDependencyIds.new_brands || []).concat(deps.new_brands);
                 if (deps.new_attributes) allDependencyIds.new_attributes = (allDependencyIds.new_attributes || []).concat(deps.new_attributes);
                 if (deps.new_terms) allDependencyIds.new_terms = (allDependencyIds.new_terms || []).concat(deps.new_terms);
+                if (deps.new_specs) allDependencyIds.new_specs = (allDependencyIds.new_specs || []).concat(deps.new_specs);
                 if (deps.new_products) allDependencyIds.new_products = (allDependencyIds.new_products || []).concat(deps.new_products);
             }
             processBatch(batchIndex + 1);
