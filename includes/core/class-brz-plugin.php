@@ -38,6 +38,42 @@ class BRZ_Plugin {
                     BRZ_WC_Shortcodes::init();
                 }
             }
+
+            // Clean & sanitize Rank Math JSON-LD output against entities missing @type (prevents PHP 8.1+ Rank Math crashes)
+            add_filter( 'rank_math/json_ld', function( $data ) {
+                if ( is_array( $data ) ) {
+                    foreach ( $data as $key => $entity ) {
+                        if ( 'metadata' !== $key ) {
+                            if ( ! is_array( $entity ) || empty( $entity['@type'] ) ) {
+                                unset( $data[ $key ] );
+                            }
+                        }
+                    }
+                }
+                return $data;
+            }, 1 );
+
+            add_filter( 'rank_math/json_ld', function( $data ) {
+                if ( is_array( $data ) ) {
+                    foreach ( $data as $key => $entity ) {
+                        if ( 'metadata' !== $key ) {
+                            if ( ! is_array( $entity ) || empty( $entity['@type'] ) ) {
+                                unset( $data[ $key ] );
+                            }
+                        }
+                    }
+                }
+                return $data;
+            }, 9999 );
+
+            add_filter( 'rank_math/snippet/rich_snippet_entity', function( $entity ) {
+                if ( ! is_array( $entity ) || empty( $entity['@type'] ) ) {
+                    if ( is_array( $entity ) ) {
+                        $entity['@type'] = 'Thing';
+                    }
+                }
+                return $entity;
+            }, 9999 );
         }
 
         // Theme compatibility filters (Bakala & GeneratePress)

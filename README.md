@@ -15,6 +15,7 @@
 - [نحوهٔ استفاده](#نحوهٔ-استفاده)
 - [تنظیمات افزونه](#تنظیمات-افزونه)
 - [توسعه و مشارکت](#توسعه-و-مشارکت)
+- [مانیفست بسته‌بندی و ساخت فایل ZIP](#zip-manifest)
 - [به‌روزرسانی دستی](#manual-update)
 - [پشتیبانی](#پشتیبانی)
 - [لایسنس](#لایسنس)
@@ -73,6 +74,74 @@
 - توسعه‌ی فعلی توسط تیم کُدروز انجام می‌شود.
 - پیش از هر تغییری حتماً فایل [`CONTRIBUTING.md`](CONTRIBUTING.md) را مطالعه و چک‌لیست نسخه‌دهی اجباری را رعایت کنید.
 - برای پیشنهاد یا اشکال جدید می‌توانید Pull Request ثبت کنید. پیش از ارسال، مطمئن شوید که استایل کدنویسی وردپرس رعایت شده و هیچ بستهٔ وابستگی اضافه‌ای نیاز ندارد.
+
+<a id="zip-manifest"></a>
+
+## مانیفست بسته‌بندی و ساخت فایل ZIP (Packaging Rules)
+
+این مانیفست ضامن ساخت خروجی‌های بهینه، سبک و آداپتیو (Adaptive) جهت آپلود در وردپرس است. معماری بسته‌بندی افزونه بر **اصل ترکیب «فهرست سفید (Allowlist)» و «محافظت دوگانه (Git-Attributes Standard)»** استوار است تا در صورت افزودن ابزارها، فایل‌های تست یا وابستگی‌های جدید در آینده، هیچ ابزار توسعه یا متای اضافی به فایل زیپ سرور نفوذ نکند.
+
+### ۱. اصل فهرست سفید (Allowlist Principle - ساختار مجاز برای سرور)
+تنها فایل‌ها و پوشه‌های زیر در نسخه نهایی آپلود و خروجی ZIP مجاز هستند:
+- **`buyruz-settings.php`** : فایل اصلی و ثبت‌کننده افزونه در وردپرس
+- **`uninstall.php`** : اسکریپت پاک‌سازی متای افزونه هنگام حذف
+- **`includes/`** : کدهای منطقی، کلاس‌ها و ماژول‌های افزونه
+- **`assets/`** : استایل‌ها (CSS) و اسکریپت‌های فرانت و ادمین (JS)
+- **`README.md`** : مستندات اصلی و مانیفست
+- **`CHANGELOG.md`** : یادداشت‌های انتشار و تاریخچه نسخه‌ها
+- **`LICENSE`** : مجوز پروژه
+
+### ۲. اصل فهرست سیاه و الگوهای استثنا (Exclusion Safeguards)
+پوشه‌ها و فایل‌های مربوط به توسعه محلی، تست، کنترل نسخه و ابزارهای کامپایل به هیچ عنوان نباید در سرور یا فایل ZIP قرار گیرند:
+- **ابزارهای تست و کش:** `tests/`, `.phpunit.cache/`, `.phpunit.result.cache`, `phpunit.xml`
+- **وابستگی‌های توسعه محلی:** `vendor/` (شامل ابزارهای تست محلی PHPUnit), `composer.json`, `composer.lock`
+- **کنترل نسخه و CI/CD:** `.git/`, `.github/`, `.gitignore`, `.gitattributes`
+- **اسناد و فایل‌های موقت توسعه:** `QA.md`, `.DS_Store`, `*.log`
+
+---
+
+### ۳. روش‌های استاندارد و آینده‌نگرانه ساخت ZIP (Adaptive Build Methods)
+
+#### روش اول (روش استاندارد و خودکار Git Archive - پیشنهادی):
+این روش به طور کامل بر فایل `.gitattributes` متکی است. فایل `.gitattributes` پروژه تمام موارد استثنا را با `export-ignore` علامت‌گذاری کرده است، بنابراین حتی در صورت افزودن فایل‌ها یا ابزارهای جدید در آینده، با افزودن نام آن‌ها به `.gitattributes` این دستور بدون تغییر در اسکریپت‌ها همیشه خروجی ۱۰۰٪ پاک تولید می‌کند:
+```bash
+git archive --format=zip --prefix=buyruz-wordpress-plugin/ -o ../buyruz-wordpress-plugin.zip HEAD
+```
+
+#### روش دوم (دستور مستقیم مبتنی بر لیست سفید - White-list Zip):
+در این روش تنها اقلام مجاز انتخاب می‌شوند؛ لذا در آینده حتی اگر صدها ابزار توسعه (مانند `node_modules` یا وابستگی‌های جدید) به پوشه اضافه شوند، خروجی زیپ ۱۰۰٪ ایمن و آداپتیو می‌ماند:
+```bash
+cd /Users/moh3n/Documents/Development && \
+rm -f buyruz-wordpress-plugin.zip && \
+zip -r buyruz-wordpress-plugin.zip buyruz-wordpress-plugin \
+  -i "buyruz-wordpress-plugin/buyruz-settings.php" \
+  -i "buyruz-wordpress-plugin/uninstall.php" \
+  -i "buyruz-wordpress-plugin/includes/*" \
+  -i "buyruz-wordpress-plugin/assets/*" \
+  -i "buyruz-wordpress-plugin/README.md" \
+  -i "buyruz-wordpress-plugin/CHANGELOG.md" \
+  -i "buyruz-wordpress-plugin/LICENSE"
+```
+
+#### روش سوم (دستور استثنائات الگویی - Dynamic Blocklist Zip):
+استفاده از الگوهای کلی برای حذف تمامی فایل‌های مخفی، تست‌ها و وابستگی‌های غیرتولیدی:
+```bash
+cd /Users/moh3n/Documents/Development && \
+rm -f buyruz-wordpress-plugin.zip && \
+zip -r buyruz-wordpress-plugin.zip buyruz-wordpress-plugin \
+  -x "buyruz-wordpress-plugin/.*" \
+  -x "buyruz-wordpress-plugin/.git/*" \
+  -x "buyruz-wordpress-plugin/.github/*" \
+  -x "buyruz-wordpress-plugin/.phpunit.cache/*" \
+  -x "buyruz-wordpress-plugin/tests/*" \
+  -x "buyruz-wordpress-plugin/vendor/*" \
+  -x "buyruz-wordpress-plugin/*.xml" \
+  -x "buyruz-wordpress-plugin/*.json" \
+  -x "buyruz-wordpress-plugin/*.lock" \
+  -x "buyruz-wordpress-plugin/QA.md" \
+  -x "buyruz-wordpress-plugin/*/.DS_Store" \
+  -x "*.DS_Store"
+```
 
 <a id="auto-update"></a>
 <a id="manual-update"></a>

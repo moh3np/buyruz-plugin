@@ -12,16 +12,12 @@ class BRZ_WC_Shortcodes {
             return;
         }
 
-        if ( self::blocked_request() ) {
-            return;
-        }
-
-        add_filter( 'woocommerce_product_get_description', array( __CLASS__, 'process_product_content' ), 20, 2 );
-        add_filter( 'woocommerce_product_get_short_description', array( __CLASS__, 'process_product_content' ), 20, 2 );
+        // Hook display filters ONLY (the_content, woocommerce_short_description, the_excerpt).
+        // DO NOT hook woocommerce_product_get_description or woocommerce_product_get_short_description
+        // as getter filters cause infinite recursion and memory exhaustion when shortcodes query product data.
         add_filter( 'the_content', array( __CLASS__, 'process_the_content' ), 11 );
         add_filter( 'woocommerce_short_description', array( __CLASS__, 'process_woocommerce_short_description' ), 11 );
         add_filter( 'the_excerpt', array( __CLASS__, 'process_the_excerpt' ), 11 );
-        add_action( 'wp', array( __CLASS__, 'prime_global_post_content' ) );
     }
 
     private static function is_enabled() {
@@ -38,6 +34,7 @@ class BRZ_WC_Shortcodes {
         if ( is_admin() ) { return true; }
         if ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) { return true; }
         if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) { return true; }
+        if ( doing_action( 'wp_head' ) || doing_action( 'rank_math/head' ) || doing_filter( 'rank_math/json_ld' ) || doing_filter( 'woocommerce_structured_data_product' ) ) { return true; }
         return false;
     }
 
